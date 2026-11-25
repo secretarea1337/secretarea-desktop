@@ -609,6 +609,7 @@ export function HardwareMonitorView({
       not_detected: t.provNotDetected,
       sensor_unavailable: t.provSensorUnavailable,
       unknown: t.provUnknown,
+      requires_admin: "Requires administrator privileges",
     }),
     [t]
   );

@@ -906,15 +906,19 @@ export function evaluateCatalogGamesOnCurrentPc(params: {
         ? Number((gpuSel.vramTotalMB / 1024).toFixed(1))
         : null,
     allGpus:
-      inventory.gpus.length > 0
-        ? inventory.gpus.map((g) => g.model).filter(Boolean)
-        : snapshot.gpus.map((g) => g.model || '').filter(Boolean),
-    ramGB: detectedRamGb,
-    ramIsApprox: inventory.sourceMode !== 'desktop_ipc',
-    spaceDrive: snapshot.storage[0]?.mount || null,
-    freeSpaceGB: freeSpaceGb,
-    totalSpaceGB: totalSpaceGb,
-    detectedAt: new Date().toISOString(),
+  inventory.gpus.length > 0
+    ? inventory.gpus
+        .map((g) => g.model)
+        .filter((model): model is string => typeof model === 'string' && model.length > 0)
+    : snapshot.gpus
+        .map((g) => g.model)
+        .filter((model): model is string => typeof model === 'string' && model.length > 0),
+ramGB: detectedRamGb,
+ramIsApprox: inventory.sourceMode !== 'desktop_ipc',
+spaceDrive: snapshot.storage[0]?.mount || null,
+freeSpaceGB: freeSpaceGb,
+totalSpaceGB: totalSpaceGb,
+detectedAt: new Date().toISOString(),
   };
 
   const q = searchQuery.trim().toLowerCase();
