@@ -1,0 +1,1245 @@
+# SECRETAREA DESKTOP — ULTIMATE PC HEALTH, HARDWARE INTELLIGENCE, DIAGNOSTICS & UPGRADE ADVISOR
+
+## PROJECT OBJECTIVE
+
+I want to transform the existing Hardware Monitor page in SecretArea Desktop into a comprehensive, intelligent PC Hardware Inspection, Health Diagnostics, Maintenance, Gaming Compatibility, and Upgrade Recommendation platform.
+
+This must be a complete hardware intelligence system for BOTH Desktop PCs and Laptops.
+
+The application should automatically discover, identify, monitor, analyze, and evaluate as much information as technically possible about the user's computer.
+
+I want users to open SecretArea and understand:
+
+- What hardware their computer contains.
+- The exact model, manufacturer, generation, and specifications of every component.
+- How many fans their computer has and which ones are working.
+- How many physical ports and connectors their computer has and their capabilities.
+- Whether their hardware is healthy, overheating, outdated, or potentially failing.
+- Whether their computer needs cleaning, thermal paste inspection, maintenance, or replacement parts.
+- Whether their PC is suitable for modern games and professional applications.
+- Which components are limiting performance.
+- Which components should be upgraded.
+- Whether their laptop or desktop will remain suitable for their needs in the coming years, including 2030 and beyond.
+
+IMPORTANT: This must be based on real hardware detection and reliable information. Never fabricate specifications, sensor readings, health percentages, or benchmark results.
+
+Before implementing anything, inspect the existing Hardware Monitor architecture and reuse existing functionality wherever possible.
+
+---
+
+# PART 1 — COMPLETE HARDWARE IDENTIFICATION & INVENTORY
+
+## 1. SYSTEM IDENTIFICATION
+
+Automatically identify:
+
+- Desktop PC or Laptop.
+- Manufacturer.
+- Computer brand.
+- Exact device model.
+- Product name.
+- Serial number only for local diagnostics, never expose it unnecessarily.
+- Motherboard manufacturer and model.
+- BIOS/UEFI version.
+- BIOS release date.
+- Chipset.
+- System architecture: x64 / ARM64.
+- Operating system and version.
+- Windows build.
+- System uptime.
+- Boot mode: UEFI / Legacy.
+- Secure Boot status.
+- TPM version and status.
+- Installed system firmware information.
+- Available hardware sensors.
+
+Provide a complete System Overview.
+
+## 2. MOTHERBOARD DIAGNOSTICS
+
+Identify:
+
+- Manufacturer.
+- Exact motherboard model.
+- Chipset.
+- PCB/model revision when available.
+- BIOS version and release date.
+- BIOS update availability from reliable official sources.
+- CPU socket.
+- Supported CPU families when verifiable.
+- Supported RAM generation.
+- Maximum supported RAM capacity when known.
+- Memory slots and occupancy.
+- PCIe slots and generations when detectable.
+- M.2 slots and supported interfaces when documented.
+- SATA connectors and capabilities when documented.
+- Available motherboard temperature sensors.
+- Voltage readings when supported.
+- Fan headers and connected fan readings when exposed.
+
+Provide compatibility information for possible upgrades.
+
+Never invent the number of physical connectors based only on controller information.
+
+## 3. CPU — PROCESSOR INTELLIGENCE
+
+Identify every processor:
+
+- Intel.
+- AMD.
+- ARM processors where supported.
+
+Collect:
+
+- Exact model.
+- Manufacturer.
+- Generation.
+- Architecture.
+- Release year.
+- Launch specifications.
+- Physical cores.
+- Logical threads.
+- Base frequency.
+- Current frequency.
+- Maximum boost frequency.
+- Cache sizes.
+- TDP and official power specifications.
+- Supported instruction sets.
+- Integrated graphics.
+- Socket.
+- Manufacturing process when reliably documented.
+- Virtualization support.
+- CPU temperature.
+- CPU utilization.
+- CPU package power when available.
+- Voltage when available.
+- Thermal throttling.
+- Clock throttling.
+- Performance limitations.
+
+Identify outdated CPU generations and compare them with modern processors.
+
+Provide a CPU condition assessment based on actual telemetry and diagnostics, not age alone.
+
+## 4. GPU — COMPLETE MULTI-GPU INTELLIGENCE
+
+Detect ALL installed GPUs.
+
+Support:
+
+- NVIDIA GeForce.
+- NVIDIA professional GPUs.
+- AMD Radeon.
+- AMD integrated graphics.
+- Intel UHD.
+- Intel Iris Xe.
+- Intel Arc.
+- Other supported graphics adapters.
+
+For each GPU identify:
+
+- Exact model.
+- Manufacturer.
+- Architecture.
+- Generation.
+- Release year.
+- VRAM capacity.
+- VRAM type.
+- Memory bandwidth when available.
+- GPU core count when documented.
+- GPU utilization.
+- Memory utilization.
+- Temperature.
+- Hotspot temperature when available.
+- Fan RPM when available.
+- GPU clock.
+- Memory clock.
+- Power consumption.
+- Driver version.
+- Driver date.
+- DirectX support.
+- Vulkan support.
+- OpenGL support.
+- Ray Tracing capabilities.
+- DLSS support.
+- FSR support.
+- XeSS support.
+- Resizable BAR support.
+- Video encoding/decoding capabilities.
+
+Detect and correctly distinguish integrated GPUs and dedicated GPUs.
+
+For multiple GPUs, display each independently and identify which GPU is being used by each workload when possible.
+
+Never assume that the primary GPU is always the best gaming GPU.
+
+## 5. RAM — MEMORY INTELLIGENCE
+
+Identify:
+
+- Total RAM.
+- Available RAM.
+- Used RAM.
+- RAM type: DDR3 / DDR4 / DDR5 / LPDDR.
+- Manufacturer.
+- Exact module model when available.
+- Individual module capacities.
+- Number of installed modules.
+- Number of available slots when detectable.
+- Operating frequency.
+- Effective data rate.
+- Timings when available.
+- Memory channels.
+- XMP / EXPO information when available.
+- ECC support and status when available.
+- Memory usage history.
+- Memory pressure.
+- Page file usage.
+
+Identify possible RAM limitations.
+
+Provide safe memory diagnostic recommendations.
+
+Never claim RAM is defective without reliable diagnostic evidence.
+
+## 6. STORAGE — COMPLETE DRIVE HEALTH
+
+Detect ALL storage devices:
+
+- HDD.
+- SATA SSD.
+- NVMe SSD.
+- External SSD.
+- USB storage.
+- Other supported storage devices.
+
+For each device:
+
+- Manufacturer.
+- Exact model.
+- Capacity.
+- Available capacity.
+- Used capacity.
+- Interface.
+- SATA generation.
+- NVMe PCIe generation.
+- Supported link width.
+- Temperature.
+- SMART status.
+- Power-on hours.
+- Power cycles.
+- Total bytes written.
+- Total bytes read.
+- Wear percentage.
+- Remaining life indicators when available.
+- Reallocated sectors.
+- Pending sectors.
+- Media errors.
+- Unsafe shutdowns.
+- Health warnings.
+
+Provide storage health assessments.
+
+Identify possible failing drives and recommend backups when necessary.
+
+Never label a drive healthy when SMART information is unavailable.
+
+Provide safe, optional read/write benchmarks. Never perform destructive benchmarks or overwrite user data.
+
+## 7. COOLING FANS — COMPLETE FAN INVENTORY
+
+I specifically want automatic detection of as many fans as possible.
+
+Detect:
+
+- CPU cooler fans.
+- GPU fans.
+- Case fans.
+- Front intake fans.
+- Rear exhaust fans.
+- Top fans.
+- Bottom fans.
+- Radiator fans.
+- AIO pump RPM.
+- Water cooling pump RPM.
+- Laptop internal cooling fans.
+- Additional motherboard-connected fans.
+
+For every detected fan display:
+
+- Fan name.
+- Fan type.
+- RPM.
+- Minimum RPM when available.
+- Maximum RPM when available.
+- Current operating status.
+- Abnormal speed warnings.
+- Temperature relationship when available.
+
+Display the total number of detected fans.
+
+Use clear statuses:
+
+- Running.
+- Stopped — confirmed.
+- Abnormal RPM.
+- Not detected.
+- Sensor unavailable.
+- Unknown.
+
+IMPORTANT:
+Do not confuse unavailable RPM readings with broken fans.
+
+Some GPUs and laptops control their fans internally and may not expose fan sensors.
+
+Never claim to physically detect all fans if the hardware does not expose that information.
+
+## 8. COOLING SYSTEM & THERMAL DIAGNOSTICS
+
+Monitor:
+
+- CPU temperature.
+- GPU temperature.
+- GPU hotspot.
+- VRAM temperature when available.
+- Motherboard temperature.
+- Chipset temperature.
+- SSD temperature.
+- HDD temperature.
+- Ambient temperature when available.
+- Fan speeds.
+- Thermal throttling.
+- Temperature behavior under load.
+
+Identify possible:
+
+- Poor cooling.
+- Dust accumulation indicators.
+- Abnormal temperature increases.
+- Cooling fan problems.
+- Thermal throttling.
+- Possible overheating.
+
+Create maintenance recommendations for:
+
+- Cleaning dust.
+- Inspecting fans.
+- Inspecting heatsinks.
+- Checking airflow.
+- Inspecting thermal paste.
+- Inspecting CPU coolers.
+- Inspecting GPU cooling.
+
+Never claim to directly detect dried thermal paste or dust. Explain that these require physical inspection.
+
+## 9. PORTS & CONNECTORS — PHYSICAL PORT INVENTORY
+
+This is a major feature.
+
+Detect and identify as many physical ports as possible.
+
+### USB
+- USB-A 2.0.
+- USB-A 3.0.
+- USB 3.1.
+- USB 3.2.
+- USB-C.
+- USB4.
+- Thunderbolt 3.
+- Thunderbolt 4.
+- Thunderbolt 5.
+
+Identify supported data speeds and charging capabilities when documented.
+
+### Video
+- HDMI.
+- DisplayPort.
+- Mini DisplayPort.
+- USB-C DisplayPort Alt Mode.
+- VGA.
+- DVI.
+
+Identify supported resolutions and refresh rates when available.
+
+### Networking
+- RJ45 Ethernet.
+- Ethernet link speed.
+- Wi-Fi adapter.
+- Wi-Fi generation.
+- Bluetooth version.
+- Wireless capabilities.
+
+### Audio
+- 3.5mm headphone.
+- Microphone.
+- Combined audio jack.
+- Optical audio.
+- Internal audio outputs.
+
+### Storage
+- SATA connectors.
+- M.2 slots.
+- NVMe interfaces.
+- SD card readers.
+- MicroSD readers.
+
+### Desktop expansion
+- PCIe x1.
+- PCIe x4.
+- PCIe x8.
+- PCIe x16.
+- Other available expansion interfaces.
+
+For every port, show:
+
+- Port type.
+- Number of ports when reliably known.
+- Supported version.
+- Maximum theoretical bandwidth.
+- Current connection status where detectable.
+- Connected device when applicable.
+- Supported capabilities.
+- Detection confidence.
+
+Distinguish between:
+1. Physically present ports.
+2. Windows-detected controllers.
+3. Currently connected devices.
+4. Ports whose physical existence cannot be confirmed.
+
+IMPORTANT:
+Do not report a USB controller as a physical USB port.
+
+Do not invent physical port counts or specifications.
+
+## 10. POWER SUPPLY & POWER MANAGEMENT
+
+For desktop computers, identify PSU information when available:
+
+- Manufacturer.
+- Model.
+- Rated wattage.
+- Efficiency certification when documented.
+- Available power telemetry.
+
+For all devices:
+
+- CPU power consumption.
+- GPU power consumption.
+- Battery charging power when available.
+- System power information where supported.
+
+Estimate system power requirements for potential upgrades.
+
+Never claim direct PSU health measurements without actual sensors or diagnostic evidence.
+
+## 11. LAPTOP-SPECIFIC HARDWARE
+
+For laptops, additionally inspect:
+
+- Exact laptop model.
+- Battery manufacturer.
+- Battery design capacity.
+- Full charge capacity.
+- Battery wear percentage.
+- Cycle count.
+- Charging status.
+- Battery health.
+- AC adapter information when exposed.
+- Integrated GPU.
+- Dedicated GPU.
+- Internal cooling fans.
+- Laptop thermal sensors.
+- Display panel information.
+- Built-in webcam.
+- Microphone.
+- Keyboard.
+- Touchpad.
+- Fingerprint reader when detectable.
+- Wi-Fi and Bluetooth adapters.
+- Internal storage.
+- RAM configuration.
+
+Identify which components are:
+- Upgradeable.
+- Replaceable.
+- Soldered.
+- Not confirmed.
+
+Never assume laptop CPU, GPU, or RAM can be upgraded.
+
+## 12. DISPLAY & MONITOR INVENTORY
+
+Detect all connected monitors and internal laptop displays.
+
+Identify:
+
+- Manufacturer.
+- Model.
+- Screen size when available.
+- Native resolution.
+- Current resolution.
+- Refresh rate.
+- Maximum supported refresh rate when documented.
+- Panel technology when known.
+- HDR support.
+- Color depth.
+- Connection type.
+- Active display adapters.
+
+Support multiple monitor configurations.
+
+Identify whether the display is suitable for gaming and high-refresh-rate applications.
+
+## 13. NETWORK & CONNECTIVITY HARDWARE
+
+Inspect:
+
+- Ethernet adapters.
+- Wi-Fi adapters.
+- Bluetooth adapters.
+- Wi-Fi generation.
+- Negotiated connection speed.
+- Current download speed.
+- Current upload speed.
+- Network signal information when available.
+- Adapter driver versions.
+- Link speed.
+- Supported connection standards.
+
+Distinguish theoretical adapter speeds from actual connection speeds.
+
+## 14. CONNECTED PERIPHERALS & DEVICES
+
+Detect connected hardware where Windows provides reliable information:
+
+- Keyboard.
+- Mouse.
+- Webcam.
+- Microphone.
+- Speakers.
+- Headphones.
+- Printers.
+- USB storage.
+- External GPUs.
+- Game controllers.
+- Bluetooth devices.
+- External displays.
+- Docking stations.
+- Other supported peripherals.
+
+Display device name, manufacturer, model, connection type, driver status, and capabilities when available.
+
+## 15. OTHER HARDWARE & SYSTEM COMPONENTS
+
+Inspect additional hardware information where supported:
+
+- Optical drives.
+- Card readers.
+- Sound cards.
+- Audio controllers.
+- USB controllers.
+- PCI devices.
+- Network controllers.
+- Capture cards.
+- TV tuners.
+- Security devices.
+- TPM.
+- Webcam sensors.
+- Hardware acceleration engines.
+
+The objective is maximum hardware discovery, not just the standard CPU/GPU/RAM inventory.
+
+---
+
+# PART 2 — HEALTH, DIAGNOSTICS & INTELLIGENT ANALYSIS
+
+## 16. SMART PC HEALTH SCORE
+
+Create a comprehensive PC Health dashboard.
+
+Evaluate independently:
+
+- CPU condition indicators.
+- GPU condition indicators.
+- RAM diagnostic status.
+- Storage SMART health.
+- Thermal behavior.
+- Cooling performance.
+- Battery health for laptops.
+- Network adapter status.
+- Driver status.
+- Other supported hardware diagnostics.
+
+Provide:
+
+- Overall PC Health Score.
+- Individual component assessments.
+- Critical warnings.
+- Maintenance recommendations.
+- Detailed diagnostic explanations.
+
+Statuses:
+
+- Healthy.
+- Good.
+- Attention Recommended.
+- Warning.
+- Critical.
+- Unknown.
+- Not Supported.
+
+IMPORTANT:
+Do not invent health percentages for components that cannot be reliably evaluated.
+
+Hardware age alone must never determine physical health.
+
+Clearly separate:
+- Physical health.
+- Performance capability.
+- Hardware age.
+- Remaining useful life estimates.
+
+Never guarantee an exact remaining lifespan.
+
+## 17. CPU & GPU PERFORMANCE ANALYSIS
+
+Analyze:
+
+- CPU utilization.
+- GPU utilization.
+- Core utilization.
+- Temperatures.
+- Power consumption.
+- Clock speeds.
+- VRAM usage.
+- RAM usage.
+- Thermal throttling.
+- Performance consistency.
+
+Identify potential CPU/GPU bottlenecks.
+
+Explain which component may be limiting performance in specific workloads.
+
+Never use a generic bottleneck percentage as a guaranteed measurement.
+
+## 18. HARDWARE AGE & GENERATION DATABASE
+
+Build an extendable hardware specification database.
+
+Cover:
+
+- Intel Core processors.
+- AMD Ryzen processors.
+- NVIDIA GeForce GPUs.
+- AMD Radeon GPUs.
+- Intel Arc GPUs.
+- Intel integrated graphics.
+- RAM generations.
+- Storage technologies.
+- Motherboard chipsets.
+- Network technologies.
+- Other relevant hardware.
+
+For every supported component store:
+
+- Exact model.
+- Generation.
+- Architecture.
+- Release year.
+- Official specifications.
+- Supported technologies.
+- Driver support information.
+- Compatibility limitations.
+- Successor generations.
+
+Identify outdated hardware generations and explain their limitations.
+
+Do not classify hardware as unusable just because it is old.
+
+## 19. AUTOMATIC HARDWARE DATABASE UPDATES
+
+Create an automatic hardware information database update system.
+
+Requirements:
+
+- Check periodically for new hardware information.
+- Support newly released CPU and GPU generations.
+- Update specifications and release dates.
+- Update technology support information.
+- Track database version.
+- Track last successful update date.
+- Allow manual database updates.
+- Verify downloaded data before applying it.
+- Keep a local offline database.
+- Preserve the last known good database if an update fails.
+
+Use reliable official sources, documented datasets, or legitimate APIs.
+
+Do not rely on scraping protected websites or invent API endpoints.
+
+Hardware database updates must remain independent of the Electron application auto-updater.
+
+Do not require a new SecretArea installation just to update hardware specifications.
+
+## 20. GAMING COMPATIBILITY ADVISOR
+
+Create a dedicated Gaming Hardware Analysis section.
+
+Evaluate:
+
+- CPU gaming capability.
+- GPU gaming capability.
+- VRAM capacity.
+- RAM capacity.
+- Storage performance.
+- Cooling performance.
+- Display resolution.
+- Display refresh rate.
+- DirectX compatibility.
+- Vulkan support.
+- Ray Tracing.
+- DLSS.
+- FSR.
+- XeSS.
+- Resizable BAR.
+- Hardware encoding and decoding.
+
+Determine gaming suitability for:
+
+- 720p.
+- 1080p.
+- 1440p.
+- 4K.
+
+Provide realistic graphics setting recommendations.
+
+When game requirements and benchmark data are available, compare the user's hardware against:
+
+- Minimum requirements.
+- Recommended requirements.
+- Actual benchmark results.
+- Available performance estimates.
+
+Never invent FPS results.
+
+Clearly label estimated performance and cite the benchmark source, game version, resolution, and settings where possible.
+
+## 21. APPLICATION & PROFESSIONAL SOFTWARE COMPATIBILITY
+
+Evaluate hardware compatibility for:
+
+- 3D modeling.
+- 3D rendering.
+- Video editing.
+- Programming.
+- Software development.
+- Graphic design.
+- CAD applications.
+- AI workloads.
+- Machine learning.
+- Office applications.
+- Virtual machines.
+
+Compare hardware against published system requirements.
+
+Explain limitations caused by CPU, GPU, VRAM, RAM, storage, and operating system compatibility.
+
+## 22. FUTURE COMPATIBILITY & 2030 ADVISOR
+
+Create a Future Compatibility feature.
+
+Allow users to evaluate their computer against target years:
+
+- 2027.
+- 2028.
+- 2029.
+- 2030.
+- Beyond 2030.
+
+Evaluate whether the device is likely to remain suitable for the user's intended workloads.
+
+Use:
+- Current hardware specifications.
+- Current software requirements.
+- Official operating system support information.
+- Published game requirements.
+- Known hardware limitations.
+- Historical hardware performance trends.
+
+Clearly distinguish facts from estimates.
+
+Never pretend to know the requirements of unreleased software.
+
+Example:
+
+"This laptop may struggle with demanding games in 2030 because of its limited GPU performance and VRAM. This is an estimate, not a guarantee that the laptop will stop working."
+
+Explain whether the computer may remain suitable for:
+- Daily use.
+- Office work.
+- Programming.
+- Gaming.
+- Professional software.
+- 3D rendering.
+- Video editing.
+
+## 23. SMART UPGRADE ADVISOR
+
+Analyze the user's complete hardware configuration.
+
+Recommend upgrades only when there is a genuine performance, compatibility, or reliability reason.
+
+Possible recommendations:
+
+- RAM upgrades.
+- CPU upgrades.
+- GPU upgrades.
+- SSD upgrades.
+- HDD replacement.
+- Cooling upgrades.
+- PSU upgrades.
+- Laptop battery replacement.
+- Monitor upgrades.
+- Network adapter upgrades.
+
+Before recommending anything, verify:
+
+- CPU socket.
+- Motherboard chipset.
+- BIOS compatibility.
+- RAM generation.
+- Maximum RAM capacity.
+- PCIe compatibility.
+- GPU physical dimensions when known.
+- PSU power requirements.
+- Cooling requirements.
+- Storage interfaces.
+- Laptop soldered components.
+- Available expansion slots.
+
+For each recommendation provide:
+
+1. Current hardware limitation.
+2. Recommended upgrade.
+3. Compatibility status.
+4. Expected performance improvement.
+5. Estimated cost when reliable current prices are available.
+6. Possible limitations.
+7. Whether additional upgrades are required.
+
+Never recommend incompatible components.
+
+## 24. MAINTENANCE & PREVENTIVE CARE ADVISOR
+
+Create an intelligent maintenance system.
+
+Identify possible maintenance needs:
+
+- Dust cleaning.
+- Fan inspection.
+- Thermal paste inspection.
+- Cooling system inspection.
+- SSD health monitoring.
+- HDD health monitoring.
+- Battery replacement.
+- Driver updates.
+- BIOS updates.
+- Network adapter troubleshooting.
+- Storage space cleanup.
+
+Provide maintenance priority:
+
+- Low.
+- Medium.
+- High.
+- Critical.
+
+Explain why maintenance is recommended.
+
+Do not recommend replacing components unnecessarily.
+
+Never automatically:
+- Flash BIOS.
+- Change voltage.
+- Overclock.
+- Modify fan curves.
+- Run destructive storage tests.
+- Delete personal files.
+- Perform risky hardware modifications.
+
+All potentially risky operations must require explicit user confirmation.
+
+## 25. DRIVER & FIRMWARE INTELLIGENCE
+
+Inspect installed hardware drivers.
+
+Identify:
+
+- Driver manufacturer.
+- Driver version.
+- Installation date.
+- Device status.
+- Possible outdated drivers.
+- Device errors.
+- Available official updates when verifiable.
+
+Support official update sources for:
+
+- NVIDIA.
+- AMD.
+- Intel.
+- Laptop manufacturers.
+- Motherboard manufacturers.
+
+Do not automatically install drivers or firmware without user consent.
+
+Warn users before potentially risky BIOS or firmware updates.
+
+---
+
+# PART 3 — BENCHMARKS, TESTING & DIAGNOSTICS
+
+## 26. SAFE HARDWARE BENCHMARKS
+
+Provide optional tests for:
+
+- CPU performance.
+- GPU performance.
+- RAM performance.
+- Storage read/write performance.
+- Network performance.
+
+Display actual results and comparison information when reliable benchmark datasets exist.
+
+Clearly distinguish benchmark measurements from manufacturer specifications.
+
+Do not run stress tests automatically.
+
+Allow users to stop tests at any time.
+
+Monitor temperatures during tests and provide safety warnings.
+
+Avoid excessive heat, unnecessary power consumption, and prolonged stress testing.
+
+## 27. HARDWARE ERROR DETECTION
+
+Inspect available Windows diagnostic information for:
+
+- Device Manager errors.
+- Hardware-related Event Viewer warnings.
+- WHEA hardware errors.
+- Storage errors.
+- Driver crashes.
+- GPU driver resets.
+- Unexpected shutdowns.
+- Thermal events.
+- Memory errors when diagnostic evidence exists.
+
+Provide understandable explanations and possible solutions.
+
+Never automatically modify system settings to fix errors.
+
+---
+
+# PART 4 — UI & USER EXPERIENCE
+
+## 28. COMPLETE HARDWARE MONITOR STRUCTURE
+
+Integrate the new features into the existing Hardware Monitor.
+
+Create well-organized sections:
+
+1. PC Health Overview.
+2. Complete Hardware Inventory.
+3. Motherboard Details.
+4. CPU Intelligence.
+5. GPU Intelligence.
+6. RAM & Memory.
+7. Storage Health.
+8. Fans & Cooling.
+9. Temperature Monitoring.
+10. Ports & Connectors.
+11. Power Management.
+12. Display & Monitors.
+13. Network & Connectivity.
+14. Connected Devices.
+15. Laptop Battery Health.
+16. Gaming Compatibility.
+17. Professional Application Compatibility.
+18. Hardware Generation Database.
+19. Future Compatibility.
+20. Smart Upgrade Advisor.
+21. Maintenance Advisor.
+22. Drivers & Firmware.
+23. Benchmarks & Diagnostics.
+
+Use expandable sections to avoid overwhelming users.
+
+Provide an easy-to-understand summary and advanced technical details for experienced users.
+
+Allow users to export a hardware report without exposing private identifiers by default.
+
+## 29. HARDWARE HEALTH REPORT
+
+Create a professional report containing:
+
+- Computer model.
+- Desktop or Laptop classification.
+- CPU information.
+- GPU information.
+- RAM configuration.
+- Motherboard information.
+- Storage devices.
+- Fan information.
+- Temperature information.
+- Port inventory.
+- Network adapters.
+- Battery information when applicable.
+- Health assessments.
+- Gaming compatibility.
+- Upgrade recommendations.
+- Maintenance recommendations.
+- Detection limitations.
+
+Allow export to PDF or JSON.
+
+Provide an option to hide serial numbers, MAC addresses, and other sensitive identifiers.
+
+## 30. USER WORKLOAD PROFILE
+
+Allow users to select their primary use:
+
+- Gaming.
+- Office & Daily Use.
+- Programming.
+- 3D Modeling & Rendering.
+- Video Editing.
+- Graphic Design.
+- AI & Machine Learning.
+- Professional Work.
+- General Mixed Usage.
+
+Use this preference to personalize compatibility assessments and upgrade recommendations.
+
+A computer that is old for gaming may still be excellent for office work.
+
+Never recommend replacing a computer simply because its hardware generation is old.
+
+## 31. DESIGN & TRANSLATIONS
+
+Preserve SecretArea's existing visual identity.
+
+Support:
+
+- Dark theme.
+- Light theme.
+- English.
+- French.
+- Spanish.
+- Arabic RTL.
+
+All new pages, labels, warnings, tooltips, and reports must be translated.
+
+Maintain responsive layouts and consistent desktop styling.
+
+Do not redesign existing Hardware Monitor functionality unnecessarily.
+
+---
+
+# PART 5 — TECHNICAL ARCHITECTURE, SECURITY & PERFORMANCE
+
+## 32. HARDWARE DETECTION TECHNOLOGY
+
+Inspect the existing implementation first.
+
+Reuse existing libraries and architecture.
+
+Where appropriate, use:
+
+- Node.js systeminformation.
+- Windows WMI.
+- Windows Management Instrumentation.
+- Windows PnP device enumeration.
+- SMBIOS.
+- Windows system APIs.
+- LibreHardwareMonitor.
+- NVML for supported NVIDIA telemetry.
+- Official AMD and Intel telemetry interfaces.
+- SMART tools.
+- Windows Event Viewer.
+- Device Manager information.
+- Manufacturer-supported APIs.
+
+Use multiple detection sources when necessary.
+
+Never assume that one library can detect every hardware component.
+
+## 33. REAL DATA VS ESTIMATED DATA
+
+Every hardware information item must have an appropriate data status.
+
+Use:
+
+- Detected.
+- Measured.
+- Manufacturer Specification.
+- Estimated.
+- Not Supported.
+- Not Detected.
+- Sensor Unavailable.
+- Unknown.
+
+For every important value, identify its source where possible.
+
+Never display an estimated value as an actual measurement.
+
+Never fabricate missing information.
+
+Do not interpret missing sensor readings as hardware failure.
+
+## 34. SECURITY & PRIVACY
+
+- Follow Electron security best practices.
+- Keep context isolation enabled.
+- Use a secure preload bridge.
+- Never expose unrestricted Node.js APIs to the renderer.
+- Validate IPC requests.
+- Never execute arbitrary commands from remote data.
+- Never execute downloaded scripts automatically.
+- Do not upload hardware information without explicit user consent.
+- Protect sensitive device identifiers.
+- Avoid unnecessary Administrator privileges.
+- Require explicit confirmation for risky diagnostic operations.
+
+## 35. PERFORMANCE OPTIMIZATION
+
+This is extremely important.
+
+The expanded Hardware Monitor must not cause performance problems.
+
+Requirements:
+
+- Lightweight background monitoring.
+- Configurable refresh intervals.
+- Avoid unnecessary polling.
+- Avoid unnecessary React re-renders.
+- Efficient sensor collection.
+- Efficient chart updates.
+- Proper resource cleanup.
+- No unnecessary background processes.
+- No excessive RAM usage.
+- No CPU spikes.
+- No scroll stuttering.
+- Avoid blocking the Electron main process.
+- Avoid unnecessary IPC traffic.
+- Use caching where appropriate.
+- Pause unnecessary monitoring when the application is minimized or inactive.
+
+Preserve smooth scrolling and the existing Custom Animated Cursor functionality.
+
+Do not sacrifice UI responsiveness for additional hardware data.
+
+---
+
+# PART 6 — IMPLEMENTATION PLAN & FINAL REPORT
+
+## 36. IMPLEMENTATION RULES
+
+Before changing code:
+
+1. Inspect the complete existing Hardware Monitor implementation.
+2. Inspect current Electron main and preload architecture.
+3. Identify existing hardware detection libraries.
+4. Identify existing sensors and data sources.
+5. Identify what already works.
+6. Identify missing detection capabilities.
+7. Prepare an implementation plan.
+8. Avoid duplicate services and unnecessary dependencies.
+
+Implement incrementally while preserving existing functionality.
+
+Do not remove existing features or replace working components unnecessarily.
+
+## 37. MANUAL SETUP REQUIREMENTS
+
+If any additional dependency, library, Windows permission, driver, sensor service, or external tool is required:
+
+- Tell me exactly what is needed.
+- Explain why it is required.
+- Provide official download links.
+- Explain installation step by step.
+- Explain whether the dependency is optional or mandatory.
+- Explain whether the end user must install it.
+- Prefer automatic, safe installation only when explicitly approved by the user.
+
+Do not assume that I have already installed additional tools.
+
+## 38. TESTING REQUIREMENTS
+
+Test:
+
+- Desktop PC.
+- Laptop.
+- NVIDIA GPU.
+- AMD GPU.
+- Intel integrated graphics.
+- Multiple GPU configurations.
+- Multiple storage drives.
+- Different RAM configurations.
+- Devices with unavailable sensors.
+- Devices without LibreHardwareMonitor.
+- Devices without Administrator privileges.
+- Devices with multiple monitors.
+- Devices with missing hardware information.
+
+Test both development mode and packaged Electron production builds.
+
+## 39. FINAL IMPLEMENTATION REPORT
+
+After implementation, provide:
+
+1. Complete list of modified and created files.
+2. New dependencies.
+3. Hardware detection methods.
+4. Features successfully implemented.
+5. Features with partial support.
+6. Features that cannot be reliably detected on all systems.
+7. Real measurements versus estimates.
+8. Hardware database update mechanism.
+9. Security considerations.
+10. Performance impact.
+11. Exact manual installation steps.
+12. Testing instructions.
+13. Any remaining limitations.
+
+Do not claim a feature is complete unless it has actually been implemented and tested.
+
+---
+
+# FINAL VISION
+
+I want SecretArea Desktop to become an intelligent PC Hardware Health & Intelligence Platform.
+
+When a user opens Hardware Monitor, SecretArea should inspect the maximum possible amount of information about their computer, whether it is a desktop PC or laptop.
+
+It should understand the hardware, monitor its condition, detect potential problems, identify outdated components, evaluate gaming and professional software compatibility, recommend maintenance, and suggest safe hardware upgrades.
+
+The system must be accurate, secure, lightweight, regularly updated, and useful for both beginners and advanced PC users.
+
+Do not break any existing SecretArea functionality, including:
+
+- Existing Hardware Monitor.
+- Live Performance charts.
+- GPU detection and selection.
+- Download Manager.
+- Notification Center.
+- Update History.
+- Electron functionality.
+- Automatic updates.
+- Existing pages and navigation.
+- All themes and translations.
+- Arabic RTL.
+- Custom Animated Cursor.
+
+The priority is maximum genuine hardware discovery, reliable diagnostics, intelligent recommendations, and excellent application performance.

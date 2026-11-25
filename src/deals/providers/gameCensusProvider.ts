@@ -1,4 +1,4 @@
-import { fetchCachedProviderJson } from '../httpClient';
+import { fetchCachedProviderJson, sanitizeExternalHttpUrl } from '../httpClient';
 import type {
   CensusMoverEntry,
   GameHealthTier,
@@ -152,7 +152,8 @@ class GameCensusProviderImpl {
             : null,
         reviewScoreDesc: data.reviews?.steam_review_desc || null,
         reviewsRecordedAt: parseIsoOrNull(data.reviews?.recorded_at),
-        sourceUrl: data.url || `https://thegamecensus.com/game/${cleanId}`,
+        sourceUrl:
+          sanitizeExternalHttpUrl(data.url) || `https://thegamecensus.com/game/${encodeURIComponent(cleanId)}`,
       };
     } catch {
       return null;
@@ -273,7 +274,9 @@ class GameCensusProviderImpl {
           healthTier: normalizeHealthTier(m.health_tier),
           ccuLatest: typeof m.ccu_latest === 'number' ? m.ccu_latest : null,
           recordedAt: parseIsoOrNull(m.recorded_at || m.recent_period_start) ?? computedAt,
-          sourceUrl: m.url || `https://thegamecensus.com/game/${m.app_id}`,
+          sourceUrl:
+            sanitizeExternalHttpUrl(m.url) ||
+            `https://thegamecensus.com/game/${encodeURIComponent(String(m.app_id))}`,
         }));
     } catch {
       return [];

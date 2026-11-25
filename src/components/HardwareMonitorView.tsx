@@ -3,29 +3,52 @@ import {
   ArrowClockwise,
   ArrowDown,
   ArrowUp,
+  CalendarCheck,
   Cpu,
+  Database,
   Desktop,
   Fan,
   GameController,
   Gauge,
   GraphicsCard,
   HardDrive,
+  Heartbeat,
   Lightning,
   Memory,
   Pause,
   Play,
+  Plug,
   Pulse,
   Sparkle,
   Thermometer,
   WifiHigh,
 } from '@phosphor-icons/react';
-import type { HardwareMonitorSnapshot, PresentMonSetupState } from '../types';
+import type {
+  DataProvenance,
+  DeepHardwareInventory,
+  GameItem,
+  HardwareDbEntry,
+  HardwareDbState,
+  HardwareMonitorSnapshot,
+  PresentMonSetupState,
+  WorkloadProfileId,
+} from '../types';
 import type { AppLanguage } from '../services/launcherSettings';
 import { getTranslations } from '../i18n/translations';
 import { GamingPerformancePanel } from './hardware/GamingPerformancePanel';
 import { GpuCapabilitiesPanel } from './hardware/GpuCapabilitiesPanel';
 import { PcCleanerPanel } from './hardware/PcCleanerPanel';
+import { HealthDiagnosticsPanel } from './hardware/HealthDiagnosticsPanel';
+import { SystemInventoryPortsPanel } from './hardware/SystemInventoryPortsPanel';
+import { CompatibilityUpgradeAdvisorPanel } from './hardware/CompatibilityUpgradeAdvisorPanel';
+import { BenchmarksAndDatabasePanel } from './hardware/BenchmarksAndDatabasePanel';
 import {
+  BUNDLED_HARDWARE_DATABASE,
+  BUNDLED_HARDWARE_DB_UPDATED_AT,
+  BUNDLED_HARDWARE_DB_VERSION,
+} from '../data/hardwareDatabase';
+import {
+  collectBrowserDeepInventory,
   EMPTY_HARDWARE_SNAPSHOT,
   formatClockGhz,
   formatClockMhz,
@@ -38,16 +61,26 @@ import {
   formatTemperatureC,
   formatUptime,
   formatVramMB,
+  getDesktopHardwareIntelligenceBridge,
   getDesktopHardwareMonitorBridge,
   isValidMetric,
   selectPrimaryGpu,
 } from '../services/hardwareMonitor';
+import {
+  computeHealthAssessment,
+  loadUserPsuWatts,
+  loadWorkloadProfile,
+  mergeHardwareDatabases,
+  saveUserPsuWatts,
+  saveWorkloadProfile,
+} from '../services/hardwareIntelligence';
 
 interface HardwareMonitorViewProps {
   isDesktopApp: boolean;
   language?: AppLanguage;
   presentMonSetupState?: PresentMonSetupState;
   onOpenPresentMonManager?: () => void;
+  catalogGames?: GameItem[];
 }
 
 interface TelemetrySample {
@@ -472,21 +505,123 @@ export function HardwareMonitorView({
   language = 'en',
   presentMonSetupState,
   onOpenPresentMonManager,
+  catalogGames = [],
 }: HardwareMonitorViewProps) {
   const tr = getTranslations(language);
   const t = tr.hardware;
   const naLabel = t.naValue;
 
   const bridge = useMemo(() => getDesktopHardwareMonitorBridge(), []);
+  const intelBridge = useMemo(() => getDesktopHardwareIntelligenceBridge(), []);
   const hasDesktopTelemetry = Boolean(isDesktopApp && bridge);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'gaming' | 'technologies' | 'cleaner'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'health' | 'inventory' | 'advisors' | 'benchmarks' | 'gaming' | 'technologies' | 'cleaner'
+  >('overview');
   const [snapshot, setSnapshot] = useState<HardwareMonitorSnapshot>(EMPTY_HARDWARE_SNAPSHOT);
   const [isMonitoring, setIsMonitoring] = useState<boolean>(hasDesktopTelemetry);
   const [intervalMs, setIntervalMs] = useState<number>(1500);
   const [isRefreshingOnce, setIsRefreshingOnce] = useState<boolean>(false);
   const [history, setHistory] = useState<TelemetrySample[]>([]);
   const lastSampleTsRef = useRef<number>(0);
+
+  const [workload, setWorkload] = useState<WorkloadProfileId>(() => loadWorkloadProfile());
+  const [userPsuWatts, setUserPsuWatts] = useState<number | null>(() => loadUserPsuWatts());
+  const [deepInventory, setDeepInventory] = useState<DeepHardwareInventory | null>(null);
+  const [isLoadingDeepInventory, setIsLoadingDeepInventory] = useState<boolean>(false);
+  const [dbState, setDbState] = useState<HardwareDbState>({
+    dbVersion: BUNDLED_HARDWARE_DB_VERSION,
+    lastUpdatedAt: BUNDLED_HARDWARE_DB_UPDATED_AT,
+    lastCheckedAt: null,
+    updateFeedUrl: 'https://raw.githubusercontent.com/secretarea1337/secretarea-desktop/main/hardware-db.json',
+    entryCount: BUNDLED_HARDWARE_DATABASE.length,
+    hasBackup: false,
+    lastError: null,
+    sourceLabel: 'Bundled Offline Hardware Database',
+    customEntriesCount: 0,
+  });
+  const [customDbEntries, setCustomDbEntries] = useState<HardwareDbEntry[]>([]);
+
+  const loadDeepInventory = useCallback(
+    async (forceRefresh = false) => {
+      setIsLoadingDeepInventory(true);
+      try {
+        if (hasDesktopTelemetry && intelBridge) {
+          const inv = await intelBridge.getDeepInventory(forceRefresh);
+          if (inv) {
+            setDeepInventory(inv);
+            return;
+          }
+        }
+        const browserInv = await collectBrowserDeepInventory();
+        setDeepInventory(browserInv);
+      } finally {
+        setIsLoadingDeepInventory(false);
+      }
+    },
+    [hasDesktopTelemetry, intelBridge]
+  );
+
+  useEffect(() => {
+    void loadDeepInventory(false);
+    if (hasDesktopTelemetry && intelBridge) {
+      void intelBridge.getDbState().then((st) => {
+        if (st) setDbState(st);
+      });
+      void intelBridge.getDbEntries().then((entries) => {
+        if (Array.isArray(entries)) setCustomDbEntries(entries);
+      });
+    }
+  }, [hasDesktopTelemetry, intelBridge, loadDeepInventory]);
+
+  const mergedDbEntries = useMemo(
+    () => mergeHardwareDatabases(customDbEntries),
+    [customDbEntries]
+  );
+
+  const [fallbackInventory, setFallbackInventory] = useState<DeepHardwareInventory | null>(null);
+  useEffect(() => {
+    if (!deepInventory) {
+      void collectBrowserDeepInventory().then(setFallbackInventory);
+    }
+  }, [deepInventory]);
+
+  const activeInventory = deepInventory || fallbackInventory;
+
+  const assessment = useMemo(() => {
+    if (!activeInventory) return null;
+    return computeHealthAssessment({
+      snapshot,
+      inventory: activeInventory,
+      workload,
+      dbEntries: mergedDbEntries,
+      userPsuWatts,
+    });
+  }, [snapshot, activeInventory, workload, mergedDbEntries, userPsuWatts]);
+
+  const provenanceLabels = useMemo<Record<DataProvenance, string>>(
+    () => ({
+      detected: t.provDetected,
+      measured: t.provMeasured,
+      manufacturer_spec: t.provSpec,
+      estimated: t.provEstimated,
+      not_supported: t.provNotSupported,
+      not_detected: t.provNotDetected,
+      sensor_unavailable: t.provSensorUnavailable,
+      unknown: t.provUnknown,
+    }),
+    [t]
+  );
+
+  const handleChangeWorkload = useCallback((next: WorkloadProfileId) => {
+    setWorkload(next);
+    saveWorkloadProfile(next);
+  }, []);
+
+  const handleChangeUserPsuWatts = useCallback((next: number | null) => {
+    setUserPsuWatts(next);
+    saveUserPsuWatts(next);
+  }, []);
 
   const appendSnapshot = useCallback((next: HardwareMonitorSnapshot | null) => {
     if (!next) return;
@@ -787,7 +922,7 @@ export function HardwareMonitorView({
           )}
         </section>
 
-        {/* Sub-Navigation Tabs for Telemetry, Gaming, Technologies, and PC Cleaner */}
+        {/* Sub-Navigation Tabs for Live Telemetry, Health Diagnostics, Inventory/Ports, Advisors/2030, Benchmarks/DB, Gaming, GPU Tech, and PC Cleaner */}
         <nav
           aria-label={t.pageTitle}
           className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-white/[0.08] pb-3"
@@ -795,6 +930,10 @@ export function HardwareMonitorView({
           {(
             [
               { id: 'overview', label: t.tabOverview, Icon: Pulse },
+              { id: 'health', label: t.tabHealth, Icon: Heartbeat },
+              { id: 'inventory', label: t.tabInventoryPorts, Icon: Plug },
+              { id: 'advisors', label: t.tabAdvisors2030, Icon: CalendarCheck },
+              { id: 'benchmarks', label: t.tabBenchmarksDb, Icon: Database },
               { id: 'gaming', label: t.tabGaming, Icon: GameController },
               { id: 'technologies', label: t.tabTechnologies, Icon: GraphicsCard },
               { id: 'cleaner', label: t.tabCleaner, Icon: Sparkle },
@@ -806,7 +945,7 @@ export function HardwareMonitorView({
                 key={id}
                 type="button"
                 onClick={() => setActiveTab(id)}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-[12.5px] font-semibold border transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-[12.5px] font-semibold border transition-colors whitespace-nowrap cursor-pointer ${
                   active
                     ? 'bg-[#0284c7] dark:bg-[#0ea5e9] border-[#0284c7] dark:border-[#38bdf8] text-white shadow-xs'
                     : 'bg-white dark:bg-[#171d25] border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-[#cbd5e1] hover:bg-slate-100 dark:hover:bg-[#1e2633]'
@@ -818,6 +957,57 @@ export function HardwareMonitorView({
             );
           })}
         </nav>
+
+        {activeTab === 'health' && activeInventory && assessment && (
+          <HealthDiagnosticsPanel
+            isDesktopApp={hasDesktopTelemetry}
+            snapshot={snapshot}
+            inventory={activeInventory}
+            isLoadingInventory={isLoadingDeepInventory}
+            onRefreshInventory={() => void loadDeepInventory(true)}
+            assessment={assessment}
+            workload={workload}
+            onChangeWorkload={handleChangeWorkload}
+            provenanceLabels={provenanceLabels}
+            t={t as unknown as Record<string, string>}
+          />
+        )}
+
+        {activeTab === 'inventory' && activeInventory && (
+          <SystemInventoryPortsPanel
+            snapshot={snapshot}
+            inventory={activeInventory}
+            provenanceLabels={provenanceLabels}
+            t={t as unknown as Record<string, string>}
+          />
+        )}
+
+        {activeTab === 'advisors' && activeInventory && assessment && (
+          <CompatibilityUpgradeAdvisorPanel
+            snapshot={snapshot}
+            inventory={activeInventory}
+            assessment={assessment}
+            dbEntries={mergedDbEntries}
+            catalogGames={catalogGames}
+            userPsuWatts={userPsuWatts}
+            onChangeUserPsuWatts={handleChangeUserPsuWatts}
+            provenanceLabels={provenanceLabels}
+            t={t as unknown as Record<string, string>}
+          />
+        )}
+
+        {activeTab === 'benchmarks' && (
+          <BenchmarksAndDatabasePanel
+            isDesktopApp={hasDesktopTelemetry}
+            dbState={dbState}
+            dbEntries={mergedDbEntries}
+            onDbUpdated={(nextState, nextEntries) => {
+              setDbState(nextState);
+              setCustomDbEntries(nextEntries);
+            }}
+            t={t as unknown as Record<string, string>}
+          />
+        )}
 
         {activeTab === 'gaming' && (
           <GamingPerformancePanel

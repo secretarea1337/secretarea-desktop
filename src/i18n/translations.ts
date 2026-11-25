@@ -916,6 +916,178 @@ export interface LauncherTranslations {
     cleanerCatRecycleDesc: string;
     cleanerCatBrowserTitle: string;
     cleanerCatBrowserDesc: string;
+    tabHealth: string;
+    tabInventoryPorts: string;
+    tabAdvisors2030: string;
+    tabBenchmarksDb: string;
+    provDetected: string;
+    provMeasured: string;
+    provSpec: string;
+    provEstimated: string;
+    provNotSupported: string;
+    provNotDetected: string;
+    provSensorUnavailable: string;
+    provRequiresAdmin: string;
+    provUnknown: string;
+    workloadProfileLabel: string;
+    workloadGaming: string;
+    workloadOffice: string;
+    workloadProgramming: string;
+    workload3d: string;
+    workloadVideo: string;
+    workloadDesign: string;
+    workloadAi: string;
+    workloadPro: string;
+    workloadMixed: string;
+    intelRefreshDeepScan: string;
+    loadingDeepScan: string;
+    intelPrivacyOn: string;
+    intelPrivacyOff: string;
+    intelExportJson: string;
+    intelExportPdf: string;
+    intelExportHtml: string;
+    intelExportSuccess: string;
+    intelExportHtmlWebNote: string;
+    intelUnknown: string;
+    intelUnavailable: string;
+    intelNotDetected: string;
+    intelSensorUnavailable: string;
+    intelSourceLabel: string;
+    desktopOnlyHint: string;
+    healthPhysicalTitle: string;
+    healthMeasuredCoverage: string;
+    healthPerformanceTitle: string;
+    healthAgeTitle: string;
+    healthAgeNote: string;
+    healthLifespanTitle: string;
+    healthLifespanDisclaimer: string;
+    healthBreakdownTitle: string;
+    thermalCoolingTitle: string;
+    fanNoSourceHint: string;
+    fansDetectedHeader: string;
+    fansUnavailableBody: string;
+    fanStatusRunning: string;
+    fanStatusStopped: string;
+    fanStatusAbnormal: string;
+    fanStatusNotDetected: string;
+    fanStatusUnavailable: string;
+    thermalSensorsHeader: string;
+    thermalPhysicalNoticeTitle: string;
+    errorsDriversTitle: string;
+    errorsDriversSubtitle: string;
+    pnpErrorsHeader: string;
+    pnpNoErrors: string;
+    eventLogsHeader: string;
+    eventLogsEmpty: string;
+    signedDriversHeader: string;
+    searchDriversPlaceholder: string;
+    driverDeviceCol: string;
+    driverClassCol: string;
+    driverVersionCol: string;
+    driverDateCol: string;
+    driverSignedCol: string;
+    sysIdTitle: string;
+    sysFormFactor: string;
+    sysSku: string;
+    sysSerialMasked: string;
+    sysOsBuild: string;
+    sysArch: string;
+    sysBootMode: string;
+    sysSecureBoot: string;
+    sysTpm: string;
+    sysSensorBackends: string;
+    moboTitle: string;
+    moboChipset: string;
+    moboSocket: string;
+    moboBios: string;
+    moboBiosDate: string;
+    moboRamSupport: string;
+    moboPcieSlots: string;
+    portsTitle: string;
+    portsSubtitle: string;
+    portsHonestyBanner: string;
+    portsTabConfirmed: string;
+    portsTabControllers: string;
+    portsTabConnected: string;
+    portsTabUnconfirmed: string;
+    portsBucketEmpty: string;
+    storageSmartTitle: string;
+    storageSmartSubtitle: string;
+    smartUnavailable: string;
+    smartWearLabel: string;
+    smartPohLabel: string;
+    smartCyclesLabel: string;
+    smartErrorsLabel: string;
+    cpuGpuDeepTitle: string;
+    cpuCacheLabel: string;
+    cpuVirtLabel: string;
+    cpuVoltageLabel: string;
+    multiGpuRolesHeader: string;
+    ramDimmsTitle: string;
+    ramEccLabel: string;
+    ramPagefileLabel: string;
+    ramDimmsUnavailable: string;
+    displaysDeepTitle: string;
+    powerPsuBatteryTitle: string;
+    psuTelemetryHeader: string;
+    batteryDesignVsFull: string;
+    batteryCyclesLabel: string;
+    batteryRateLabel: string;
+    peripheralsNetTitle: string;
+    adaptersLabel: string;
+    peripheralsLabel: string;
+    systemComponentsLabel: string;
+    future2030Title: string;
+    future2030Subtitle: string;
+    futureProjectedVerdict: string;
+    futureVerifiedFactsTitle: string;
+    futureForwardEstimatesTitle: string;
+    upgradeAdvisorTitle: string;
+    upgradeAdvisorSubtitle: string;
+    psuWattageInputLabel: string;
+    psuApplyBtn: string;
+    psuOptionalHint: string;
+    upgradeNoneNeeded: string;
+    compatVerified: string;
+    compatCheckNeeded: string;
+    gamingCompatTitle: string;
+    gamingCompatSubtitle: string;
+    catalogGamesCheckTitle: string;
+    catalogSearchPlaceholder: string;
+    proCompatTitle: string;
+    maintenanceTitle: string;
+    maintenanceSafetyNote: string;
+    benchTitle: string;
+    benchSubtitle: string;
+    benchSafetyNotice: string;
+    benchCpuSingle: string;
+    benchCpuMulti: string;
+    benchRamThroughput: string;
+    benchStorageSeq: string;
+    benchStorage4k: string;
+    benchNetLatency: string;
+    benchStartBtn: string;
+    benchStartWebBtn: string;
+    benchCancelBtn: string;
+    benchStarting: string;
+    benchRunningWeb: string;
+    benchCompleted: string;
+    benchAbortedThermal: string;
+    benchCancelled: string;
+    dbTitle: string;
+    dbVersionLabel: string;
+    dbEntriesLabel: string;
+    dbSourceLabel: string;
+    dbCheckUpdateBtn: string;
+    dbCustomFeedConsentLabel: string;
+    dbImportJsonBtn: string;
+    dbRollbackBtn: string;
+    dbSearchPlaceholder: string;
+    dbWebOfflineNote: string;
+    dbUpdateApplied: string;
+    dbUpToDate: string;
+    dbImportSuccess: string;
+    dbRollbackSuccess: string;
   };
   updateHistory: {
     title: string;
@@ -2080,6 +2252,178 @@ const EN: LauncherTranslations = {
     cleanerCatRecycleDesc: 'Permanently empties items currently sitting in the Recycle Bin.',
     cleanerCatBrowserTitle: 'Browser HTTP Cache Only (No History/Cookies)',
     cleanerCatBrowserDesc: 'Clears ONLY Cache / Code Cache folders in Edge, Chrome, or Firefox. Preserves logins, cookies, bookmarks, and history.',
+    tabHealth: 'Health & Diagnostics',
+    tabInventoryPorts: 'System & Ports',
+    tabAdvisors2030: 'Advisors & 2030+',
+    tabBenchmarksDb: 'Benchmarks & DB',
+    provDetected: 'Detected',
+    provMeasured: 'Measured',
+    provSpec: 'Spec',
+    provEstimated: 'Estimated',
+    provNotSupported: 'Not Supported',
+    provNotDetected: 'Not Detected',
+    provSensorUnavailable: 'Sensor Unavailable',
+    provRequiresAdmin: 'Requires Admin',
+    provUnknown: 'Unknown',
+    workloadProfileLabel: 'Primary Workload',
+    workloadGaming: 'Gaming',
+    workloadOffice: 'Office & Everyday',
+    workloadProgramming: 'Programming & VMs',
+    workload3d: '3D Modeling & Rendering',
+    workloadVideo: 'Video Editing',
+    workloadDesign: 'Graphic Design',
+    workloadAi: 'AI / Machine Learning',
+    workloadPro: 'General Professional',
+    workloadMixed: 'Mixed Usage',
+    intelRefreshDeepScan: 'Rescan Hardware',
+    loadingDeepScan: 'Collecting deep hardware inventory...',
+    intelPrivacyOn: 'Privacy Shield: ON',
+    intelPrivacyOff: 'Privacy Shield: OFF',
+    intelExportJson: 'Export JSON',
+    intelExportPdf: 'Export PDF',
+    intelExportHtml: 'Export Report',
+    intelExportSuccess: 'Hardware report exported successfully',
+    intelExportHtmlWebNote: 'Printable HTML report downloaded (open and Print to PDF).',
+    intelUnknown: 'Unknown',
+    intelUnavailable: 'Unavailable',
+    intelNotDetected: 'Not Detected',
+    intelSensorUnavailable: 'Sensor Unavailable',
+    intelSourceLabel: 'Sensor Source',
+    desktopOnlyHint: 'Available in SecretArea Desktop (Windows / Linux).',
+    healthPhysicalTitle: 'Physical Health',
+    healthMeasuredCoverage: 'components measured',
+    healthPerformanceTitle: 'Performance Capability',
+    healthAgeTitle: 'Hardware Generation Age',
+    healthAgeNote: 'Derived from matched CPU/GPU/RAM release years',
+    healthLifespanTitle: 'Estimated Useful Life',
+    healthLifespanDisclaimer: 'Depends on workloads, thermal care & component wear',
+    healthBreakdownTitle: 'Component Health & Bottleneck Analysis',
+    thermalCoolingTitle: 'Fans, Cooling & Thermal Diagnostics',
+    fanNoSourceHint: 'No fan RPM bridge detected (install LibreHardwareMonitor on Windows for motherboard fan RPM)',
+    fansDetectedHeader: 'Detected Fans & Cooling',
+    fansUnavailableBody: 'No fan RPM sensors were exposed by OS APIs. Running LibreHardwareMonitor on Windows or lm-sensors/hwmon on Linux exposes motherboard and case fan RPMs without guessing.',
+    fanStatusRunning: 'Running',
+    fanStatusStopped: 'Stopped — Confirmed',
+    fanStatusAbnormal: 'Abnormal RPM',
+    fanStatusNotDetected: 'Not Detected',
+    fanStatusUnavailable: 'Sensor Unavailable',
+    thermalSensorsHeader: 'Temperature Sensors',
+    thermalPhysicalNoticeTitle: 'Physical Inspection Required',
+    errorsDriversTitle: 'Hardware Errors, Event Logs & Drivers',
+    errorsDriversSubtitle: 'Read-only Device Manager codes, WHEA/Disk/Display Event Viewer logs & signed drivers',
+    pnpErrorsHeader: 'Device Manager Errors',
+    pnpNoErrors: 'No Device Manager hardware error codes detected.',
+    eventLogsHeader: 'System Event Logs (14 Days)',
+    eventLogsEmpty: 'No critical WHEA, disk, display, or thermal events recorded.',
+    signedDriversHeader: 'Signed Hardware Drivers',
+    searchDriversPlaceholder: 'Search drivers or class...',
+    driverDeviceCol: 'Device',
+    driverClassCol: 'Class',
+    driverVersionCol: 'Version',
+    driverDateCol: 'Date',
+    driverSignedCol: 'Signature',
+    sysIdTitle: 'System Identification',
+    sysFormFactor: 'Form Factor',
+    sysSku: 'Product / SKU',
+    sysSerialMasked: 'Serial (Masked)',
+    sysOsBuild: 'OS & Build',
+    sysArch: 'Architecture',
+    sysBootMode: 'Boot Mode',
+    sysSecureBoot: 'Secure Boot',
+    sysTpm: 'TPM Security',
+    sysSensorBackends: 'Active Telemetry Backends',
+    moboTitle: 'Motherboard Diagnostics',
+    moboChipset: 'Chipset',
+    moboSocket: 'CPU Socket',
+    moboBios: 'BIOS / UEFI',
+    moboBiosDate: 'BIOS Date',
+    moboRamSupport: 'Memory Support',
+    moboPcieSlots: 'PCIe / Expansion Slots (SMBIOS)',
+    portsTitle: 'Ports, Connectors & Hardware Controllers',
+    portsSubtitle: 'Strictly separates physical SMBIOS ports from OS host controllers and plugged devices',
+    portsHonestyBanner: 'Accuracy rule: A USB host controller is NOT counted as 1 physical USB port. Unconfirmed chassis ports are separated rather than guessed.',
+    portsTabConfirmed: 'Confirmed Physical Ports',
+    portsTabControllers: 'Hardware Controllers',
+    portsTabConnected: 'Connected Devices',
+    portsTabUnconfirmed: 'Unconfirmed / Internal Headers',
+    portsBucketEmpty: 'No items reported in this category by the OS/SMBIOS tables.',
+    storageSmartTitle: 'Storage Health & SMART Diagnostics',
+    storageSmartSubtitle: 'Drives without SMART reliability counters are marked Unavailable — never assumed healthy',
+    smartUnavailable: 'SMART Unavailable',
+    smartWearLabel: 'SSD Wear / Life',
+    smartPohLabel: 'Power-On Hours',
+    smartCyclesLabel: 'Power Cycles',
+    smartErrorsLabel: 'Uncorrected Errors',
+    cpuGpuDeepTitle: 'Expanded CPU & Multi-GPU Roles',
+    cpuCacheLabel: 'CPU Cache',
+    cpuVirtLabel: 'Hardware Virtualization',
+    cpuVoltageLabel: 'Core Voltage',
+    multiGpuRolesHeader: 'GPU Role Assignment (iGPU vs dGPU)',
+    ramDimmsTitle: 'RAM & Per-DIMM Breakdown',
+    ramEccLabel: 'ECC Status',
+    ramPagefileLabel: 'Pagefile / Virtual Memory',
+    ramDimmsUnavailable: 'Per-slot DIMM SMBIOS details are unavailable in this environment.',
+    displaysDeepTitle: 'Displays & EDID Physical Dimensions',
+    powerPsuBatteryTitle: 'Power Supply & Battery Diagnostics',
+    psuTelemetryHeader: 'Desktop PSU Telemetry Disclosure',
+    batteryDesignVsFull: 'Full vs Design Capacity',
+    batteryCyclesLabel: 'Charge Cycles',
+    batteryRateLabel: 'Charge / Discharge Rate',
+    peripheralsNetTitle: 'Network Links, Peripherals & System Components',
+    adaptersLabel: 'Adapters',
+    peripheralsLabel: 'Peripherals',
+    systemComponentsLabel: 'Controllers & Components',
+    future2030Title: 'Future Compatibility & 2030+ Advisor',
+    future2030Subtitle: 'Separates verified detected hardware facts from forward projections (2027–2030+)',
+    futureProjectedVerdict: 'Projected Readiness',
+    futureVerifiedFactsTitle: 'Verified Hardware Facts',
+    futureForwardEstimatesTitle: 'Forward Estimates & Assumptions',
+    upgradeAdvisorTitle: 'Smart Upgrade Advisor',
+    upgradeAdvisorSubtitle: 'Checks socket, RAM generation/slots, soldered laptop constraints & PSU headroom',
+    psuWattageInputLabel: 'Your Desktop PSU Wattage (W)',
+    psuApplyBtn: 'Verify PSU',
+    psuOptionalHint: 'Optional — software cannot read standard ATX PSU wattage.',
+    upgradeNoneNeeded: 'No urgent compatibility-verified hardware upgrades required for your selected workload.',
+    compatVerified: 'Compatibility Verified',
+    compatCheckNeeded: 'Verify Clearance / PSU',
+    gamingCompatTitle: 'Gaming Compatibility & Catalog Checker',
+    gamingCompatSubtitle: 'Realistic resolution/preset guidance plus SecretArea Game Catalog checks (no fake FPS)',
+    catalogGamesCheckTitle: 'Test Against SecretArea Catalog Games',
+    catalogSearchPlaceholder: 'Search catalog game...',
+    proCompatTitle: 'Professional Application Compatibility',
+    maintenanceTitle: 'Maintenance & Preventive Care Advisor',
+    maintenanceSafetyNote: 'Read-only guidance — never auto-flashes BIOS, edits voltages, or deletes personal data',
+    benchTitle: 'Safe Optional Micro-Benchmarks',
+    benchSubtitle: 'Short, non-destructive, cancellable tests with live temperature safety auto-abort',
+    benchSafetyNotice: 'Benchmarks are optional and user-triggered. Desktop mode aborts automatically if CPU >= 92°C or GPU >= 88°C. Storage tests run only on a temporary file in OS temp space and delete it immediately.',
+    benchCpuSingle: 'CPU Single-Thread',
+    benchCpuMulti: 'CPU Multi-Thread',
+    benchRamThroughput: 'RAM Bandwidth',
+    benchStorageSeq: 'Storage Sequential (Temp)',
+    benchStorage4k: 'Storage 4K Read (Temp)',
+    benchNetLatency: 'Network Latency',
+    benchStartBtn: 'Run Selected Safe Tests',
+    benchStartWebBtn: 'Run Browser-Safe Micro-Tests',
+    benchCancelBtn: 'Stop Benchmark',
+    benchStarting: 'Preparing safe benchmark...',
+    benchRunningWeb: 'Running browser-safe micro-benchmarks...',
+    benchCompleted: 'Benchmark completed.',
+    benchAbortedThermal: 'Stopped safely due to thermal safety limit.',
+    benchCancelled: 'Benchmark cancelled by user.',
+    dbTitle: 'Hardware Generation Database & Auto-Updater',
+    dbVersionLabel: 'Database Version',
+    dbEntriesLabel: 'entries',
+    dbSourceLabel: 'Active Source',
+    dbCheckUpdateBtn: 'Check Feed Update',
+    dbCustomFeedConsentLabel: 'I trust this custom HTTPS feed URL and understand it overrides the official database.',
+    dbImportJsonBtn: 'Import JSON',
+    dbRollbackBtn: 'Rollback Backup',
+    dbSearchPlaceholder: 'Filter CPUs, GPUs, RAM, Chipsets...',
+    dbWebOfflineNote: 'Using bundled offline hardware database in Web Preview mode.',
+    dbUpdateApplied: 'Hardware database updated and schema-verified.',
+    dbUpToDate: 'Verified local hardware database is active.',
+    dbImportSuccess: 'Local JSON hardware database imported and verified.',
+    dbRollbackSuccess: 'Rolled back to last-known-good hardware database backup.',
   },
   updateHistory: {
     title: 'Update History',
@@ -3262,6 +3606,178 @@ const FR: LauncherTranslations = {
     cleanerCatRecycleDesc: 'Vide définitivement les éléments de la Corbeille.',
     cleanerCatBrowserTitle: 'Cache HTTP navigateur uniquement',
     cleanerCatBrowserDesc: 'Supprime uniquement le cache HTTP/Code d’Edge, Chrome ou Firefox (conserve connexions, cookies et historique).',
+    tabHealth: 'Santé & Diagnostics',
+    tabInventoryPorts: 'Système & Ports',
+    tabAdvisors2030: 'Conseillers & 2030+',
+    tabBenchmarksDb: 'Benchmarks & Base',
+    provDetected: 'Détecté',
+    provMeasured: 'Mesuré',
+    provSpec: 'Spécification',
+    provEstimated: 'Estimé',
+    provNotSupported: 'Non supporté',
+    provNotDetected: 'Non détecté',
+    provSensorUnavailable: 'Capteur indisponible',
+    provRequiresAdmin: 'Droits Admin Requis',
+    provUnknown: 'Inconnu',
+    workloadProfileLabel: 'Usage principal',
+    workloadGaming: 'Jeu vidéo',
+    workloadOffice: 'Bureautique & Quotidien',
+    workloadProgramming: 'Programmation & VMs',
+    workload3d: 'Modélisation & Rendu 3D',
+    workloadVideo: 'Montage Vidéo',
+    workloadDesign: 'Design Graphique',
+    workloadAi: 'IA / Machine Learning',
+    workloadPro: 'Usage Professionnel',
+    workloadMixed: 'Usage Mixte',
+    intelRefreshDeepScan: 'Réanalyser le matériel',
+    loadingDeepScan: 'Collecte de l’inventaire matériel approfondi...',
+    intelPrivacyOn: 'Confidentialité : ACTIVÉE',
+    intelPrivacyOff: 'Confidentialité : DÉSACTIVÉE',
+    intelExportJson: 'Exporter JSON',
+    intelExportPdf: 'Exporter PDF',
+    intelExportHtml: 'Exporter Rapport',
+    intelExportSuccess: 'Rapport matériel exporté avec succès',
+    intelExportHtmlWebNote: 'Rapport HTML imprimable téléchargé (ouvrir puis Imprimer en PDF).',
+    intelUnknown: 'Inconnu',
+    intelUnavailable: 'Indisponible',
+    intelNotDetected: 'Non détecté',
+    intelSensorUnavailable: 'Capteur indisponible',
+    intelSourceLabel: 'Source capteur',
+    desktopOnlyHint: 'Disponible dans SecretArea Desktop (Windows / Linux).',
+    healthPhysicalTitle: 'Santé Physique',
+    healthMeasuredCoverage: 'composants mesurés',
+    healthPerformanceTitle: 'Capacité de Performance',
+    healthAgeTitle: 'Âge Matériel',
+    healthAgeNote: 'Basé sur les générations CPU/GPU/RAM détectées',
+    healthLifespanTitle: 'Durée de vie utile estimée',
+    healthLifespanDisclaimer: 'Dépend de l’usage, du refroidissement et de l’usure',
+    healthBreakdownTitle: 'Détail Santé & Analyse des Goulots',
+    thermalCoolingTitle: 'Ventilateurs, Refroidissement & Thermique',
+    fanNoSourceHint: 'Aucun pont RPM détecté (LibreHardwareMonitor recommandé sous Windows)',
+    fansDetectedHeader: 'Ventilateurs détectés',
+    fansUnavailableBody: 'Aucun capteur RPM exposé par l’OS. LibreHardwareMonitor (Windows) ou hwmon (Linux) permet de lire les RPM réels sans estimation.',
+    fanStatusRunning: 'Actif',
+    fanStatusStopped: 'Arrêté — Confirmé',
+    fanStatusAbnormal: 'RPM Anormal',
+    fanStatusNotDetected: 'Non détecté',
+    fanStatusUnavailable: 'Capteur indisponible',
+    thermalSensorsHeader: 'Capteurs de Température',
+    thermalPhysicalNoticeTitle: 'Inspection Physique Requise',
+    errorsDriversTitle: 'Erreurs Matérielles, Journaux & Pilotes',
+    errorsDriversSubtitle: 'Codes Gestionnaire de périphériques, journaux WHEA/Disque/Affichage et pilotes signés',
+    pnpErrorsHeader: 'Erreurs Périphériques (PnP)',
+    pnpNoErrors: 'Aucune erreur détectée dans le Gestionnaire de périphériques.',
+    eventLogsHeader: 'Journaux Système (14 jours)',
+    eventLogsEmpty: 'Aucun événement critique WHEA, disque ou affichage récent.',
+    signedDriversHeader: 'Pilotes Matériels Signés',
+    searchDriversPlaceholder: 'Rechercher un pilote...',
+    driverDeviceCol: 'Périphérique',
+    driverClassCol: 'Classe',
+    driverVersionCol: 'Version',
+    driverDateCol: 'Date',
+    driverSignedCol: 'Signature',
+    sysIdTitle: 'Identification Système',
+    sysFormFactor: 'Format (Châssis)',
+    sysSku: 'Produit / SKU',
+    sysSerialMasked: 'N° Série (Masqué)',
+    sysOsBuild: 'OS & Build',
+    sysArch: 'Architecture',
+    sysBootMode: 'Mode Démarrage',
+    sysSecureBoot: 'Secure Boot',
+    sysTpm: 'Module TPM',
+    sysSensorBackends: 'Moteurs Télémétrie Actifs',
+    moboTitle: 'Diagnostics Carte Mère',
+    moboChipset: 'Chipset',
+    moboSocket: 'Socket CPU',
+    moboBios: 'BIOS / UEFI',
+    moboBiosDate: 'Date BIOS',
+    moboRamSupport: 'Support Mémoire',
+    moboPcieSlots: 'Slots PCIe / Extension (SMBIOS)',
+    portsTitle: 'Ports, Connecteurs & Contrôleurs',
+    portsSubtitle: 'Distingue strictement ports physiques SMBIOS, contrôleurs hôtes et appareils connectés',
+    portsHonestyBanner: 'Règle de précision : Un contrôleur USB n’est jamais compté comme un port physique. Les ports non confirmés restent séparés.',
+    portsTabConfirmed: 'Ports Physiques Confirmés',
+    portsTabControllers: 'Contrôleurs Matériels',
+    portsTabConnected: 'Appareils Connectés',
+    portsTabUnconfirmed: 'En-têtes Internes / Non Confirmés',
+    portsBucketEmpty: 'Aucun élément signalé dans cette catégorie par les tables OS/SMBIOS.',
+    storageSmartTitle: 'Santé Stockage & Diagnostics SMART',
+    storageSmartSubtitle: 'Tout disque sans compteur SMART est marqué Indisponible — jamais sain par défaut',
+    smartUnavailable: 'SMART Indisponible',
+    smartWearLabel: 'Usure / Vie SSD',
+    smartPohLabel: 'Heures sous tension',
+    smartCyclesLabel: 'Cycles allumage',
+    smartErrorsLabel: 'Erreurs non corrigées',
+    cpuGpuDeepTitle: 'CPU Détaillé & Rôles Multi-GPU',
+    cpuCacheLabel: 'Cache CPU',
+    cpuVirtLabel: 'Virtualisation Matérielle',
+    cpuVoltageLabel: 'Tension Cœur',
+    multiGpuRolesHeader: 'Attribution Rôles GPU (iGPU vs dGPU)',
+    ramDimmsTitle: 'RAM & Détail par Barrette (DIMM)',
+    ramEccLabel: 'Statut ECC',
+    ramPagefileLabel: 'Fichier d’échange (Pagefile)',
+    ramDimmsUnavailable: 'Les détails SMBIOS par slot DIMM sont indisponibles ici.',
+    displaysDeepTitle: 'Écrans & Dimensions Physiques EDID',
+    powerPsuBatteryTitle: 'Alimentation & Batterie',
+    psuTelemetryHeader: 'Information Télémétrie PSU Bureau',
+    batteryDesignVsFull: 'Capacité Actuelle / Design',
+    batteryCyclesLabel: 'Cycles de charge',
+    batteryRateLabel: 'Débit Charge / Décharge',
+    peripheralsNetTitle: 'Réseau, Périphériques & Composants Système',
+    adaptersLabel: 'Adaptateurs',
+    peripheralsLabel: 'Périphériques',
+    systemComponentsLabel: 'Contrôleurs & Composants',
+    future2030Title: 'Compatibilité Future & Conseiller 2030+',
+    future2030Subtitle: 'Sépare les faits matériels vérifiés des projections futures (2027–2030+)',
+    futureProjectedVerdict: 'Préparation Projetée',
+    futureVerifiedFactsTitle: 'Faits Matériels Vérifiés',
+    futureForwardEstimatesTitle: 'Estimations & Hypothèses Futures',
+    upgradeAdvisorTitle: 'Conseiller Mise à Niveau Intelligent',
+    upgradeAdvisorSubtitle: 'Vérifie socket, génération/slots RAM, composants soudés PC portable & alimentation PSU',
+    psuWattageInputLabel: 'Puissance Alimentation PSU (W)',
+    psuApplyBtn: 'Vérifier PSU',
+    psuOptionalHint: 'Optionnel — Windows ne lit pas la puissance d’un bloc ATX standard.',
+    upgradeNoneNeeded: 'Aucune mise à niveau urgente requise pour votre profil d’usage actuel.',
+    compatVerified: 'Compatibilité Vérifiée',
+    compatCheckNeeded: 'Vérifier Espace / PSU',
+    gamingCompatTitle: 'Compatibilité Jeu & Catalogue SecretArea',
+    gamingCompatSubtitle: 'Recommandations réalistes par résolution + test sur les jeux du catalogue',
+    catalogGamesCheckTitle: 'Tester avec le Catalogue de Jeux',
+    catalogSearchPlaceholder: 'Rechercher un jeu du catalogue...',
+    proCompatTitle: 'Compatibilité Logiciels Professionnels',
+    maintenanceTitle: 'Maintenance & Entretien Préventif',
+    maintenanceSafetyNote: 'Conseils en lecture seule — ne modifie jamais BIOS, tensions ou fichiers personnels',
+    benchTitle: 'Micro-Benchmarks Sûrs & Optionnels',
+    benchSubtitle: 'Tests courts, non destructifs et annulables avec arrêt thermique automatique',
+    benchSafetyNotice: 'Tests lancés uniquement à la demande. Arrêt automatique si CPU >= 92°C ou GPU >= 88°C. Le test disque utilise uniquement un fichier temporaire supprimé aussitôt.',
+    benchCpuSingle: 'CPU Mono-Cœur',
+    benchCpuMulti: 'CPU Multi-Cœurs',
+    benchRamThroughput: 'Bande Passante RAM',
+    benchStorageSeq: 'Stockage Séquentiel (Temp)',
+    benchStorage4k: 'Stockage Lecture 4K (Temp)',
+    benchNetLatency: 'Latence Réseau',
+    benchStartBtn: 'Lancer les tests sélectionnés',
+    benchStartWebBtn: 'Lancer micro-tests navigateur',
+    benchCancelBtn: 'Arrêter le test',
+    benchStarting: 'Préparation du benchmark sûr...',
+    benchRunningWeb: 'Exécution des micro-tests navigateur...',
+    benchCompleted: 'Benchmark terminé.',
+    benchAbortedThermal: 'Arrêt de sécurité thermique déclenché.',
+    benchCancelled: 'Benchmark annulé par l’utilisateur.',
+    dbTitle: 'Base Générations Matérielles & Mise à Jour',
+    dbVersionLabel: 'Version Base',
+    dbEntriesLabel: 'entrées',
+    dbSourceLabel: 'Source Active',
+    dbCheckUpdateBtn: 'Vérifier Flux HTTPS',
+    dbCustomFeedConsentLabel: 'Je fais confiance à ce flux HTTPS personnalisé et j’accepte de remplacer la base officielle.',
+    dbImportJsonBtn: 'Importer JSON',
+    dbRollbackBtn: 'Restaurer Sauvegarde',
+    dbSearchPlaceholder: 'Filtrer CPU, GPU, RAM, Chipsets...',
+    dbWebOfflineNote: 'Utilisation de la base hors-ligne intégrée en mode Aperçu Web.',
+    dbUpdateApplied: 'Base matérielle mise à jour et validée.',
+    dbUpToDate: 'La base matérielle locale vérifiée est active.',
+    dbImportSuccess: 'Base JSON locale importée et validée.',
+    dbRollbackSuccess: 'Restauration vers la dernière sauvegarde valide réussie.',
   },
   updateHistory: {
     title: 'Historique des mises à jour',
@@ -4444,6 +4960,178 @@ const ES: LauncherTranslations = {
     cleanerCatRecycleDesc: 'Vacía permanentemente la Papelera de Windows.',
     cleanerCatBrowserTitle: 'Solo caché HTTP del navegador',
     cleanerCatBrowserDesc: 'Elimina únicamente Cache / Code Cache de Edge, Chrome o Firefox sin tocar sesiones, cookies ni historial.',
+    tabHealth: 'Salud y Diagnóstico',
+    tabInventoryPorts: 'Sistema y Puertos',
+    tabAdvisors2030: 'Asesores y 2030+',
+    tabBenchmarksDb: 'Pruebas y Base DB',
+    provDetected: 'Detectado',
+    provMeasured: 'Medido',
+    provSpec: 'Especificación',
+    provEstimated: 'Estimado',
+    provNotSupported: 'No Soportado',
+    provNotDetected: 'No Detectado',
+    provSensorUnavailable: 'Sensor No Disponible',
+    provRequiresAdmin: 'Requiere Administrador',
+    provUnknown: 'Desconocido',
+    workloadProfileLabel: 'Uso Principal',
+    workloadGaming: 'Gaming',
+    workloadOffice: 'Oficina y Diario',
+    workloadProgramming: 'Programación y VMs',
+    workload3d: 'Modelado y Render 3D',
+    workloadVideo: 'Edición de Vídeo',
+    workloadDesign: 'Diseño Gráfico',
+    workloadAi: 'IA / Machine Learning',
+    workloadPro: 'Uso Profesional',
+    workloadMixed: 'Uso Mixto',
+    intelRefreshDeepScan: 'Reescanear Hardware',
+    loadingDeepScan: 'Recopilando inventario profundo de hardware...',
+    intelPrivacyOn: 'Privacidad: ACTIVADA',
+    intelPrivacyOff: 'Privacidad: DESACTIVADA',
+    intelExportJson: 'Exportar JSON',
+    intelExportPdf: 'Exportar PDF',
+    intelExportHtml: 'Exportar Informe',
+    intelExportSuccess: 'Informe de hardware exportado correctamente',
+    intelExportHtmlWebNote: 'Informe HTML imprimible descargado (abrir e Imprimir a PDF).',
+    intelUnknown: 'Desconocido',
+    intelUnavailable: 'No disponible',
+    intelNotDetected: 'No detectado',
+    intelSensorUnavailable: 'Sensor no disponible',
+    intelSourceLabel: 'Fuente de sensor',
+    desktopOnlyHint: 'Disponible en SecretArea Desktop (Windows / Linux).',
+    healthPhysicalTitle: 'Salud Física',
+    healthMeasuredCoverage: 'componentes medidos',
+    healthPerformanceTitle: 'Capacidad de Rendimiento',
+    healthAgeTitle: 'Antigüedad Generacional',
+    healthAgeNote: 'Basado en años de lanzamiento de CPU/GPU/RAM',
+    healthLifespanTitle: 'Vida Útil Estimada',
+    healthLifespanDisclaimer: 'Depende del uso, refrigeración y desgaste',
+    healthBreakdownTitle: 'Desglose de Salud y Cuellos de Botella',
+    thermalCoolingTitle: 'Ventiladores, Refrigeración y Térmica',
+    fanNoSourceHint: 'Sin puente RPM detectado (LibreHardwareMonitor recomendado en Windows)',
+    fansDetectedHeader: 'Ventiladores Detectados',
+    fansUnavailableBody: 'El SO no expone sensores RPM. LibreHardwareMonitor (Windows) o hwmon (Linux) muestran RPM reales sin inventar datos.',
+    fanStatusRunning: 'Activo',
+    fanStatusStopped: 'Detenido — Confirmado',
+    fanStatusAbnormal: 'RPM Anormal',
+    fanStatusNotDetected: 'No Detectado',
+    fanStatusUnavailable: 'Sensor No Disponible',
+    thermalSensorsHeader: 'Sensores de Temperatura',
+    thermalPhysicalNoticeTitle: 'Requiere Inspección Física',
+    errorsDriversTitle: 'Errores de Hardware, Registros y Controladores',
+    errorsDriversSubtitle: 'Códigos del Administrador de dispositivos, visor de eventos WHEA/Disco/GPU y drivers firmados',
+    pnpErrorsHeader: 'Errores de Dispositivos (PnP)',
+    pnpNoErrors: 'No se detectaron códigos de error en dispositivos.',
+    eventLogsHeader: 'Registros del Sistema (14 días)',
+    eventLogsEmpty: 'Sin eventos críticos de WHEA, disco o pantalla recientes.',
+    signedDriversHeader: 'Controladores Firmados',
+    searchDriversPlaceholder: 'Buscar controlador o clase...',
+    driverDeviceCol: 'Dispositivo',
+    driverClassCol: 'Clase',
+    driverVersionCol: 'Versión',
+    driverDateCol: 'Fecha',
+    driverSignedCol: 'Firma',
+    sysIdTitle: 'Identificación del Sistema',
+    sysFormFactor: 'Formato',
+    sysSku: 'Producto / SKU',
+    sysSerialMasked: 'Serie (Oculta)',
+    sysOsBuild: 'SO y Compilación',
+    sysArch: 'Arquitectura',
+    sysBootMode: 'Modo de Arranque',
+    sysSecureBoot: 'Secure Boot',
+    sysTpm: 'Seguridad TPM',
+    sysSensorBackends: 'Motores de Telemetría',
+    moboTitle: 'Diagnóstico Placa Base',
+    moboChipset: 'Chipset',
+    moboSocket: 'Socket CPU',
+    moboBios: 'BIOS / UEFI',
+    moboBiosDate: 'Fecha BIOS',
+    moboRamSupport: 'Soporte de Memoria',
+    moboPcieSlots: 'Ranuras PCIe (SMBIOS)',
+    portsTitle: 'Puertos, Conectores y Controladores',
+    portsSubtitle: 'Separa puertos físicos SMBIOS de controladores USB/PCI y dispositivos conectados',
+    portsHonestyBanner: 'Regla de precisión: Un controlador USB NO equivale a un puerto físico. Los puertos no confirmados se listan aparte.',
+    portsTabConfirmed: 'Puertos Físicos Confirmados',
+    portsTabControllers: 'Controladores Hardware',
+    portsTabConnected: 'Dispositivos Conectados',
+    portsTabUnconfirmed: 'Cabeceras Internas / No Confirmadas',
+    portsBucketEmpty: 'No hay elementos en esta categoría según las tablas OS/SMBIOS.',
+    storageSmartTitle: 'Salud Almacenamiento y SMART',
+    storageSmartSubtitle: 'Unidades sin contadores SMART se muestran como No Disponible — nunca sanas sin pruebas',
+    smartUnavailable: 'SMART No Disponible',
+    smartWearLabel: 'Desgaste / Vida SSD',
+    smartPohLabel: 'Horas Encendido',
+    smartCyclesLabel: 'Ciclos Encendido',
+    smartErrorsLabel: 'Errores Sin Corregir',
+    cpuGpuDeepTitle: 'CPU Extendida y Roles Multi-GPU',
+    cpuCacheLabel: 'Caché CPU',
+    cpuVirtLabel: 'Virtualización',
+    cpuVoltageLabel: 'Voltaje Núcleo',
+    multiGpuRolesHeader: 'Asignación de Roles GPU (iGPU vs dGPU)',
+    ramDimmsTitle: 'RAM y Módulos DIMM',
+    ramEccLabel: 'Estado ECC',
+    ramPagefileLabel: 'Archivo de Paginación',
+    ramDimmsUnavailable: 'Los detalles SMBIOS por módulo DIMM no están disponibles aquí.',
+    displaysDeepTitle: 'Pantallas y Dimensiones EDID',
+    powerPsuBatteryTitle: 'Fuente de Alimentación y Batería',
+    psuTelemetryHeader: 'Aviso Telemetría PSU de Escritorio',
+    batteryDesignVsFull: 'Capacidad Actual vs Diseño',
+    batteryCyclesLabel: 'Ciclos de Carga',
+    batteryRateLabel: 'Tasa Carga / Descarga',
+    peripheralsNetTitle: 'Redes, Periféricos y Componentes',
+    adaptersLabel: 'Adaptadores',
+    peripheralsLabel: 'Periféricos',
+    systemComponentsLabel: 'Controladores y Componentes',
+    future2030Title: 'Compatibilidad Futura y Asesor 2030+',
+    future2030Subtitle: 'Separa hechos verificados de proyecciones futuras (2027–2030+)',
+    futureProjectedVerdict: 'Preparación Proyectada',
+    futureVerifiedFactsTitle: 'Hechos Verificados del Equipo',
+    futureForwardEstimatesTitle: 'Estimaciones y Supuestos Futuros',
+    upgradeAdvisorTitle: 'Asesor Inteligente de Mejoras',
+    upgradeAdvisorSubtitle: 'Verifica socket, tipo/ranuras RAM, piezas soldadas en portátil y fuente PSU',
+    psuWattageInputLabel: 'Potencia PSU Escritorio (W)',
+    psuApplyBtn: 'Verificar PSU',
+    psuOptionalHint: 'Opcional — el software no puede leer vatios de fuentes ATX estándar.',
+    upgradeNoneNeeded: 'No se requieren mejoras urgentes para tu perfil de uso actual.',
+    compatVerified: 'Compatibilidad Verificada',
+    compatCheckNeeded: 'Verificar Espacio / PSU',
+    gamingCompatTitle: 'Compatibilidad Gaming y Catálogo',
+    gamingCompatSubtitle: 'Guía realista por resolución + comprobación del catálogo SecretArea',
+    catalogGamesCheckTitle: 'Probar con Juegos del Catálogo',
+    catalogSearchPlaceholder: 'Buscar juego del catálogo...',
+    proCompatTitle: 'Compatibilidad Aplicaciones Profesionales',
+    maintenanceTitle: 'Mantenimiento y Cuidado Preventivo',
+    maintenanceSafetyNote: 'Solo lectura — nunca modifica BIOS, voltajes ni elimina archivos personales',
+    benchTitle: 'Micro-Pruebas Seguras Opcionales',
+    benchSubtitle: 'Pruebas cortas, no destructivas y cancelables con parada térmica automática',
+    benchSafetyNotice: 'Pruebas iniciadas solo por el usuario. Se detienen automáticamente si CPU >= 92°C o GPU >= 88°C. El test de disco usa un archivo temporal borrado al instante.',
+    benchCpuSingle: 'CPU 1 Hilo',
+    benchCpuMulti: 'CPU Multi-Hilo',
+    benchRamThroughput: 'Ancho de Banda RAM',
+    benchStorageSeq: 'Almacenamiento Secuencial (Temp)',
+    benchStorage4k: 'Almacenamiento Lectura 4K (Temp)',
+    benchNetLatency: 'Latencia de Red',
+    benchStartBtn: 'Ejecutar Pruebas Seguras',
+    benchStartWebBtn: 'Ejecutar Micro-Pruebas Web',
+    benchCancelBtn: 'Detener Prueba',
+    benchStarting: 'Preparando prueba segura...',
+    benchRunningWeb: 'Ejecutando micro-pruebas seguras en navegador...',
+    benchCompleted: 'Prueba completada.',
+    benchAbortedThermal: 'Detenido por límite térmico de seguridad.',
+    benchCancelled: 'Prueba cancelada por el usuario.',
+    dbTitle: 'Base de Generaciones Hardware y Actualizador',
+    dbVersionLabel: 'Versión Base',
+    dbEntriesLabel: 'registros',
+    dbSourceLabel: 'Fuente Activa',
+    dbCheckUpdateBtn: 'Buscar Actualización HTTPS',
+    dbCustomFeedConsentLabel: 'Confío en esta URL HTTPS personalizada y acepto reemplazar la base oficial.',
+    dbImportJsonBtn: 'Importar JSON',
+    dbRollbackBtn: 'Restaurar Copia',
+    dbSearchPlaceholder: 'Filtrar CPUs, GPUs, RAM, Chipsets...',
+    dbWebOfflineNote: 'Usando base de datos offline integrada en modo Vista Web.',
+    dbUpdateApplied: 'Base de datos hardware actualizada y validada.',
+    dbUpToDate: 'La base de datos local verificada está activa.',
+    dbImportSuccess: 'Base de datos JSON local importada y validada.',
+    dbRollbackSuccess: 'Restaurada la última copia válida de la base de datos.',
   },
   updateHistory: {
     title: 'Historial de actualizaciones',
@@ -5626,6 +6314,178 @@ const AR: LauncherTranslations = {
     cleanerCatRecycleDesc: 'إفراغ سلة المحذوفات في ويندوز بشكل نهائي.',
     cleanerCatBrowserTitle: 'كاش المتصفح المؤقت فقط (دون السجل)',
     cleanerCatBrowserDesc: 'يحذف كاش HTTP في Edge و Chrome و Firefox فقط مع الحفاظ الكامل على الحسابات والكوكيز والمفضلة والسجل.',
+    tabHealth: 'الصحة والتشخيص',
+    tabInventoryPorts: 'النظام والمنافذ',
+    tabAdvisors2030: 'المستشار و 2030+',
+    tabBenchmarksDb: 'الاختبارات وقاعدة البيانات',
+    provDetected: 'مكتشف',
+    provMeasured: 'مُقاس',
+    provSpec: 'مواصفة مصنعية',
+    provEstimated: 'تقديري',
+    provNotSupported: 'غير مدعوم',
+    provNotDetected: 'غير مكتشف',
+    provSensorUnavailable: 'المستشعر غير متاح',
+    provRequiresAdmin: 'يتطلب صلاحيات المسؤول',
+    provUnknown: 'غير معروف',
+    workloadProfileLabel: 'نوع الاستخدام الأساسي',
+    workloadGaming: 'الألعاب',
+    workloadOffice: 'العمل المكتبي واليومي',
+    workloadProgramming: 'البرمجة والأنظمة الوهمية',
+    workload3d: 'التصميم والتصيير ثلاثي الأبعاد',
+    workloadVideo: 'مونتاج الفيديو',
+    workloadDesign: 'التصميم الجرافيكي',
+    workloadAi: 'الذكاء الاصطناعي',
+    workloadPro: 'الاستخدام الاحترافي العام',
+    workloadMixed: 'استخدام مختلط',
+    intelRefreshDeepScan: 'إعادة فحص العتاد',
+    loadingDeepScan: 'جارٍ جمع الفحص التفصيلي للعتاد...',
+    intelPrivacyOn: 'درع الخصوصية: مُفعّل',
+    intelPrivacyOff: 'درع الخصوصية: مُعطّل',
+    intelExportJson: 'تصدير JSON',
+    intelExportPdf: 'تصدير PDF',
+    intelExportHtml: 'تصدير التقرير',
+    intelExportSuccess: 'تم تصدير تقرير العتاد بنجاح',
+    intelExportHtmlWebNote: 'تم تنزيل التقرير بصيغة HTML للطباعة أو الحفظ كـ PDF.',
+    intelUnknown: 'غير معروف',
+    intelUnavailable: 'غير متاح',
+    intelNotDetected: 'غير مكتشف',
+    intelSensorUnavailable: 'المستشعر غير متاح',
+    intelSourceLabel: 'مصدر المستشعر',
+    desktopOnlyHint: 'متاح في تطبيق سطح المكتب SecretArea Desktop (Windows / Linux).',
+    healthPhysicalTitle: 'الصحة الفيزيائية',
+    healthMeasuredCoverage: 'مكونات تم قياسها',
+    healthPerformanceTitle: 'القدرة الأدائية',
+    healthAgeTitle: 'عمر الجيل العتادي',
+    healthAgeNote: 'محسوب وفق سنوات إصدار المعالج وكرت الشاشة والذاكرة',
+    healthLifespanTitle: 'العمر الافتراضي التقديري',
+    healthLifespanDisclaimer: 'يعتمد على طبيعة الاستخدام والتبريد وحالة القطع',
+    healthBreakdownTitle: 'تفاصيل صحة المكونات وعنق الزجاجة',
+    thermalCoolingTitle: 'المراوح والتبريد والتشخيص الحراري',
+    fanNoSourceHint: 'لا يوجد جسر لقراءة سرعة المراوح (يفضّل تشغيل LibreHardwareMonitor على Windows)',
+    fansDetectedHeader: 'المراوح المكتشفة',
+    fansUnavailableBody: 'لم يكشف النظام عن مستشعرات RPM. تشغيل LibreHardwareMonitor على Windows أو hwmon على Linux يتيح قراءة سرعة المراوح بدقة دون تخمين.',
+    fanStatusRunning: 'تعمل',
+    fanStatusStopped: 'متوقفة — مؤكد',
+    fanStatusAbnormal: 'سرعة غير طبيعية',
+    fanStatusNotDetected: 'غير مكتشفة',
+    fanStatusUnavailable: 'المستشعر غير متاح',
+    thermalSensorsHeader: 'مستشعرات الحرارة',
+    thermalPhysicalNoticeTitle: 'فحص يدوي مطلوب',
+    errorsDriversTitle: 'أخطاء العتاد، السجلات والتعريفات',
+    errorsDriversSubtitle: 'أخطاء إدارة الأجهزة وسجلات WHEA/القرص/الشاشة والتعريفات الموقّعة',
+    pnpErrorsHeader: 'أخطاء إدارة الأجهزة (PnP)',
+    pnpNoErrors: 'لا توجد أخطاء أجهزة مكتشفة.',
+    eventLogsHeader: 'سجلات النظام (آخر 14 يوماً)',
+    eventLogsEmpty: 'لا توجد أحداث حرجة مسجلة لـ WHEA أو القرص أو الشاشة.',
+    signedDriversHeader: 'تعريفات العتاد الموقّعة',
+    searchDriversPlaceholder: 'ابحث عن تعريف أو فئة...',
+    driverDeviceCol: 'الجهاز',
+    driverClassCol: 'الفئة',
+    driverVersionCol: 'الإصدار',
+    driverDateCol: 'التاريخ',
+    driverSignedCol: 'التوقيع',
+    sysIdTitle: 'هوية النظام',
+    sysFormFactor: 'نوع الجهاز',
+    sysSku: 'المنتج / SKU',
+    sysSerialMasked: 'الرقم التسلسلي (مخفي)',
+    sysOsBuild: 'نظام التشغيل والبناء',
+    sysArch: 'المعمارية',
+    sysBootMode: 'وضع الإقلاع',
+    sysSecureBoot: 'الإقلاع الآمن',
+    sysTpm: 'أمان TPM',
+    sysSensorBackends: 'محركات القياس النشطة',
+    moboTitle: 'تشخيص اللوحة الأم',
+    moboChipset: 'الشريحة (Chipset)',
+    moboSocket: 'مقبس المعالج',
+    moboBios: 'إصدار BIOS / UEFI',
+    moboBiosDate: 'تاريخ BIOS',
+    moboRamSupport: 'دعم الذاكرة',
+    moboPcieSlots: 'منافذ التوسعة PCIe',
+    portsTitle: 'المنافذ، الوصلات والمتحكمات',
+    portsSubtitle: 'فصل صارم بين المنافذ الفيزيائية ومتحكمات USB/PCI والأجهزة المتصلة فعلياً',
+    portsHonestyBanner: 'قاعدة الدقة: متحكم USB لا يُحسب كمنفذ فيزيائي واحد. المنافذ غير المؤكدة تُعرض بشكل منفصل دون تخمين.',
+    portsTabConfirmed: 'منافذ فيزيائية مؤكدة',
+    portsTabControllers: 'متحكمات العتاد',
+    portsTabConnected: 'أجهزة متصلة حالياً',
+    portsTabUnconfirmed: 'منافذ داخلية / غير مؤكدة',
+    portsBucketEmpty: 'لم يُبلغ النظام أو جداول SMBIOS عن عناصر في هذه الفئة.',
+    storageSmartTitle: 'صحة التخزين وبيانات SMART',
+    storageSmartSubtitle: 'الأقراص التي لا توفر بيانات SMART تُصنّف كغير متاح ولا تُعتبر سليمة تلقائياً',
+    smartUnavailable: 'SMART غير متاح',
+    smartWearLabel: 'الاستهلاك / العمر',
+    smartPohLabel: 'ساعات التشغيل',
+    smartCyclesLabel: 'دورات التشغيل',
+    smartErrorsLabel: 'أخطاء غير مصححة',
+    cpuGpuDeepTitle: 'تفاصيل المعالج وأدوار كروت الشاشة',
+    cpuCacheLabel: 'ذاكرة الكاش',
+    cpuVirtLabel: 'المحاكاة الافتراضية',
+    cpuVoltageLabel: 'جهد النواة',
+    multiGpuRolesHeader: 'توزيع الأدوار (مدمج مقابل منفصل)',
+    ramDimmsTitle: 'الذاكرة وتفاصيل الشرائح (DIMM)',
+    ramEccLabel: 'دعم ECC',
+    ramPagefileLabel: 'الذاكرة الافتراضية (Pagefile)',
+    ramDimmsUnavailable: 'تفاصيل شرائح SMBIOS غير متاحة في هذا الوضع.',
+    displaysDeepTitle: 'الشاشات والأبعاد الفيزيائية EDID',
+    powerPsuBatteryTitle: 'مزود الطاقة والبطارية',
+    psuTelemetryHeader: 'توضيح قياس مزود الطاقة المكتبي',
+    batteryDesignVsFull: 'السعة الحالية مقابل التصميمية',
+    batteryCyclesLabel: 'دورات الشحن',
+    batteryRateLabel: 'معدل الشحن / التفريغ',
+    peripheralsNetTitle: 'الشبكات، الملحقات ومكونات النظام',
+    adaptersLabel: 'محولات',
+    peripheralsLabel: 'الملحقات',
+    systemComponentsLabel: 'المتحكمات والمكونات',
+    future2030Title: 'توافق المستقبل ومستشار 2030+',
+    future2030Subtitle: 'يفصل بين الحقائق العتادية المؤكدة والتقديرات المستقبلية (2027–2030+)',
+    futureProjectedVerdict: 'الجاهزية المتوقعة',
+    futureVerifiedFactsTitle: 'حقائق عتادية مؤكدة',
+    futureForwardEstimatesTitle: 'تقديرات وافتراضات مستقبلية',
+    upgradeAdvisorTitle: 'مستشار الترقية الذكي',
+    upgradeAdvisorSubtitle: 'يتحقق من المقبس، نوع/منافذ RAM، قيود اللابتوب الملحومة وقدرة مزود الطاقة',
+    psuWattageInputLabel: 'قدرة مزود الطاقة المكتبي (واط)',
+    psuApplyBtn: 'تأكيد القدرة',
+    psuOptionalHint: 'اختياري — مزودات ATX العادية لا ترسل قدرتها برمجياً.',
+    upgradeNoneNeeded: 'لا توجد ترقيات عاجلة مطلوبة لاستخدامك المحدد حالياً.',
+    compatVerified: 'التوافق مؤكد',
+    compatCheckNeeded: 'تحقق من الحجم / المزود',
+    gamingCompatTitle: 'توافق الألعاب وفحص كتالوج SecretArea',
+    gamingCompatSubtitle: 'تقييم واقعي للدقات والإعدادات مع اختبار ألعاب الكتالوج (دون أرقام FPS وهمية)',
+    catalogGamesCheckTitle: 'فحص ألعاب كتالوج SecretArea',
+    catalogSearchPlaceholder: 'ابحث عن لعبة في الكتالوج...',
+    proCompatTitle: 'توافق البرامج الاحترافية',
+    maintenanceTitle: 'مستشار الصيانة والوقاية',
+    maintenanceSafetyNote: 'إرشادات آمنة للقراءة فقط — لا يعدّل BIOS أو الفولتية ولا يحذف بياناتك',
+    benchTitle: 'اختبارات أداء آمنة واختيارية',
+    benchSubtitle: 'اختبارات قصيرة وغير مُتلفة قابلة للإيقاف مع حماية حرارية تلقائية',
+    benchSafetyNotice: 'الاختبارات اختيارية وبإذنك فقط. يتوقف الاختبار تلقائياً عند CPU >= 92°C أو GPU >= 88°C. اختبار التخزين يستخدم ملفاً مؤقتاً يُحذف فوراً.',
+    benchCpuSingle: 'المعالج نواة واحدة',
+    benchCpuMulti: 'المعالج متعدد الأنوية',
+    benchRamThroughput: 'سرعة الذاكرة RAM',
+    benchStorageSeq: 'التخزين المتسلسل (مؤقت)',
+    benchStorage4k: 'قراءة عشوائية 4K (مؤقت)',
+    benchNetLatency: 'استجابة الشبكة',
+    benchStartBtn: 'بدء الاختبارات المحددة',
+    benchStartWebBtn: 'بدء اختبارات المتصفح الآمنة',
+    benchCancelBtn: 'إيقاف الاختبار',
+    benchStarting: 'جارٍ تجهيز الاختبار الآمن...',
+    benchRunningWeb: 'جارٍ تشغيل اختبارات المتصفح الآمنة...',
+    benchCompleted: 'اكتمل الاختبار بنجاح.',
+    benchAbortedThermal: 'تم الإيقاف لحماية الحرارة.',
+    benchCancelled: 'تم إلغاء الاختبار بواسطة المستخدم.',
+    dbTitle: 'قاعدة بيانات أجيال العتاد والتحديث التلقائي',
+    dbVersionLabel: 'إصدار القاعدة',
+    dbEntriesLabel: 'عنصر',
+    dbSourceLabel: 'المصدر النشط',
+    dbCheckUpdateBtn: 'فحص تحديث HTTPS',
+    dbCustomFeedConsentLabel: 'أثق في رابط HTTPS المخصص هذا وأوافق على استبدال القاعدة الرسمية.',
+    dbImportJsonBtn: 'استيراد JSON',
+    dbRollbackBtn: 'استرجاع النسخة الاحتياطية',
+    dbSearchPlaceholder: 'تصفية المعالجات، الكروت، الذاكرة...',
+    dbWebOfflineNote: 'يتم استخدام قاعدة البيانات المدمجة محلياً في وضع معاينة الويب.',
+    dbUpdateApplied: 'تم تحديث قاعدة بيانات العتاد والتحقق منها.',
+    dbUpToDate: 'قاعدة البيانات المحلية الموثقة نشطة حالياً.',
+    dbImportSuccess: 'تم استيراد قاعدة بيانات JSON والتحقق من صحتها.',
+    dbRollbackSuccess: 'تمت الاستعادة إلى آخر نسخة احتياطية صالحة.',
   },
   updateHistory: {
     title: 'سجل التحديثات',

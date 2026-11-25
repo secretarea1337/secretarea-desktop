@@ -4,16 +4,16 @@ export interface SystemHardwareSpecs {
   source: 'electron' | 'browser' | 'custom';
   osName: string;
   cpuName: string;
-  cpuCores: number;
-  cpuSpeedGhz: number;
+  cpuCores: number | null;
+  cpuSpeedGhz: number | null;
   gpuName: string;
   gpuVramGB: number | null;
   allGpus?: string[];
-  ramGB: number;
+  ramGB: number | null;
   ramIsApprox?: boolean;
   freeSpaceGB: number | null;
   totalSpaceGB: number | null;
-  spaceDrive: string;
+  spaceDrive: string | null;
   detectedAt: string;
 }
 
@@ -85,28 +85,31 @@ function detectBrowserOsName(): string {
 
 export function detectBrowserSystemSpecs(): SystemHardwareSpecs {
   const threads =
-    typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number'
+    typeof navigator !== 'undefined' &&
+    typeof navigator.hardwareConcurrency === 'number' &&
+    navigator.hardwareConcurrency > 0
       ? navigator.hardwareConcurrency
-      : 8;
+      : null;
   const navMem =
     typeof navigator !== 'undefined' &&
-    typeof (navigator as unknown as { deviceMemory?: number }).deviceMemory === 'number'
+    typeof (navigator as unknown as { deviceMemory?: number }).deviceMemory === 'number' &&
+    (navigator as unknown as { deviceMemory: number }).deviceMemory > 0
       ? (navigator as unknown as { deviceMemory: number }).deviceMemory
-      : 8;
+      : null;
 
   return {
     source: 'browser',
     osName: detectBrowserOsName(),
-    cpuName: `${threads}-Thread Processor`,
+    cpuName: threads ? `${threads}-Thread Processor` : 'Unknown CPU',
     cpuCores: threads,
-    cpuSpeedGhz: 0,
+    cpuSpeedGhz: null,
     gpuName: detectBrowserGpuName(),
     gpuVramGB: null,
     ramGB: navMem,
-    ramIsApprox: navMem >= 8,
+    ramIsApprox: navMem !== null && navMem >= 8,
     freeSpaceGB: null,
     totalSpaceGB: null,
-    spaceDrive: 'Local Drive',
+    spaceDrive: null,
     detectedAt: new Date().toISOString(),
   };
 }
@@ -119,17 +122,17 @@ export function loadSavedCustomSystemSpecs(): SystemHardwareSpecs | null {
     if (!parsed || typeof parsed !== 'object') return null;
     return {
       source: 'custom',
-      osName: typeof parsed.osName === 'string' && parsed.osName ? parsed.osName : 'Windows 11',
-      cpuName: typeof parsed.cpuName === 'string' && parsed.cpuName ? parsed.cpuName : 'Processor',
-      cpuCores: typeof parsed.cpuCores === 'number' ? parsed.cpuCores : 8,
-      cpuSpeedGhz: typeof parsed.cpuSpeedGhz === 'number' ? parsed.cpuSpeedGhz : 0,
-      gpuName: typeof parsed.gpuName === 'string' && parsed.gpuName ? parsed.gpuName : 'Graphics Card',
-      gpuVramGB: typeof parsed.gpuVramGB === 'number' ? parsed.gpuVramGB : null,
-      ramGB: typeof parsed.ramGB === 'number' && parsed.ramGB > 0 ? parsed.ramGB : 16,
+      osName: typeof parsed.osName === 'string' && parsed.osName ? parsed.osName : 'Unknown OS',
+      cpuName: typeof parsed.cpuName === 'string' && parsed.cpuName ? parsed.cpuName : 'Unknown CPU',
+      cpuCores: typeof parsed.cpuCores === 'number' && parsed.cpuCores > 0 ? parsed.cpuCores : null,
+      cpuSpeedGhz: typeof parsed.cpuSpeedGhz === 'number' && parsed.cpuSpeedGhz > 0 ? parsed.cpuSpeedGhz : null,
+      gpuName: typeof parsed.gpuName === 'string' && parsed.gpuName ? parsed.gpuName : 'Unknown GPU',
+      gpuVramGB: typeof parsed.gpuVramGB === 'number' && parsed.gpuVramGB > 0 ? parsed.gpuVramGB : null,
+      ramGB: typeof parsed.ramGB === 'number' && parsed.ramGB > 0 ? parsed.ramGB : null,
       ramIsApprox: false,
-      freeSpaceGB: typeof parsed.freeSpaceGB === 'number' ? parsed.freeSpaceGB : null,
-      totalSpaceGB: typeof parsed.totalSpaceGB === 'number' ? parsed.totalSpaceGB : null,
-      spaceDrive: typeof parsed.spaceDrive === 'string' && parsed.spaceDrive ? parsed.spaceDrive : 'C:',
+      freeSpaceGB: typeof parsed.freeSpaceGB === 'number' && parsed.freeSpaceGB >= 0 ? parsed.freeSpaceGB : null,
+      totalSpaceGB: typeof parsed.totalSpaceGB === 'number' && parsed.totalSpaceGB > 0 ? parsed.totalSpaceGB : null,
+      spaceDrive: typeof parsed.spaceDrive === 'string' && parsed.spaceDrive ? parsed.spaceDrive : null,
       detectedAt: parsed.detectedAt || new Date().toISOString(),
     };
   } catch {

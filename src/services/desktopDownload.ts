@@ -8,23 +8,48 @@ export function isRunningInDesktopApp(): boolean {
   return Boolean(win.secretAreaDesktop?.isDesktop);
 }
 
+function isSafePublicHttpsUrl(rawUrl: string): boolean {
+  if (!rawUrl || /[\x00-\x1f\x7f]/.test(rawUrl)) return false;
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:') return false;
+    if (parsed.username || parsed.password) return false;
+    const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    if (
+      !host ||
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host === '0.0.0.0' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      host.endsWith('.localhost')
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Accepts a direct SecretArea.exe URL OR a GitHub repo URL/slug (e.g. https://github.com/user/repo)
+ * Accepts a direct HTTPS SecretArea.exe URL OR a GitHub repo URL/slug (e.g. https://github.com/user/repo)
  * and resolves it to the direct GitHub Releases installer link:
  * https://github.com/<user>/<repo>/releases/latest/download/SecretArea.exe
  */
 export function resolveInstallerUrl(input: string): string {
   const trimmed = input.trim();
-  if (!trimmed) return '';
+  if (!trimmed || /[\x00-\x1f\x7f]/.test(trimmed)) return '';
 
-  // Direct executable / release asset URL
-  if (/^https?:\/\/.+\.(exe|msi)(\?.*)?$/i.test(trimmed)) {
+  // Direct HTTPS executable / release asset URL
+  if (/^https:\/\/.+\.(exe|msi)(\?.*)?$/i.test(trimmed) && isSafePublicHttpsUrl(trimmed)) {
     return trimmed;
   }
 
   // GitHub repository URL -> latest release SecretArea.exe
   const ghUrlMatch = trimmed.match(
-    /^https?:\/\/(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git|\/.*)?$/i
+    /^https:\/\/(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git|\/.*)?$/i
   );
   if (ghUrlMatch) {
     return `https://github.com/${ghUrlMatch[1]}/${ghUrlMatch[2]}/releases/latest/download/SecretArea.exe`;
@@ -36,7 +61,7 @@ export function resolveInstallerUrl(input: string): string {
     return `https://github.com/${slugMatch[1]}/${slugMatch[2]}/releases/latest/download/SecretArea.exe`;
   }
 
-  if (/^https?:\/\//i.test(trimmed)) {
+  if (isSafePublicHttpsUrl(trimmed)) {
     return trimmed;
   }
 
@@ -85,9 +110,10 @@ export function saveDesktopExeUrl(rawInput: string): string {
 }
 
 export function triggerExeDownload(exeUrl: string): void {
-  if (!exeUrl || typeof document === 'undefined') return;
+  const safeUrl = resolveInstallerUrl(exeUrl);
+  if (!safeUrl || typeof document === 'undefined') return;
   const link = document.createElement('a');
-  link.href = exeUrl;
+  link.href = safeUrl;
   link.download = 'SecretArea.exe';
   link.rel = 'noopener noreferrer';
   document.body.appendChild(link);

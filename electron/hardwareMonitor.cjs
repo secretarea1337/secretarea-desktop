@@ -324,7 +324,10 @@ function extractWindowsSensorReadings(sensorList, powerMeterList) {
 
   let cpuTempC = null;
   let cpuPowerWatts = null;
+  let cpuVoltageVolts = null;
   const gpuSensorsByVendor = { Intel: null, AMD: null, NVIDIA: null };
+  const fans = [];
+  const extraTemps = [];
 
   const pkgTempCandidates = [];
   const coreTempCandidates = [];
@@ -339,6 +342,16 @@ function extractWindowsSensorReadings(sensorList, powerMeterList) {
     const val = toFiniteNumber(s.Value);
     if (val === null) continue;
 
+    if (sType === 'fan' && val >= 0) {
+      fans.push({
+        id: ident || `fan-${fans.length}`,
+        name: sName || `Fan ${fans.length + 1}`,
+        rpm: Math.round(val),
+        percent: null,
+        source: ident.includes('lhm') ? 'LibreHardwareMonitor' : 'Hardware Sensor WMI',
+      });
+    }
+
     if (ident.includes('cpu') || ident.startsWith('/amdcpu') || ident.startsWith('/intelcpu')) {
       if (sType === 'temperature' && val > 0 && val <= 120) {
         if (/(package|tctl|tdie|core max|cpu package)/i.test(sNameLower)) {
@@ -351,6 +364,10 @@ function extractWindowsSensorReadings(sensorList, powerMeterList) {
           cpuPowerCandidates.unshift(Number(val.toFixed(1)));
         } else if (/(cores|cpu|ia)/i.test(sNameLower)) {
           cpuPowerCandidates.push(Number(val.toFixed(1)));
+        }
+      } else if (sType === 'voltage' && val > 0.2 && val < 3.0 && /(core|vcore|cpu)/i.test(sNameLower)) {
+        if (cpuVoltageVolts === null) {
+          cpuVoltageVolts = Number(val.toFixed(3));
         }
       }
     } else if (ident.includes('gpu')) {
@@ -366,25 +383,63 @@ function extractWindowsSensorReadings(sensorList, powerMeterList) {
         gpuSensorsByVendor[vendor] = {
           utilizationPercent: null,
           temperatureCelsius: null,
+          hotspotTempCelsius: null,
           clockSpeedMhz: null,
+          memoryClockMhz: null,
           powerWatts: null,
           fanSpeedRpm: null,
         };
       }
       const g = gpuSensorsByVendor[vendor];
-      if (sType === 'temperature' && val > 0 && val <= 125 && /(gpu core|hot spot|edge|junction|temperature)/i.test(sNameLower)) {
-        if (g.temperatureCelsius === null || sNameLower.includes('core') || sNameLower.includes('edge')) {
-          g.temperatureCelsius = Number(val.toFixed(1));
+      if (sType === 'temperature' && val > 0 && val <= 125) {
+        if (/(hot spot|hotspot|junction)/i.test(sNameLower)) {
+          g.hotspotTempCelsius = Number(val.toFixed(1));
+          extraTemps.push({
+            id: ident || `gpu-hot-${extraTemps.length}`,
+            name: `${vendor} ${sName}`,
+            category: 'gpu_hotspot',
+            celsius: Number(val.toFixed(1)),
+            source: 'Hardware Sensor WMI',
+          });
+        } else if (/(memory|vram)/i.test(sNameLower)) {
+          extraTemps.push({
+            id: ident || `gpu-vram-${extraTemps.length}`,
+            name: `${vendor} ${sName}`,
+            category: 'vram',
+            celsius: Number(val.toFixed(1)),
+            source: 'Hardware Sensor WMI',
+          });
+        } else if (/(gpu core|edge|temperature)/i.test(sNameLower)) {
+          if (g.temperatureCelsius === null || sNameLower.includes('core') || sNameLower.includes('edge')) {
+            g.temperatureCelsius = Number(val.toFixed(1));
+          }
         }
       } else if (sType === 'load' && val >= 0 && val <= 100 && /(gpu core|d3d 3d|3d)/i.test(sNameLower)) {
         g.utilizationPercent = Math.max(g.utilizationPercent ?? 0, Number(val.toFixed(1)));
-      } else if (sType === 'clock' && val > 0 && /(gpu core|graphics)/i.test(sNameLower)) {
-        g.clockSpeedMhz = Math.round(val);
+      } else if (sType === 'clock' && val > 0) {
+        if (/(gpu memory|memory)/i.test(sNameLower)) {
+          g.memoryClockMhz = Math.round(val);
+        } else if (/(gpu core|graphics)/i.test(sNameLower)) {
+          g.clockSpeedMhz = Math.round(val);
+        }
       } else if (sType === 'power' && val >= 0 && val <= 1500 && /(gpu|package|power|total)/i.test(sNameLower)) {
         g.powerWatts = Number(val.toFixed(1));
       } else if (sType === 'fan' && val >= 0) {
         g.fanSpeedRpm = Math.round(val);
       }
+    } else if (sType === 'temperature' && val > 0 && val <= 125) {
+      let category = 'other';
+      if (/(chipset|pch)/i.test(sNameLower)) category = 'chipset';
+      else if (/(vrm|mos|vr )/i.test(sNameLower)) category = 'vrm';
+      else if (/(nvme|ssd|hdd|drive|composite)/i.test(sNameLower) || ident.includes('nvme') || ident.includes('hdd')) category = 'storage';
+      else if (/(motherboard|system|mainboard|tmpin|t_sys)/i.test(sNameLower) || ident.includes('lpc')) category = 'motherboard';
+      extraTemps.push({
+        id: ident || `temp-${extraTemps.length}`,
+        name: sName || 'Board Sensor',
+        category,
+        celsius: Number(val.toFixed(1)),
+        source: 'Hardware Sensor WMI',
+      });
     }
   }
 
@@ -408,7 +463,7 @@ function extractWindowsSensorReadings(sensorList, powerMeterList) {
     }
   }
 
-  return { cpuTempC, cpuPowerWatts, gpuSensorsByVendor };
+  return { cpuTempC, cpuPowerWatts, cpuVoltageVolts, gpuSensorsByVendor, fans, extraTemps };
 }
 
 function scoreGpuForOrdering(gpu) {
@@ -1379,6 +1434,11 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
     let cpuClockGhz = null;
     let cpuTempC = null;
     let cpuPowerWatts = null;
+    let cpuVoltageVolts = null;
+    const winSensorsBundle =
+      isWindows && winPerfRes
+        ? extractWindowsSensorReadings(winPerfRes.hwSensors, winPerfRes.powerMeters)
+        : { cpuTempC: null, cpuPowerWatts: null, cpuVoltageVolts: null, gpuSensorsByVendor: {}, fans: [], extraTemps: [] };
 
     if (isLinux && linuxCpuRes) {
       cpuUsage = linuxCpuRes.usagePercent;
@@ -1404,17 +1464,13 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
         cpuClockGhz = profile.cpu.baseSpeedGhz;
       }
 
-      const winSensors =
-        isWindows && winPerfRes
-          ? extractWindowsSensorReadings(winPerfRes.hwSensors, winPerfRes.powerMeters)
-          : { cpuTempC: null, cpuPowerWatts: null, gpuSensorsByVendor: {} };
-
       if (isWindows && winPerfRes) {
         cpuTempC =
-          winSensors.cpuTempC ??
+          winSensorsBundle.cpuTempC ??
           pickCpuThermalZoneTemp(winPerfRes.thermalPerf) ??
           pickCpuThermalZoneTemp(winPerfRes.thermalAcpi);
-        cpuPowerWatts = winSensors.cpuPowerWatts;
+        cpuPowerWatts = winSensorsBundle.cpuPowerWatts;
+        cpuVoltageVolts = winSensorsBundle.cpuVoltageVolts;
       } else if (isDarwin) {
         const dTemp = toFiniteNumber(darwinTempRes?.main);
         cpuTempC = dTemp !== null && dTemp > 0 && dTemp <= 120 ? dTemp : null;
@@ -1429,10 +1485,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
     const winGpuLuids = isWindows
       ? parseWindowsGpuPerfByLuid(winPerfRes?.gpuEng, winPerfRes?.gpuMem)
       : [];
-    const winSensorsForGpu =
-      isWindows && winPerfRes
-        ? extractWindowsSensorReadings(winPerfRes.hwSensors, winPerfRes.powerMeters).gpuSensorsByVendor
-        : {};
+    const winSensorsForGpu = winSensorsBundle.gpuSensorsByVendor || {};
     const dxAdapters = Array.isArray(profile.winDxAdapters) ? profile.winDxAdapters : [];
 
     // First pass: resolve NVIDIA matches and identify known NVIDIA LUIDs so non-NVIDIA LUIDs stay unambiguous
@@ -1551,6 +1604,8 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
         null;
 
       const clockSpeedMhz = nvMatch?.clockSpeedMhz ?? winExtraSensor?.clockSpeedMhz ?? null;
+      const memoryClockMhz = winExtraSensor?.memoryClockMhz ?? null;
+      const hotspotTempCelsius = winExtraSensor?.hotspotTempCelsius ?? null;
       const fanSpeedPercent = nvMatch?.fanSpeedPercent ?? null;
       const fanSpeedRpm = drmMatch?.fanSpeedRpm ?? winExtraSensor?.fanSpeedRpm ?? null;
       const powerWatts = nvMatch?.powerWatts ?? drmMatch?.powerWatts ?? winExtraSensor?.powerWatts ?? null;
@@ -1562,9 +1617,11 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
         utilizationPercent:
           util !== null ? Math.max(0, Math.min(100, Number(util.toFixed(1)))) : null,
         temperatureCelsius: temp !== null && temp > 0 && temp <= 125 ? temp : null,
+        hotspotTempCelsius,
         vramUsedMB,
         vramTotalMB,
         clockSpeedMhz: clockSpeedMhz !== null && clockSpeedMhz > 0 ? clockSpeedMhz : null,
+        memoryClockMhz: memoryClockMhz !== null && memoryClockMhz > 0 ? memoryClockMhz : null,
         fanSpeedPercent: fanSpeedPercent !== null && fanSpeedPercent >= 0 ? fanSpeedPercent : null,
         fanSpeedRpm,
         powerWatts: powerWatts !== null && powerWatts >= 0 ? powerWatts : null,
@@ -2050,6 +2107,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
         physicalCores: profile.cpu.physicalCores,
         logicalThreads: profile.cpu.logicalThreads,
         powerWatts: cpuPowerWatts,
+        voltageVolts: cpuVoltageVolts,
         coreLoads,
       },
       gpus,
@@ -2077,6 +2135,15 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
         interfaces,
         totalDownloadBytesPerSec,
         totalUploadBytesPerSec,
+      },
+      liveSensors: {
+        fans: winSensorsBundle.fans || [],
+        extraTemps: winSensorsBundle.extraTemps || [],
+        source: profile.winFeatures?.hasLhm
+          ? 'LibreHardwareMonitor WMI'
+          : profile.winFeatures?.hasOhm
+          ? 'OpenHardwareMonitor WMI'
+          : null,
       },
       capabilities: {
         gpuTechnologies,
@@ -2266,6 +2333,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
   return {
     registerIpc,
     getSnapshot,
+    getLastSnapshot: () => lastSnapshot,
     start,
     stop,
     pauseForHidden,

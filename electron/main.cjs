@@ -6,12 +6,13 @@ const os = require('os');
 const https = require('https');
 const { fileURLToPath } = require('url');
 const { execFile } = require('child_process');
-const { createDownloadManager } = require('./downloadManager.cjs');
+const { createDownloadManager, isPrivateOrLoopbackHostname } = require('./downloadManager.cjs');
 const { createQbitSetupManager } = require('./qbitSetupManager.cjs');
 const { createHardwareMonitor } = require('./hardwareMonitor.cjs');
 const { createGamingSessionManager } = require('./hardware/gamingSessionManager.cjs');
 const { createPresentMonManager } = require('./hardware/presentMonManager.cjs');
 const { createPcCleaner } = require('./hardware/pcCleaner.cjs');
+const { createHardwareIntelligenceManager } = require('./hardware/hardwareIntelligenceIpc.cjs');
 const { registerDealsNetworkBridge } = require('./deals/dealsNetworkBridge.cjs');
 const { createDealsCredentialsManager } = require('./deals/dealsCredentialsManager.cjs');
 
@@ -30,6 +31,7 @@ let downloadManager = null;
 let qbitSetupManager = null;
 let presentMonManager = null;
 let hardwareMonitor = null;
+let hardwareIntelligenceManager = null;
 let gamingSessionManager = null;
 let pcCleaner = null;
 
@@ -997,11 +999,12 @@ async function detectWindowsHardwareDetails() {
 
 async function detectStaticHardwareProfile() {
   const cpus = os.cpus() || [];
-  let cpuName = cleanHardwareLabel(cpus[0]?.model || '') || 'Desktop Processor';
-  let cpuCores = cpus.length || 0;
-  let cpuSpeedGhz = cpus[0]?.speed ? Number((cpus[0].speed / 1000).toFixed(2)) : 0;
+  let cpuName = cleanHardwareLabel(cpus[0]?.model || '') || 'Unknown Processor';
+  let cpuCores = cpus.length > 0 ? cpus.length : null;
+  let cpuSpeedGhz = cpus[0]?.speed && cpus[0].speed > 0 ? Number((cpus[0].speed / 1000).toFixed(2)) : null;
   let osName = getFriendlyOsName();
-  const ramGB = Math.max(1, Math.round(os.totalmem() / (1024 ** 3)));
+  const totalMem = os.totalmem();
+  const ramGB = totalMem > 0 ? Math.max(1, Math.round(totalMem / (1024 ** 3))) : null;
   let allGpus = [];
   let gpuName = '';
   let gpuVramGB = null;
@@ -1015,11 +1018,11 @@ async function detectStaticHardwareProfile() {
       if (winInfo.cpu?.Name) {
         cpuName = cleanHardwareLabel(winInfo.cpu.Name);
       }
-      if (winInfo.cpu?.NumberOfLogicalProcessors) {
-        cpuCores = Number(winInfo.cpu.NumberOfLogicalProcessors) || cpuCores;
+      if (winInfo.cpu?.NumberOfLogicalProcessors && Number(winInfo.cpu.NumberOfLogicalProcessors) > 0) {
+        cpuCores = Number(winInfo.cpu.NumberOfLogicalProcessors);
       }
-      if (winInfo.cpu?.MaxClockSpeed) {
-        cpuSpeedGhz = Number((Number(winInfo.cpu.MaxClockSpeed) / 1000).toFixed(2)) || cpuSpeedGhz;
+      if (winInfo.cpu?.MaxClockSpeed && Number(winInfo.cpu.MaxClockSpeed) > 0) {
+        cpuSpeedGhz = Number((Number(winInfo.cpu.MaxClockSpeed) / 1000).toFixed(2));
       }
       const gpuList = Array.isArray(winInfo.gpus)
         ? winInfo.gpus
@@ -1066,7 +1069,7 @@ async function detectStaticHardwareProfile() {
     cpuName,
     cpuCores,
     cpuSpeedGhz,
-    gpuName: gpuName || 'Integrated / Standard GPU',
+    gpuName: gpuName || 'Unknown GPU',
     gpuVramGB,
     allGpus,
     ramGB,
@@ -1090,17 +1093,19 @@ async function getSystemSpecs(forceRefresh = false) {
   }
 
   const disk = getDiskSpaceInfo();
+  const fallbackMem = os.totalmem();
+  const fallbackCores = os.cpus()?.length || 0;
   return {
     ...(cachedHardwareProfile || {
       source: 'electron',
       osName: getFriendlyOsName(),
-      cpuName: 'Processor',
-      cpuCores: os.cpus()?.length || 0,
-      cpuSpeedGhz: 0,
-      gpuName: 'Graphics Adapter',
+      cpuName: 'Unknown Processor',
+      cpuCores: fallbackCores > 0 ? fallbackCores : null,
+      cpuSpeedGhz: null,
+      gpuName: 'Unknown GPU',
       gpuVramGB: null,
       allGpus: [],
-      ramGB: Math.max(1, Math.round(os.totalmem() / (1024 ** 3))),
+      ramGB: fallbackMem > 0 ? Math.max(1, Math.round(fallbackMem / (1024 ** 3))) : null,
       ramIsApprox: false,
     }),
     ...disk,
@@ -1119,16 +1124,17 @@ function resolveAppIcon() {
 function parseSafeExternalUrl(targetUrl) {
   if (typeof targetUrl !== 'string') return '';
   const trimmed = targetUrl.trim();
-  if (!trimmed || /[\x00-\x1f\x7f]/.test(trimmed)) return '';
+  if (!trimmed || trimmed.length > 2048 || /[\x00-\x1f\x7f]/.test(trimmed)) return '';
   try {
     const parsed = new URL(trimmed);
     const proto = parsed.protocol.toLowerCase();
     if (proto === 'http:' || proto === 'https:') {
-      if (!parsed.hostname) return '';
+      if (parsed.username || parsed.password) return '';
+      if (!parsed.hostname || isPrivateOrLoopbackHostname(parsed.hostname)) return '';
       return trimmed;
     }
     if (proto === 'magnet:' || proto === 'tg:') {
-      return trimmed;
+      return /\s/.test(trimmed) ? '' : trimmed;
     }
     return '';
   } catch {
@@ -1399,6 +1405,13 @@ app.whenReady().then(() => {
   });
   hardwareMonitor.registerIpc(ipcMain, isTrustedSender);
 
+  hardwareIntelligenceManager = createHardwareIntelligenceManager({
+    getMainWindow: () => mainWindow,
+    getUserDataPath: () => app.getPath('userData'),
+    getLatestSnapshot: () => (hardwareMonitor ? hardwareMonitor.getLastSnapshot() : null),
+  });
+  hardwareIntelligenceManager.registerIpc(ipcMain, isTrustedSender);
+
   const dealsCredentialsManager = createDealsCredentialsManager({
     getUserDataPath: () => app.getPath('userData'),
   });
@@ -1425,6 +1438,9 @@ app.on('before-quit', () => {
   isQuitting = true;
   if (hardwareMonitor) {
     hardwareMonitor.shutdown();
+  }
+  if (hardwareIntelligenceManager) {
+    hardwareIntelligenceManager.shutdown();
   }
   if (gamingSessionManager) {
     gamingSessionManager.shutdown();

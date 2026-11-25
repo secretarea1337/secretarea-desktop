@@ -1208,14 +1208,18 @@ export const StoreView = memo(function StoreView({
                   <Memory className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#66c0f4] shrink-0" />
                   <span className="text-slate-500 dark:text-[#8b9bb4]">{t.ramLabel}:</span>
                   <strong className="text-slate-900 dark:text-white font-semibold font-mono-tabular">
-                    {systemSpecs.ramIsApprox ? `${systemSpecs.ramGB} GB+` : `${systemSpecs.ramGB} GB`}
+                    {systemSpecs.ramGB !== null && systemSpecs.ramGB > 0
+                      ? systemSpecs.ramIsApprox
+                        ? `${systemSpecs.ramGB} GB+`
+                        : `${systemSpecs.ramGB} GB`
+                      : 'N/A'}
                   </strong>
                 </span>
                 {systemSpecs.freeSpaceGB !== null && (
                   <span className="inline-flex items-center gap-1.5">
                     <HardDrive className="w-3.5 h-3.5 text-[#0284c7] dark:text-[#66c0f4] shrink-0" />
                     <span className="text-slate-500 dark:text-[#8b9bb4]">
-                      {t.freeDriveLabel} ({systemSpecs.spaceDrive}):
+                      {t.freeDriveLabel}{systemSpecs.spaceDrive ? ` (${systemSpecs.spaceDrive})` : ''}:
                     </span>
                     <strong className="text-slate-900 dark:text-white font-semibold font-mono-tabular">
                       {systemSpecs.freeSpaceGB.toFixed(1)} GB

@@ -69,16 +69,16 @@ export interface DesktopSystemSpecsPayload {
   source: 'electron';
   osName: string;
   cpuName: string;
-  cpuCores: number;
-  cpuSpeedGhz: number;
+  cpuCores: number | null;
+  cpuSpeedGhz: number | null;
   gpuName: string;
   gpuVramGB: number | null;
   allGpus?: string[];
-  ramGB: number;
+  ramGB: number | null;
   ramIsApprox?: boolean;
   freeSpaceGB: number | null;
   totalSpaceGB: number | null;
-  spaceDrive: string;
+  spaceDrive: string | null;
   detectedAt: string;
 }
 

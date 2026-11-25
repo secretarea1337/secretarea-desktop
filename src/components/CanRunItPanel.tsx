@@ -109,7 +109,7 @@ export function CanRunItPanel({
   const [showEditor, setShowEditor] = useState(false);
   const [draftGpu, setDraftGpu] = useState(specs.gpuName);
   const [draftCpu, setDraftCpu] = useState(specs.cpuName);
-  const [draftRam, setDraftRam] = useState(String(specs.ramGB));
+  const [draftRam, setDraftRam] = useState(specs.ramGB !== null ? String(specs.ramGB) : '');
   const [draftSpace, setDraftSpace] = useState(
     specs.freeSpaceGB !== null ? String(specs.freeSpaceGB) : ''
   );
@@ -117,7 +117,7 @@ export function CanRunItPanel({
   const openEditor = () => {
     setDraftGpu(specs.gpuName);
     setDraftCpu(specs.cpuName);
-    setDraftRam(String(specs.ramGB));
+    setDraftRam(specs.ramGB !== null ? String(specs.ramGB) : '');
     setDraftSpace(specs.freeSpaceGB !== null ? String(specs.freeSpaceGB) : '');
     setShowEditor((prev) => !prev);
   };
@@ -125,7 +125,11 @@ export function CanRunItPanel({
   const handleApplyDraft = (e: React.FormEvent) => {
     e.preventDefault();
     if (!onSaveCustomSpecs) return;
-    const parsedRam = Math.max(1, Number(draftRam) || specs.ramGB);
+    const numRam = Number(draftRam);
+    const parsedRam =
+      draftRam.trim() !== '' && Number.isFinite(numRam) && numRam > 0
+        ? Math.max(1, numRam)
+        : specs.ramGB;
     const parsedSpace =
       draftSpace.trim() === '' ? null : Math.max(0, Number(draftSpace) || 0);
     onSaveCustomSpecs({

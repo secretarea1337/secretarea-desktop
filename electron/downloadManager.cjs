@@ -82,15 +82,28 @@ function isPrivateOrLoopbackHostname(rawHostname) {
 function isSafeRemoteDownloadUrl(rawUrl) {
   if (typeof rawUrl !== 'string') return false;
   const trimmed = rawUrl.trim();
-  if (!trimmed || /[\x00-\x1f\x7f]/.test(trimmed)) return false;
+  if (!trimmed || trimmed.length > 4096 || /[\x00-\x1f\x7f]/.test(trimmed)) return false;
   try {
     const parsed = new URL(trimmed);
     const proto = parsed.protocol.toLowerCase();
     if (proto !== 'http:' && proto !== 'https:') return false;
+    if (parsed.username || parsed.password) return false;
     if (!parsed.hostname || isPrivateOrLoopbackHostname(parsed.hostname)) return false;
     return true;
   } catch {
     return false;
+  }
+}
+
+function hasHeaderControlChars(val) {
+  return typeof val === 'string' && /[\r\n\0\x00-\x1f\x7f]/.test(val);
+}
+
+function assertNotSymlinkIfExists(targetPath) {
+  if (!targetPath || !fs.existsSync(targetPath)) return;
+  const st = fs.lstatSync(targetPath);
+  if (st.isSymbolicLink()) {
+    throw new Error('Security policy: Refusing to read or write through a symbolic link target.');
   }
 }
 
@@ -116,7 +129,9 @@ function isValidInfoHash(hash) {
 function scrubSensitiveText(text) {
   return String(text || '')
     .replace(/Bearer\s+[A-Za-z0-9._+/=-]+/gi, 'Bearer [redacted]')
-    .replace(/(SID=)[^;\s]+/gi, '$1[redacted]');
+    .replace(/(SID=)[^;\s]+/gi, '$1[redacted]')
+    .replace(/(https?:\/\/)[^:/@\s]+:[^/@\s]+@/gi, '$1[redacted]@')
+    .replace(/([?&](?:token|key|apikey|api_key|password|secret)=)[^&\s]+/gi, '$1[redacted]');
 }
 
 function compareSemver(a, b) {
@@ -975,9 +990,16 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
         throw new Error('Response stream is empty.');
       }
 
-      const writeStream = fs.createWriteStream(finalPartPath, {
-        flags: isResumedPartial ? 'a' : 'w',
-      });
+      const writeStream = fs.createWriteStream(
+        (() => {
+          assertNotSymlinkIfExists(finalSavePath);
+          assertNotSymlinkIfExists(finalPartPath);
+          return finalPartPath;
+        })(),
+        {
+          flags: isResumedPartial ? 'a' : 'w',
+        }
+      );
 
       const reader = response.body.getReader();
       let downloaded = startOffset;
@@ -1033,6 +1055,8 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       }
 
       if (fs.existsSync(finalPartPath)) {
+        assertNotSymlinkIfExists(finalPartPath);
+        assertNotSymlinkIfExists(finalSavePath);
         fs.renameSync(finalPartPath, finalSavePath);
       }
 
@@ -1154,6 +1178,8 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       const entry = activeMegaStreams.get(taskId);
       if (entry) entry.stream = dlStream;
 
+      assertNotSymlinkIfExists(finalSavePath);
+      assertNotSymlinkIfExists(finalPartPath);
       const writeStream = fs.createWriteStream(finalPartPath, {
         flags: existingBytes > 0 ? 'a' : 'w',
       });
@@ -1214,6 +1240,8 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       if (abortFlag.paused || abortFlag.cancelled) return;
 
       if (fs.existsSync(finalPartPath)) {
+        assertNotSymlinkIfExists(finalPartPath);
+        assertNotSymlinkIfExists(finalSavePath);
         fs.renameSync(finalPartPath, finalSavePath);
       }
 
@@ -1251,8 +1279,12 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
 
   function registerGlobalWillDownload() {
     session.defaultSession.on('will-download', (event, item, webContents) => {
-      const urlChain = item.getURLChain();
-      const firstUrl = urlChain[0] || item.getURL() || '';
+      const urlChain = typeof item.getURLChain === 'function' ? item.getURLChain() : [];
+      const currentUrl = typeof item.getURL === 'function' ? item.getURL() : '';
+      const candidateUrls = [currentUrl, ...urlChain].filter(
+        (u) => typeof u === 'string' && u.trim().length > 0
+      );
+      const firstUrl = urlChain[0] || currentUrl || '';
       const rawName = item.getFilename() || 'download.bin';
 
       let matchedMeta = null;
@@ -1263,6 +1295,28 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
           browserTaskQueueMeta.splice(i, 1);
           break;
         }
+      }
+
+      if (candidateUrls.length === 0 || !candidateUrls.every((u) => isSafeRemoteDownloadUrl(u))) {
+        event.preventDefault();
+        try {
+          item.cancel();
+        } catch {
+          // ignore
+        }
+        if (matchedMeta?.taskId) {
+          patchTask(
+            matchedMeta.taskId,
+            {
+              status: 'failed',
+              speedBytesPerSec: 0,
+              etaSeconds: null,
+              error: 'Blocked unsafe or private network download target.',
+            },
+            true
+          );
+        }
+        return;
       }
 
       const { downloadFolder } = getDownloadSettings();
@@ -1767,6 +1821,16 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
 
     try {
       assertSafeLoopbackConfig(cfg);
+      if (
+        hasHeaderControlChars(cfg.username) ||
+        hasHeaderControlChars(cfg.password) ||
+        hasHeaderControlChars(cfg.apiKey)
+      ) {
+        return {
+          ok: false,
+          message: 'Credentials contain invalid control or newline characters.',
+        };
+      }
       if (!cfg.port || cfg.port < 1 || cfg.port > 65535) {
         return {
           ok: false,
@@ -2640,20 +2704,33 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
     const portNum = Number(nextInput?.port);
     const rawHost = typeof nextInput?.host === 'string' ? nextInput.host.trim() : '';
     const safeHost = isLoopbackHost(rawHost) ? rawHost : '127.0.0.1';
+    const rawUsername = typeof nextInput?.username === 'string' ? nextInput.username.trim() : '';
+    const rawPassword =
+      typeof nextInput?.password === 'string' && nextInput.password.length > 0
+        ? nextInput.password
+        : torrentConfig.password;
+    const rawApiKey =
+      typeof nextInput?.apiKey === 'string' && nextInput.apiKey.length > 0
+        ? nextInput.apiKey.trim()
+        : torrentConfig.apiKey;
+
+    if (
+      hasHeaderControlChars(rawUsername) ||
+      hasHeaderControlChars(rawPassword) ||
+      hasHeaderControlChars(rawApiKey)
+    ) {
+      torrentError = 'Credentials contain invalid control or newline characters.';
+      emitSnapshot(true);
+      return getSnapshot();
+    }
 
     const nextCfg = {
       enabled: Boolean(nextInput?.enabled),
       host: safeHost,
       port: Number.isFinite(portNum) && portNum > 0 && portNum <= 65535 ? Math.round(portNum) : 8080,
-      username: typeof nextInput?.username === 'string' ? nextInput.username.trim() : '',
-      password:
-        typeof nextInput?.password === 'string' && nextInput.password.length > 0
-          ? nextInput.password
-          : torrentConfig.password,
-      apiKey:
-        typeof nextInput?.apiKey === 'string' && nextInput.apiKey.length > 0
-          ? nextInput.apiKey.trim()
-          : torrentConfig.apiKey,
+      username: rawUsername,
+      password: rawPassword,
+      apiKey: rawApiKey,
       pollIntervalMs: 1500,
     };
 

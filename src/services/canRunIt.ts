@@ -421,16 +421,18 @@ function scoreCpuRequirement(rawReq: string): { score: number | null; isGeneric:
   return { score: minScore, isGeneric: anyGeneric };
 }
 
-function scoreUserCpu(specs: SystemHardwareSpecs): { score: number; label: string } {
-  const scored = scoreSingleCpu(specs.cpuName);
+function scoreUserCpu(specs: SystemHardwareSpecs): { score: number | null; label: string } {
+  const cpuName = (specs.cpuName || '').trim();
+  const isUnknownCpuName = !cpuName || /^(?:unknown|unavailable|browser-reported|desktop processor|processor)/i.test(cpuName);
+  const scored = scoreSingleCpu(cpuName);
   if (scored.score !== null && !scored.isGeneric) {
-    return { score: scored.score, label: specs.cpuName };
+    return { score: scored.score, label: cpuName };
   }
-  // Fallback estimation from logical cores + clock when model string isn't in lookup (e.g. web threads)
-  const cores = Math.max(2, specs.cpuCores || 4);
-  const speed = specs.cpuSpeedGhz > 0 ? specs.cpuSpeedGhz : 3.2;
-  const estScore = Math.round(cores * 12 * (speed / 3.0));
-  return { score: Math.max(32, estScore), label: specs.cpuName };
+  if (!isUnknownCpuName && specs.cpuCores !== null && specs.cpuCores > 0 && specs.cpuSpeedGhz !== null && specs.cpuSpeedGhz > 0) {
+    const estScore = Math.round(specs.cpuCores * 12 * (specs.cpuSpeedGhz / 3.0));
+    return { score: Math.max(20, estScore), label: cpuName };
+  }
+  return { score: null, label: cpuName || 'Unknown CPU' };
 }
 
 function scoreUserGpu(specs: SystemHardwareSpecs): {
@@ -526,12 +528,17 @@ function computeCanRunGame(
   const userGpu = scoreUserGpu(specs);
   const userCpu = scoreUserCpu(specs);
 
+  const gpuName = (specs.gpuName || '').trim();
+  const isGpuUnknown =
+    !gpuName ||
+    /^(?:unknown|unavailable|graphics adapter|integrated\s*\/\s*standard\s*gpu|web\s*gpu)/i.test(gpuName);
+
   // 1. Graphics / GPU
   if (gpu) {
     const reqGpu = scoreGpuRequirement(gpu);
     let status: ComponentStatus = 'unknown';
     let deltaPercent: number | null = null;
-    let statusText = 'Compatible';
+    let statusText = 'Unknown';
     let reason: string | undefined;
 
     if (reqGpu.requiresCuda && !userGpu.isNvidia && userGpu.score !== null) {
@@ -560,19 +567,22 @@ function computeCanRunGame(
         reason = `GPU below minimum`;
         weakComponents.push('gpu');
       }
-    } else if (reqGpu.isGeneric) {
+    } else if (reqGpu.isGeneric && !isGpuUnknown && userGpu.score !== null) {
       status = 'pass';
       statusText = 'Enough';
+    } else {
+      reason = 'GPU specification or requirement could not be verified';
     }
 
     rows.push({
       key: 'gpu',
       label: 'Graphics',
       requiredText: gpu,
-      userText:
-        specs.gpuVramGB && specs.gpuVramGB > 0 && specs.gpuVramGB < 3.9
-          ? `${specs.gpuName} (${specs.gpuVramGB} GB)`
-          : specs.gpuName,
+      userText: isGpuUnknown
+        ? 'Unknown GPU'
+        : specs.gpuVramGB && specs.gpuVramGB > 0 && specs.gpuVramGB < 3.9
+        ? `${gpuName} (${specs.gpuVramGB} GB)`
+        : gpuName,
       status,
       deltaPercent,
       statusText,
@@ -585,10 +595,10 @@ function computeCanRunGame(
     const reqCpu = scoreCpuRequirement(cpu);
     let status: ComponentStatus = 'unknown';
     let deltaPercent: number | null = null;
-    let statusText = 'Compatible';
+    let statusText = 'Unknown';
     let reason: string | undefined;
 
-    if (reqCpu.score !== null) {
+    if (reqCpu.score !== null && userCpu.score !== null) {
       deltaPercent = ((userCpu.score - reqCpu.score) / reqCpu.score) * 100;
       if (userCpu.score >= reqCpu.score * 0.92) {
         status = 'pass';
@@ -599,9 +609,11 @@ function computeCanRunGame(
         reason = 'Processor below minimum';
         weakComponents.push('cpu');
       }
-    } else if (reqCpu.isGeneric) {
+    } else if (reqCpu.isGeneric && userCpu.score !== null) {
       status = 'pass';
       statusText = 'Enough';
+    } else {
+      reason = 'CPU specification or requirement could not be verified';
     }
 
     rows.push({
@@ -609,7 +621,7 @@ function computeCanRunGame(
       label: 'Processor',
       requiredText: cpu,
       userText:
-        specs.cpuCores > 0
+        specs.cpuCores !== null && specs.cpuCores > 0
           ? `${userCpu.label} (${specs.cpuCores} threads)`
           : userCpu.label,
       status,
@@ -623,11 +635,11 @@ function computeCanRunGame(
   if (ram) {
     const reqRamGB = parseRamRequirementGB(ram);
     let status: ComponentStatus = 'unknown';
-    let statusText = 'Enough';
+    let statusText = 'Unknown';
     let deltaPercent: number | null = null;
     let reason: string | undefined;
 
-    if (reqRamGB !== null) {
+    if (reqRamGB !== null && specs.ramGB !== null && specs.ramGB > 0) {
       deltaPercent = ((specs.ramGB - reqRamGB) / reqRamGB) * 100;
       if (specs.ramGB >= reqRamGB) {
         status = 'pass';
@@ -643,13 +655,20 @@ function computeCanRunGame(
         reason = `Needs ${reqRamGB} GB RAM`;
         weakComponents.push('ram');
       }
+    } else {
+      reason = 'RAM capacity or requirement unknown';
     }
 
     rows.push({
       key: 'ram',
       label: 'Memory',
       requiredText: ram,
-      userText: specs.ramIsApprox ? `${specs.ramGB} GB+ (Browser cap)` : `${specs.ramGB} GB`,
+      userText:
+        specs.ramGB !== null && specs.ramGB > 0
+          ? specs.ramIsApprox
+            ? `${specs.ramGB} GB+ (Browser cap)`
+            : `${specs.ramGB} GB`
+          : 'Unknown',
       status,
       deltaPercent,
       statusText,
@@ -660,9 +679,9 @@ function computeCanRunGame(
   // 4. Storage / Free Space
   if (storageReqGB !== null && storageReqGB > 0) {
     let status: ComponentStatus = 'unknown';
-    let statusText = 'Check space';
+    let statusText = 'Unknown';
     let reason: string | undefined;
-    const driveLabel = specs.spaceDrive || 'Drive';
+    const driveLabel = specs.spaceDrive;
 
     if (specs.freeSpaceGB !== null) {
       if (specs.freeSpaceGB >= storageReqGB) {
@@ -675,16 +694,18 @@ function computeCanRunGame(
         reason = `Need ${storageReqGB} GB free`;
         weakComponents.push('space');
       }
+    } else {
+      reason = 'Free disk space unavailable';
     }
 
     rows.push({
       key: 'space',
       label: 'Space',
-      requiredText: `~${storageReqGB} GB on ${driveLabel}`,
+      requiredText: driveLabel ? `~${storageReqGB} GB on ${driveLabel}` : `~${storageReqGB} GB`,
       userText:
         specs.freeSpaceGB !== null
           ? `${specs.freeSpaceGB.toFixed(1)} GB free`
-          : 'Open in SecretArea.exe for real disk space',
+          : 'Unknown',
       status,
       deltaPercent: null,
       statusText,
@@ -728,14 +749,28 @@ function computeCanRunGame(
   }
 
   const passedLabels = rows.filter((r) => r.status === 'pass').map((r) => r.label.toLowerCase());
+  const unknownRows = rows.filter((r) => r.status === 'unknown');
+  if (passedLabels.length === 0 || unknownRows.length > 0) {
+    const unknownNames = unknownRows.map((r) => r.label).join(', ');
+    return {
+      status: 'unknown',
+      headline: 'Unable to confirm full compatibility',
+      shortBadge: 'Unknown',
+      summaryText: unknownNames
+        ? `Unverified component checks: ${unknownNames}. Unknown specs are never treated as passing.`
+        : 'Hardware specifications or game requirements could not be verified.',
+      weakComponents: [],
+      weakLabels: [],
+      rows,
+      hasRequirements: true,
+    };
+  }
+
   return {
     status: 'can-run',
     headline: 'Runs well on this PC',
     shortBadge: 'Can Run It',
-    summaryText:
-      passedLabels.length > 0
-        ? `Above the minimum on ${passedLabels.slice(0, 3).join(', ')}`
-        : 'Meets listed system requirements',
+    summaryText: `Above the minimum on ${passedLabels.slice(0, 3).join(', ')}`,
     weakComponents: [],
     weakLabels: [],
     rows,

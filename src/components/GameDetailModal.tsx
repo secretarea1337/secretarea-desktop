@@ -437,8 +437,8 @@ export function GameDetailModal({
     if (trailerSlideIdx >= 0) {
       setActiveSlideIndex(trailerSlideIdx);
       mediaSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else if (game.trailerUrl) {
-      window.open(game.trailerUrl, '_blank', 'noopener,noreferrer');
+    } else if (game.trailerUrl && /^https?:\/\//i.test(game.trailerUrl.trim())) {
+      window.open(game.trailerUrl.trim(), '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -1879,10 +1879,12 @@ export function GameDetailModal({
 
                       {game.parsedTools.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3">
-                          {game.parsedTools.map((tool, i) => (
+                          {game.parsedTools
+                            .filter((tool) => /^https?:\/\//i.test((tool.url || '').trim()))
+                            .map((tool, i) => (
                             <motion.a
                               key={`${tool.name}-${i}`}
-                              href={tool.url}
+                              href={tool.url.trim()}
                               target="_blank"
                               rel="noopener noreferrer"
                               initial={{ opacity: 0, y: 8 }}
@@ -2398,7 +2400,7 @@ export function GameDetailModal({
                                     </button>
                                   ) : (
                                     <a
-                                      href={mirror.url}
+                                      href={/^magnet:\?/i.test(mirror.url) ? mirror.url : /^https?:\/\//i.test(mirror.url) ? mirror.url : '#'}
                                       onClick={() => onStartDownload?.(mirror, game)}
                                       className="group relative overflow-hidden flex-1 sm:flex-initial inline-flex items-center justify-center gap-2.5 px-4 sm:px-5 py-2.5 bg-gradient-to-r from-[#0284c7] to-[#0ea5e9] hover:from-[#0369a1] hover:to-[#0284c7] dark:from-[#1a9fff] dark:to-[#0284c7] dark:hover:from-[#38adff] dark:hover:to-[#1a9fff] text-white text-[13px] font-semibold transition-colors"
                                     >
@@ -2449,7 +2451,7 @@ export function GameDetailModal({
                                   </button>
                                 ) : (
                                   <a
-                                    href={mirror.url}
+                                    href={/^https?:\/\//i.test(mirror.url) ? mirror.url : '#'}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={() => onStartDownload?.(mirror, game)}
@@ -2463,7 +2465,7 @@ export function GameDetailModal({
                                   </a>
                                 )}
 
-                                {isDesktopApp && (
+                                {isDesktopApp && /^https?:\/\//i.test(mirror.url) && (
                                   <a
                                     href={mirror.url}
                                     target="_blank"

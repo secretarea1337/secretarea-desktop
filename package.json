@@ -1,7 +1,7 @@
 {
   "name": "secretarea",
   "private": true,
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "SecretArea Desktop Game Launcher",
   "repository": "https://github.com/secretarea1337/secretarea-desktop",
   "type": "module",
@@ -24,6 +24,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "hardware-db.json",
       "package.json"
     ],
     "publish": [

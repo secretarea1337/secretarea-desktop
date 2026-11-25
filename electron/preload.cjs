@@ -126,6 +126,32 @@ contextBridge.exposeInMainWorld('secretAreaDesktop', {
       };
     },
   },
+  hardwareIntelligence: {
+    getDeepInventory: (forceRefresh) =>
+      ipcRenderer.invoke('hardware:get-deep-inventory', Boolean(forceRefresh)),
+    getDbState: () => ipcRenderer.invoke('hardware:db-get-state'),
+    getDbEntries: () => ipcRenderer.invoke('hardware:db-get-entries'),
+    checkDbUpdate: (customUrl, options) =>
+      ipcRenderer.invoke('hardware:db-check-update', customUrl, options),
+    importDbFile: () => ipcRenderer.invoke('hardware:db-import-file'),
+    rollbackDb: () => ipcRenderer.invoke('hardware:db-rollback'),
+    runBenchmark: (testIds) => ipcRenderer.invoke('hardware:benchmark-run', testIds),
+    cancelBenchmark: () => ipcRenderer.invoke('hardware:benchmark-cancel'),
+    onBenchmarkProgress: (callback) => {
+      if (typeof callback !== 'function') {
+        return () => {};
+      }
+      const listener = (_event, progress) => {
+        callback(progress);
+      };
+      ipcRenderer.on('hardware:benchmark-progress', listener);
+      return () => {
+        ipcRenderer.removeListener('hardware:benchmark-progress', listener);
+      };
+    },
+    exportReportJson: (payload) => ipcRenderer.invoke('hardware:export-report-json', payload),
+    exportReportPdf: (payload) => ipcRenderer.invoke('hardware:export-report-pdf', payload),
+  },
   gamingMonitor: {
     listProcesses: () => ipcRenderer.invoke('gaming:list-processes'),
     checkPresentMon: () => ipcRenderer.invoke('gaming:check-presentmon'),

@@ -34,6 +34,23 @@ function maskSecret(secret) {
   return `${trimmed.slice(0, 4)}••••${trimmed.slice(-4)}`;
 }
 
+function validateApiKeyFormat(rawSecret) {
+  if (typeof rawSecret !== 'string') {
+    return { ok: false, error: 'API key must be a text string.' };
+  }
+  const trimmed = rawSecret.trim();
+  if (!trimmed) {
+    return { ok: false, error: 'API key cannot be empty.' };
+  }
+  if (trimmed.length > 2048) {
+    return { ok: false, error: 'API key exceeds maximum allowed length (2048 characters).' };
+  }
+  if (/[\r\n\0\x00-\x1f\x7f]/.test(trimmed)) {
+    return { ok: false, error: 'API key contains invalid control or newline characters.' };
+  }
+  return { ok: true, value: trimmed };
+}
+
 function createDealsCredentialsManager({ getUserDataPath }) {
   const memorySessionKeys = new Map();
 
@@ -73,7 +90,8 @@ function createDealsCredentialsManager({ getUserDataPath }) {
     if (!spec) return null;
 
     if (memorySessionKeys.has(providerId)) {
-      return memorySessionKeys.get(providerId) || null;
+      const memCheck = validateApiKeyFormat(memorySessionKeys.get(providerId));
+      return memCheck.ok ? memCheck.value : null;
     }
 
     const disk = readDiskRecords();
@@ -81,8 +99,9 @@ function createDealsCredentialsManager({ getUserDataPath }) {
     if (entry && typeof entry.encryptedBase64 === 'string' && entry.encryptedBase64.length > 0) {
       if (isSafeStorageReady()) {
         try {
-          const decrypted = safeStorage.decryptString(Buffer.from(entry.encryptedBase64, 'base64')).trim();
-          if (decrypted) return decrypted;
+          const decrypted = safeStorage.decryptString(Buffer.from(entry.encryptedBase64, 'base64'));
+          const check = validateApiKeyFormat(decrypted);
+          if (check.ok) return check.value;
         } catch {
           // Ignore corrupted ciphertext; fall back to env var if configured
         }
@@ -90,8 +109,9 @@ function createDealsCredentialsManager({ getUserDataPath }) {
     }
 
     const envVal = process.env[spec.envVar];
-    if (typeof envVal === 'string' && envVal.trim()) {
-      return envVal.trim();
+    const envCheck = validateApiKeyFormat(envVal);
+    if (envCheck.ok) {
+      return envCheck.value;
     }
 
     return null;
@@ -102,10 +122,11 @@ function createDealsCredentialsManager({ getUserDataPath }) {
     if (!spec) {
       return { ok: false, error: 'Unsupported provider credential ID.' };
     }
-    const trimmed = typeof rawSecret === 'string' ? rawSecret.trim() : '';
-    if (!trimmed) {
-      return { ok: false, error: 'API key cannot be empty.' };
+    const validation = validateApiKeyFormat(rawSecret);
+    if (!validation.ok) {
+      return { ok: false, error: validation.error };
     }
+    const trimmed = validation.value;
 
     if (isSafeStorageReady()) {
       try {

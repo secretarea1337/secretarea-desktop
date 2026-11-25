@@ -529,6 +529,7 @@ export interface HardwareCpuMetrics {
   physicalCores: number | null;
   logicalThreads: number | null;
   powerWatts: number | null;
+  voltageVolts?: number | null;
   coreLoads: number[];
 }
 
@@ -538,9 +539,11 @@ export interface HardwareGpuMetrics {
   manufacturer: string | null;
   utilizationPercent: number | null;
   temperatureCelsius: number | null;
+  hotspotTempCelsius?: number | null;
   vramUsedMB: number | null;
   vramTotalMB: number | null;
   clockSpeedMhz: number | null;
+  memoryClockMhz?: number | null;
   fanSpeedPercent: number | null;
   fanSpeedRpm: number | null;
   powerWatts: number | null;
@@ -585,6 +588,22 @@ export interface HardwareNetworkInterfaceMetrics {
   isActive: boolean;
 }
 
+export interface LiveFanTelemetryItem {
+  id: string;
+  name: string;
+  rpm: number | null;
+  percent: number | null;
+  source: string;
+}
+
+export interface LiveExtraTempItem {
+  id: string;
+  name: string;
+  category: 'motherboard' | 'chipset' | 'storage' | 'vrm' | 'gpu_hotspot' | 'vram' | 'other';
+  celsius: number;
+  source: string;
+}
+
 export interface HardwareMonitorSnapshot {
   timestamp: number;
   platform: string;
@@ -610,6 +629,11 @@ export interface HardwareMonitorSnapshot {
     totalDownloadBytesPerSec: number | null;
     totalUploadBytesPerSec: number | null;
   };
+  liveSensors?: {
+    fans: LiveFanTelemetryItem[];
+    extraTemps: LiveExtraTempItem[];
+    source: string | null;
+  } | null;
   capabilities?: {
     gpuTechnologies: GpuCapabilitiesProfile[];
     display: DisplayCapabilitiesProfile | null;
@@ -755,4 +779,540 @@ export interface CleanerProgressEvent {
   percent: number;
   currentPath: string | null;
 }
+
+// --- Deep Hardware Inspection, Intelligence, Database, Benchmarks & 2030+ Advisors ---
+
+export type DataProvenance =
+  | 'detected'
+  | 'measured'
+  | 'manufacturer_spec'
+  | 'estimated'
+  | 'not_supported'
+  | 'not_detected'
+  | 'sensor_unavailable'
+  | 'requires_admin'
+  | 'unknown';
+
+export type WorkloadProfileId =
+  | 'gaming'
+  | 'office'
+  | 'programming'
+  | '3d_rendering'
+  | 'video_editing'
+  | 'graphic_design'
+  | 'ai_ml'
+  | 'professional'
+  | 'mixed';
+
+export type FanStatus =
+  | 'running'
+  | 'stopped_confirmed'
+  | 'abnormal_rpm'
+  | 'not_detected'
+  | 'sensor_unavailable'
+  | 'unknown';
+
+export interface SensorReadingItem {
+  id: string;
+  name: string;
+  category:
+    | 'cpu'
+    | 'gpu'
+    | 'gpu_hotspot'
+    | 'vram'
+    | 'motherboard'
+    | 'chipset'
+    | 'storage'
+    | 'ambient'
+    | 'voltage'
+    | 'other';
+  value: number | null;
+  unit: 'C' | 'V' | 'RPM' | 'W' | '%';
+  minValue: number | null;
+  maxValue: number | null;
+  source: string;
+  provenance: DataProvenance;
+}
+
+export interface PcieSlotInfo {
+  designation: string;
+  slotType: string | null;
+  laneWidth: string | null;
+  currentUsage: 'In Use' | 'Available' | 'Unknown';
+  supportsHotPlug: boolean | null;
+  provenance: DataProvenance;
+}
+
+export interface MemoryDimmInfo {
+  bankLabel: string | null;
+  deviceLocator: string | null;
+  manufacturer: string | null;
+  partNumber: string | null;
+  serialMasked: string | null;
+  capacityBytes: number | null;
+  configuredSpeedMhz: number | null;
+  ratedSpeedMhz: number | null;
+  memoryType: string | null;
+  formFactor: string | null;
+  voltageMv: number | null;
+  isSolderedHint: boolean;
+  provenance: DataProvenance;
+}
+
+export interface DeepStorageDriveInfo {
+  id: string;
+  index: number | null;
+  friendlyName: string;
+  model: string | null;
+  vendor: string | null;
+  serialMasked: string | null;
+  mediaType: 'NVMe SSD' | 'SATA SSD' | 'HDD' | 'External / USB' | 'SSD' | 'Unknown';
+  busType: string | null;
+  interfaceDetail: string | null;
+  sizeBytes: number | null;
+  temperatureC: number | null;
+  smartSupported: boolean | null;
+  smartAvailable: boolean;
+  smartHealthStatus: 'healthy' | 'warning' | 'critical' | 'unavailable';
+  smartSource: string | null;
+  powerOnHours: number | null;
+  powerCycles: number | null;
+  wearPercent: number | null;
+  remainingLifePercent: number | null;
+  tbwBytes: number | null;
+  tbrBytes: number | null;
+  reallocatedSectors: number | null;
+  pendingSectors: number | null;
+  mediaErrors: number | null;
+  unsafeShutdowns: number | null;
+  readErrorsUncorrected: number | null;
+  writeErrorsUncorrected: number | null;
+  warnings: string[];
+  provenance: DataProvenance;
+}
+
+export interface FanSensorInfo {
+  id: string;
+  name: string;
+  role: 'cpu' | 'gpu' | 'case' | 'aio_pump' | 'laptop' | 'other';
+  rpm: number | null;
+  percent: number | null;
+  minRpm: number | null;
+  maxRpm: number | null;
+  status: FanStatus;
+  linkedTempSensor: string | null;
+  source: string;
+  provenance: DataProvenance;
+}
+
+export interface PortEntry {
+  id: string;
+  category: 'confirmed_physical' | 'controller' | 'connected_device' | 'unconfirmed_physical';
+  kind: 'usb' | 'video' | 'network' | 'audio' | 'storage' | 'pcie' | 'expansion' | 'other';
+  name: string;
+  connectorType: string | null;
+  versionOrSpec: string | null;
+  theoreticalBandwidth: string | null;
+  status: 'connected' | 'available' | 'active' | 'unknown';
+  connectedDeviceName: string | null;
+  capabilities: string[];
+  confidence: 'high' | 'medium' | 'low';
+  source: string;
+  provenance: DataProvenance;
+}
+
+export interface DeepDisplayInfo {
+  id: string;
+  name: string;
+  manufacturer: string | null;
+  serialMasked: string | null;
+  diagonalInches: number | null;
+  physicalWidthMm: number | null;
+  physicalHeightMm: number | null;
+  nativeResolution: string | null;
+  currentResolution: string | null;
+  refreshRateHz: number | null;
+  maxRefreshRateHz: number | null;
+  colorDepthBits: number | null;
+  connectionType: string | null;
+  isInternal: boolean;
+  isPrimary: boolean;
+  hdrCapable: boolean | null;
+  vrrCapable: boolean | null;
+  gpuPnpDeviceId?: string | null;
+  provenance: DataProvenance;
+}
+
+export interface NetworkAdapterDeepInfo {
+  id: string;
+  name: string;
+  interfaceName: string | null;
+  kind: 'ethernet' | 'wifi' | 'bluetooth' | 'virtual' | 'other';
+  status: string | null;
+  macMasked: string | null;
+  linkSpeedMbps: number | null;
+  wifiGeneration: string | null;
+  ssid: string | null;
+  signalQualityPercent: number | null;
+  rssiDbm: number | null;
+  driverVersion: string | null;
+  driverDate: string | null;
+  provenance: DataProvenance;
+}
+
+export interface PeripheralDeviceEntry {
+  id: string;
+  name: string;
+  category:
+    | 'keyboard'
+    | 'mouse'
+    | 'audio'
+    | 'camera'
+    | 'printer'
+    | 'storage_usb'
+    | 'controller'
+    | 'bluetooth'
+    | 'dock_hub'
+    | 'other';
+  manufacturer: string | null;
+  status: string | null;
+  connectionBus: string | null;
+  driverVersion: string | null;
+  provenance: DataProvenance;
+}
+
+export interface SystemComponentEntry {
+  id: string;
+  name: string;
+  category:
+    | 'tpm_security'
+    | 'audio_controller'
+    | 'usb_controller'
+    | 'pci_bridge'
+    | 'optical'
+    | 'card_reader'
+    | 'acceleration_npu'
+    | 'capture'
+    | 'other';
+  manufacturer: string | null;
+  driverVersion: string | null;
+  status: string | null;
+  errorCode: number | null;
+  provenance: DataProvenance;
+}
+
+export interface SignedDriverInfo {
+  deviceName: string;
+  deviceClass: string | null;
+  manufacturer: string | null;
+  driverVersion: string | null;
+  driverDate: string | null;
+  isSigned: boolean | null;
+  signer: string | null;
+}
+
+export interface PnpErrorDeviceInfo {
+  name: string;
+  deviceId: string | null;
+  deviceClass: string | null;
+  errorCode: number | null;
+  status: string | null;
+}
+
+export interface SystemEventLogItem {
+  id: string;
+  timestamp: string;
+  level: 'Error' | 'Critical' | 'Warning' | 'Information';
+  providerName: string;
+  eventId: number;
+  category: 'whea' | 'disk' | 'display' | 'power' | 'thermal' | 'other';
+  message: string;
+}
+
+export interface DeepHardwareInventory {
+  collectedAt: number;
+  sourceMode: 'desktop_ipc' | 'web_browser';
+  platform: string;
+  isElevated: boolean | null;
+  detectionLimitations: string[];
+  system: {
+    formFactor: 'desktop' | 'laptop' | 'tablet_convertible' | 'unknown';
+    chassisTypeLabel: string | null;
+    manufacturer: string | null;
+    model: string | null;
+    sku: string | null;
+    family: string | null;
+    serialMasked: string | null;
+    uuidMasked: string | null;
+    architecture: string;
+    osName: string | null;
+    osVersion: string | null;
+    osBuild: string | null;
+    bootMode: 'UEFI' | 'Legacy BIOS' | 'Unknown';
+    secureBoot: boolean | null;
+    tpm: {
+      present: boolean | null;
+      enabled: boolean | null;
+      specVersion: string | null;
+      manufacturer: string | null;
+      status?: 'detected' | 'not_detected' | 'unknown' | 'requires_admin' | 'not_supported';
+      provenance?: DataProvenance;
+    };
+    sensorBackends: {
+      lhmRunning: boolean;
+      ohmRunning: boolean;
+      nvidiaSmiAvailable: boolean;
+      smartctlAvailable: boolean;
+    };
+    provenance: DataProvenance;
+  };
+  motherboard: {
+    manufacturer: string | null;
+    model: string | null;
+    version: string | null;
+    serialMasked: string | null;
+    chipset: string | null;
+    socket: string | null;
+    biosVendor: string | null;
+    biosVersion: string | null;
+    biosReleaseDate: string | null;
+    memorySlotsTotal: number | null;
+    memorySlotsUsed: number | null;
+    maxRamGB: number | null;
+    ramGenSupported: string | null;
+    pcieSlots: PcieSlotInfo[];
+    voltages: SensorReadingItem[];
+    boardTemps: SensorReadingItem[];
+    provenance: DataProvenance;
+  };
+  cpu: {
+    model: string | null;
+    manufacturer: string | null;
+    architecture: string | null;
+    socket: string | null;
+    physicalCores: number | null;
+    logicalThreads: number | null;
+    baseClockGhz: number | null;
+    maxBoostClockGhz: number | null;
+    l2CacheKB: number | null;
+    l3CacheKB: number | null;
+    stepping: string | null;
+    virtualizationFirmwareEnabled: boolean | null;
+    hypervisorPresent: boolean | null;
+    instructionSets: string[];
+    throttlingState: 'none' | 'thermal' | 'power_limit' | 'unknown';
+    provenance: DataProvenance;
+  };
+  gpus: Array<{
+    id: string;
+    model: string | null;
+    vendor: string | null;
+    isIntegrated: boolean;
+    workloadRole: string;
+    driverVersion: string | null;
+    driverDate: string | null;
+    vramMB: number | null;
+    directXFeatureLevel: string | null;
+    pnpDeviceId: string | null;
+    provenance: DataProvenance;
+  }>;
+  memory: {
+    totalBytes: number | null;
+    slotsTotal: number | null;
+    slotsUsed: number | null;
+    maxCapacityBytes: number | null;
+    channelMode: string | null;
+    eccStatus: string | null;
+    pageFileTotalMB: number | null;
+    pageFileUsedMB: number | null;
+    modules: MemoryDimmInfo[];
+    provenance: DataProvenance;
+  };
+  storage: DeepStorageDriveInfo[];
+  fans: {
+    items: FanSensorInfo[];
+    totalDetectedCount: number;
+    runningCount: number;
+    stoppedCount: number;
+    sensorSource: string | null;
+    provenance: DataProvenance;
+  };
+  thermals: {
+    sensors: SensorReadingItem[];
+    inspectionNote: string;
+  };
+  ports: {
+    confirmedPhysical: PortEntry[];
+    controllers: PortEntry[];
+    connectedDevices: PortEntry[];
+    unconfirmedPhysical: PortEntry[];
+    summaryNotes: string[];
+    provenance?: DataProvenance;
+  };
+  power: {
+    psuTelemetryExposed: boolean;
+    psuNote: string;
+    acAdapterConnected: boolean | null;
+    powerPlan: string | null;
+    battery: {
+      present: boolean;
+      manufacturer: string | null;
+      chemistry: string | null;
+      chargePercent: number | null;
+      isCharging: boolean | null;
+      designCapacityMwh: number | null;
+      fullChargeCapacityMwh: number | null;
+      wearPercent: number | null;
+      healthPercent: number | null;
+      cycleCount: number | null;
+      chargeRateWatts: number | null;
+      voltageMv: number | null;
+      provenance: DataProvenance;
+    } | null;
+  };
+  displays: DeepDisplayInfo[];
+  network: {
+    adapters: NetworkAdapterDeepInfo[];
+    bluetoothAdapters: Array<{ name: string; status: string | null; driverVersion: string | null }>;
+  };
+  peripherals: PeripheralDeviceEntry[];
+  otherComponents: SystemComponentEntry[];
+  drivers: SignedDriverInfo[];
+  diagnosticEvents: {
+    pnpErrors: PnpErrorDeviceInfo[];
+    eventLogWarnings: SystemEventLogItem[];
+    eventLogErrorNote: string | null;
+  };
+}
+
+export type HardwareDbCategory =
+  | 'cpu'
+  | 'gpu'
+  | 'ram'
+  | 'storage'
+  | 'chipset_platform'
+  | 'network';
+
+export interface HardwareDbEntry {
+  id: string;
+  category: HardwareDbCategory;
+  vendor: string;
+  family: string;
+  generation: string;
+  architecture: string;
+  matchPatterns: string[];
+  releaseYear: number;
+  tierScore: number;
+  specsSummary: string;
+  supportedTechnologies: string[];
+  driverSupportStatus: 'active' | 'legacy_security' | 'eol';
+  limitations: string[];
+  recommendedSuccessor: string | null;
+  suitability2030Score: number;
+}
+
+export interface HardwareDbPayload {
+  schemaVersion: number;
+  dbVersion: string;
+  lastUpdatedAt: string;
+  sourceLabel: string;
+  entries: HardwareDbEntry[];
+}
+
+export interface HardwareDbState {
+  dbVersion: string;
+  lastUpdatedAt: string;
+  lastCheckedAt: string | null;
+  updateFeedUrl: string;
+  entryCount: number;
+  hasBackup: boolean;
+  lastError: string | null;
+  sourceLabel: string;
+  customEntriesCount: number;
+}
+
+export type FutureTargetYear = 2027 | 2028 | 2029 | 2030 | 2032;
+
+export interface HealthComponentScore {
+  id: 'cpu' | 'gpu' | 'ram' | 'storage' | 'thermals' | 'cooling' | 'battery' | 'stability';
+  label: string;
+  score: number | null;
+  status: 'healthy' | 'fair' | 'warning' | 'critical' | 'unavailable';
+  summary: string;
+  provenance: DataProvenance;
+}
+
+export interface HealthAssessmentReport {
+  overallPhysicalHealthScore: number | null;
+  performanceCapabilityScore: number | null;
+  measuredComponentsCount: number;
+  totalComponentsCount: number;
+  hardwareAgeLabel: string;
+  oldestDetectedComponentYear: number | null;
+  estimatedUsefulLifeRange: string;
+  componentScores: HealthComponentScore[];
+  bottleneckSummary: {
+    primaryLimitingFactor: string;
+    explanation: string;
+    provenance: DataProvenance;
+  };
+  gamingSuitability: {
+    resolutions: Array<{
+      resolution: '720p' | '1080p' | '1440p' | '4K';
+      verdict: 'Strong' | 'Playable' | 'Entry / Upscaled' | 'Not Ideal' | 'Unknown';
+      recommendedPreset: string;
+      notes: string;
+    }>;
+    featureMatrix: Array<{ name: string; status: string; provenance: DataProvenance }>;
+  };
+  proCompatibility: Array<{
+    workload: string;
+    verdict: 'Excellent' | 'Good' | 'Basic' | 'Limited' | 'Unknown';
+    reason: string;
+    limitingFactor: string | null;
+  }>;
+  upgradeRecommendations: Array<{
+    id: string;
+    priority: 'High' | 'Medium' | 'Optional';
+    component: string;
+    currentItem: string;
+    recommendedUpgrade: string;
+    whyRecommended: string;
+    compatibilityVerified: boolean;
+    compatibilityNotes: string;
+    expectedBenefit: string;
+    prerequisites: string[];
+  }>;
+  maintenanceAdvisories: Array<{
+    id: string;
+    priority: 'Critical' | 'High' | 'Medium' | 'Low';
+    title: string;
+    whyItMatters: string;
+    steps: string[];
+    requiresPhysicalInspection: boolean;
+  }>;
+}
+
+export interface BenchmarkMetricResult {
+  id: 'cpu_single' | 'cpu_multi' | 'ram_throughput' | 'storage_seq' | 'storage_4k' | 'network_latency' | 'webgl_frame';
+  label: string;
+  value: number | null;
+  unit: string;
+  durationMs: number;
+  peakTempC: number | null;
+  abortedForSafety: boolean;
+  cancelled?: boolean;
+  note: string;
+  completedAt: number;
+}
+
+export interface BenchmarkRunProgress {
+  running: boolean;
+  activeTestId: string | null;
+  progressPercent: number;
+  statusMessage: string;
+  currentTempC: number | null;
+  abortedReason: string | null;
+}
+
 

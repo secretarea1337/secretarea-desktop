@@ -24,9 +24,31 @@ const FAVORITES_STORAGE_KEY = 'secretarea_favorites';
 const REQUESTS_STORAGE_KEY = 'secretarea_requests';
 
 function isValidHttpsEndpoint(rawUrl: string): boolean {
+  if (typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed || trimmed.length > 2048 || /[\x00-\x1f\x7f]/.test(trimmed)) return false;
   try {
-    const parsed = new URL(rawUrl.trim());
-    return parsed.protocol === 'https:' && Boolean(parsed.hostname);
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:') return false;
+    if (parsed.username || parsed.password) return false;
+    const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    if (
+      !host ||
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host === '0.0.0.0' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      host.endsWith('.localhost') ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^169\.254\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+    ) {
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -133,6 +155,9 @@ function buildCacheBustedGasUrl(rawUrl: string): string {
 }
 
 export async function fetchCatalogFromGas(gasUrl: string): Promise<SheetCatalogData> {
+  if (!isValidHttpsEndpoint(gasUrl)) {
+    throw new Error('Blocked invalid or non-HTTPS sync endpoint URL.');
+  }
   const cleanUrl = buildCacheBustedGasUrl(gasUrl);
   const response = await fetch(cleanUrl, {
     method: 'GET',
@@ -260,7 +285,7 @@ export async function fetchComments(itemId: string, gasUrl?: string): Promise<Co
   const localMap = getAllLocalCommentsMap();
   const localForItem = localMap[itemId] || [];
 
-  if (!gasUrl || !gasUrl.trim()) {
+  if (!gasUrl || !isValidHttpsEndpoint(gasUrl)) {
     return localForItem;
   }
 
@@ -282,6 +307,7 @@ export async function fetchComments(itemId: string, gasUrl?: string): Promise<Co
 }
 
 async function postToGas(gasUrl: string, payload: Record<string, unknown>): Promise<boolean> {
+  if (!isValidHttpsEndpoint(gasUrl)) return false;
   const res = await fetch(gasUrl.trim(), {
     method: 'POST',
     redirect: 'follow',
@@ -421,7 +447,7 @@ export async function reactComment(
 
 export async function fetchRequestsFromGas(gasUrl?: string): Promise<ItemRequestPayload[]> {
   const localRequests = loadLocalRequests();
-  if (!gasUrl || !gasUrl.trim() || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+  if (!gasUrl || !isValidHttpsEndpoint(gasUrl) || (typeof navigator !== 'undefined' && !navigator.onLine)) {
     return localRequests;
   }
 
@@ -489,7 +515,7 @@ export async function submitItemRequest(
 
   const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
 
-  if (gasUrl && gasUrl.trim() && isOnline) {
+  if (gasUrl && isValidHttpsEndpoint(gasUrl) && isOnline) {
     try {
       const res = await fetch(gasUrl.trim(), {
         method: 'POST',

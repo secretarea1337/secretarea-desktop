@@ -28,9 +28,12 @@ const REQUEST_TIMEOUT_MS = 14000;
 
 function isAllowedDealsApiUrl(rawUrl) {
   if (typeof rawUrl !== 'string' || !rawUrl.trim()) return false;
+  const trimmed = rawUrl.trim();
+  if (trimmed.length > 4096 || /[\x00-\x1f\x7f]/.test(trimmed)) return false;
   try {
-    const parsed = new URL(rawUrl.trim());
+    const parsed = new URL(trimmed);
     if (parsed.protocol !== 'https:') return false;
+    if (parsed.username || parsed.password) return false;
     return ALLOWED_DEALS_API_HOSTS.has(parsed.hostname.toLowerCase());
   } catch {
     return false;

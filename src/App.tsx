@@ -2126,6 +2126,7 @@ export default function App() {
             language={launcherSettings.language}
             presentMonSetupState={presentMonSetupState}
             onOpenPresentMonManager={handleOpenPresentMonManager}
+            catalogGames={catalog.game}
           />
         )}
 
