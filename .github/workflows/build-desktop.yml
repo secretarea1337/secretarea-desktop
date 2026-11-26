@@ -1,4 +1,3 @@
-
 name: Release SecretArea Desktop App
 
 on:
@@ -180,6 +179,9 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) {
+            throw "npm ci failed with exit code $LASTEXITCODE"
+          }
 
           if (
             -not (Test-Path "node_modules/@typescript/typescript-win32-x64") -or
@@ -187,13 +189,28 @@ jobs:
           ) {
             Write-Host "Resolving Windows x64 optional native binaries..."
             npm install --no-audit --no-fund
+            if ($LASTEXITCODE -ne 0) {
+              throw "Windows optional native binary installation failed."
+            }
           }
 
       - name: Run TypeScript check
-        run: npm run lint
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          npm run lint
+          if ($LASTEXITCODE -ne 0) {
+            throw "TypeScript check failed with exit code $LASTEXITCODE"
+          }
 
       - name: Build production web bundle for tests
-        run: npm run build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          npm run build
+          if ($LASTEXITCODE -ne 0) {
+            throw "Production web build failed with exit code $LASTEXITCODE"
+          }
 
       - name: Verify production bundle
         shell: pwsh
@@ -208,13 +225,38 @@ jobs:
 
       - name: Run desktop & optimization test suites
         shell: pwsh
+        timeout-minutes: 10
         run: |
           $ErrorActionPreference = "Stop"
-          node --test tests/*.cjs.test.cjs
-          npx tsx --test tests/hardwareAudit.ts.test.ts
+
+          Write-Host "Node version:"
+          node --version
+
+          Write-Host "=== Starting CJS test suite ==="
+
+          node --test --test-force-exit tests/*.cjs.test.cjs
+          if ($LASTEXITCODE -ne 0) {
+            throw "CJS test suite failed with exit code $LASTEXITCODE"
+          }
+
+          Write-Host "=== CJS test suite completed successfully ==="
+          Write-Host "=== Starting TypeScript hardware audit tests ==="
+
+          node --import tsx --test --test-force-exit tests/hardwareAudit.ts.test.ts
+          if ($LASTEXITCODE -ne 0) {
+            throw "Hardware audit test suite failed with exit code $LASTEXITCODE"
+          }
+
+          Write-Host "=== All desktop & optimization test suites passed ==="
 
       - name: Install Electron & Electron Builder
-        run: npm install --no-save --no-audit --no-fund electron electron-builder
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          npm install --no-save --no-audit --no-fund electron electron-builder
+          if ($LASTEXITCODE -ne 0) {
+            throw "Electron and Electron Builder installation failed."
+          }
 
       - name: Build production web bundle & package Windows NSIS installer
         run: npm run desktop:build:win
