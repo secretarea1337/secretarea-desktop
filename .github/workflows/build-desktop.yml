@@ -1,3 +1,4 @@
+
 name: Release SecretArea Desktop App
 
 on:
@@ -45,8 +46,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_REF_NAME: ${{ github.ref_name }}
+          INPUT_GITHUB_REF: ${{ github.ref }}
+          INPUT_GITHUB_REF_NAME: ${{ github.ref_name }}
           EVENT_NAME: ${{ github.event_name }}
           FORCE_RELEASE: ${{ inputs.force_release }}
         run: |
@@ -57,27 +58,35 @@ jobs:
 
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           const version = typeof pkg.version === 'string' ? pkg.version.trim() : '';
+
           if (!version) {
             throw new Error('package.json version is empty or missing.');
           }
+
           if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(version)) {
             throw new Error(`Invalid package.json version: ${version}`);
           }
 
           const tag = `v${version}`;
+
           console.log(`Package version: ${version}`);
           console.log(`Release tag: ${tag}`);
 
-          const githubRef = process.env.GITHUB_REF || '';
-          const refName = process.env.GITHUB_REF_NAME || '';
+          const githubRef = process.env.INPUT_GITHUB_REF || '';
+          const refName = process.env.INPUT_GITHUB_REF_NAME || '';
+
           if (githubRef.startsWith('refs/tags/') && refName !== tag) {
-            throw new Error(`Tag '${refName}' does not match package.json version '${tag}'. Update package.json version first.`);
+            throw new Error(
+              `Tag '${refName}' does not match package.json version '${tag}'. Update package.json version first.`
+            );
           }
 
           (async () => {
             const repo = process.env.REPOSITORY;
             const token = process.env.GH_TOKEN;
-            const releaseUrl = `https://api.github.com/repos/${repo}/releases/tags/${encodeURIComponent(tag)}`;
+
+            const releaseUrl =
+              `https://api.github.com/repos/${repo}/releases/tags/${encodeURIComponent(tag)}`;
 
             const res = await fetch(releaseUrl, {
               headers: {
@@ -88,6 +97,7 @@ jobs:
             });
 
             let releaseExists = false;
+
             if (res.status === 200) {
               releaseExists = true;
               console.log(`Release ${tag} already exists.`);
@@ -95,26 +105,41 @@ jobs:
               releaseExists = false;
               console.log(`Release ${tag} does not exist.`);
             } else {
-              const text = await res.text().catch(() => '');
-              throw new Error(`GitHub API error while checking release (HTTP ${res.status}): ${text}`);
+              const responseText = await res.text().catch(() => '');
+              throw new Error(
+                `GitHub API error while checking release (HTTP ${res.status}): ${responseText}`
+              );
             }
 
             const isManualForce =
               process.env.EVENT_NAME === 'workflow_dispatch' &&
               process.env.FORCE_RELEASE === 'true';
+
             const isTagPush = githubRef.startsWith('refs/tags/');
 
-            const shouldRelease = (!releaseExists || isManualForce || isTagPush) ? 'true' : 'false';
+            const shouldRelease =
+              (!releaseExists || isManualForce || isTagPush) ? 'true' : 'false';
+
             console.log(
               shouldRelease === 'true'
                 ? `Release ${tag} will be built for Windows and Linux and published.`
                 : `Release ${tag} already exists. Skipping build.`
             );
 
-            const outputFile = process.env.GITHUB_OUTPUT;
-            fs.appendFileSync(outputFile, `version=${version}\n`);
-            fs.appendFileSync(outputFile, `tag=${tag}\n`);
-            fs.appendFileSync(outputFile, `should_release=${shouldRelease}\n`);
+            fs.appendFileSync(
+              process.env.GITHUB_OUTPUT,
+              `version=${version}\n`
+            );
+
+            fs.appendFileSync(
+              process.env.GITHUB_OUTPUT,
+              `tag=${tag}\n`
+            );
+
+            fs.appendFileSync(
+              process.env.GITHUB_OUTPUT,
+              `should_release=${shouldRelease}\n`
+            );
           })().catch((err) => {
             console.error(err);
             process.exit(1);
@@ -167,6 +192,20 @@ jobs:
       - name: Run TypeScript check
         run: npm run lint
 
+      - name: Build production web bundle for tests
+        run: npm run build
+
+      - name: Verify production bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if (-not (Test-Path "dist/index.html")) {
+            throw "Production build failed: dist/index.html is missing."
+          }
+
+          Write-Host "Production bundle verified."
+
       - name: Run desktop & optimization test suites
         shell: pwsh
         run: |
@@ -203,10 +242,12 @@ jobs:
             if (-not (Test-Path $file)) {
               throw "Missing required Windows release artifact: $file"
             }
+
             Write-Host "Verified: $file"
           }
 
           $latestYml = Get-Content -Raw release/latest.yml
+
           Write-Host "--- release/latest.yml ---"
           Write-Host $latestYml
 
@@ -263,6 +304,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           npm ci --no-audit --no-fund
 
           if [ ! -d "node_modules/@typescript/typescript-linux-x64" ] || [ ! -d "node_modules/@rolldown/binding-linux-x64-gnu" ]; then
@@ -272,6 +314,21 @@ jobs:
 
       - name: Run TypeScript check
         run: npm run lint
+
+      - name: Build production web bundle for tests
+        run: npm run build
+
+      - name: Verify production bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -s dist/index.html || {
+            echo "Production build failed: dist/index.html is missing." >&2
+            exit 1
+          }
+
+          echo "Production bundle verified."
 
       - name: Run desktop & optimization test suites
         shell: bash
@@ -304,6 +361,7 @@ jobs:
               echo "Missing or empty Linux release artifact: $file" >&2
               exit 1
             fi
+
             echo "Verified: $file"
           done
 
@@ -316,16 +374,28 @@ jobs:
           const fs = require('fs');
           const ver = process.env.EXPECTED_VERSION;
           const yml = fs.readFileSync('release/latest-linux.yml', 'utf8');
-          const verRegex = new RegExp(`^version:\\s*['"]?${ver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]?\\s*$`, 'm');
+
+          const escapedVersion = ver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const verRegex = new RegExp(
+            `^version:\\s*['"]?${escapedVersion}['"]?\\s*$`,
+            'm'
+          );
+
           if (!verRegex.test(yml)) {
-            throw new Error(`release/latest-linux.yml version does not match package.json version ${ver}`);
+            throw new Error(
+              `release/latest-linux.yml version does not match package.json version ${ver}`
+            );
           }
+
           if (!yml.includes(`SecretArea-${ver}-linux-x86_64.AppImage`)) {
-            throw new Error(`release/latest-linux.yml does not reference SecretArea-${ver}-linux-x86_64.AppImage`);
+            throw new Error(
+              `release/latest-linux.yml does not reference SecretArea-${ver}-linux-x86_64.AppImage`
+            );
           }
           EOF
 
           dpkg-deb -I "$DEB_FILE"
+
           echo "All Linux package & updater metadata checks passed."
 
       - name: Upload Linux build artifacts
@@ -381,6 +451,7 @@ jobs:
               echo "Missing or empty staged release asset: $file" >&2
               exit 1
             fi
+
             ls -lh "$file"
           done
 
