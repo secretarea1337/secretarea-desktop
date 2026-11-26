@@ -1,4 +1,9 @@
-import type { CloseBehaviorMode } from '../types';
+import type {
+  CloseBehaviorMode,
+  EffectivePerformanceConfig,
+  PerformanceAdvancedSettings,
+  PerformanceMode,
+} from '../types';
 
 export type AppLanguage = 'en' | 'fr' | 'es' | 'ar';
 export type AppThemeMode = 'default' | 'ps5' | 'xbox';
@@ -31,6 +36,8 @@ export interface LauncherSettings {
   customCursorEnabled: boolean;
   soundVolume: number;
   customTheme: CustomThemeConfig;
+  performanceMode: PerformanceMode;
+  performanceAdvanced: PerformanceAdvancedSettings;
 }
 
 export const CUSTOM_THEME_ACCENT_PRESETS: { id: string; hex: string; secondary: string }[] = [
@@ -106,6 +113,15 @@ export const DEFAULT_CUSTOM_THEME: CustomThemeConfig = {
 
 const STORAGE_KEY = 'secretarea_launcher_settings_v1';
 
+export const DEFAULT_PERFORMANCE_ADVANCED: PerformanceAdvancedSettings = {
+  pauseBackgroundWhenMinimized: true,
+  reduceVisualEffects: false,
+  hardwareMonitorIntervalMs: 'auto',
+  downloadUiThrottleMs: 'auto',
+  adaptiveTorrentPolling: true,
+  deferBackgroundChecks: false,
+};
+
 export const DEFAULT_LAUNCHER_SETTINGS: LauncherSettings = {
   language: 'en',
   startWithComputer: false,
@@ -120,6 +136,8 @@ export const DEFAULT_LAUNCHER_SETTINGS: LauncherSettings = {
   customCursorEnabled: true,
   soundVolume: 70,
   customTheme: { ...DEFAULT_CUSTOM_THEME },
+  performanceMode: 'balanced',
+  performanceAdvanced: { ...DEFAULT_PERFORMANCE_ADVANCED },
 };
 
 export function getAppVersionString(): string {
@@ -215,6 +233,107 @@ export function getActiveConsoleTheme(settings: LauncherSettings): AppThemeMode 
   return 'default';
 }
 
+export function normalizePerformanceMode(value: unknown): PerformanceMode {
+  if (value === 'eco' || value === 'balanced' || value === 'performance') {
+    return value;
+  }
+  return 'balanced';
+}
+
+export function normalizePerformanceAdvanced(
+  value: unknown,
+  mode: PerformanceMode = 'balanced'
+): PerformanceAdvancedSettings {
+  const raw =
+    value && typeof value === 'object' ? (value as Partial<PerformanceAdvancedSettings>) : {};
+  const hwRaw = raw.hardwareMonitorIntervalMs;
+  const hardwareMonitorIntervalMs: PerformanceAdvancedSettings['hardwareMonitorIntervalMs'] =
+    hwRaw === 1000 || hwRaw === 1500 || hwRaw === 2000 || hwRaw === 3000 || hwRaw === 5000
+      ? hwRaw
+      : 'auto';
+  const dlRaw = raw.downloadUiThrottleMs;
+  const downloadUiThrottleMs: PerformanceAdvancedSettings['downloadUiThrottleMs'] =
+    dlRaw === 200 || dlRaw === 350 || dlRaw === 750 ? dlRaw : 'auto';
+
+  return {
+    pauseBackgroundWhenMinimized:
+      typeof raw.pauseBackgroundWhenMinimized === 'boolean'
+        ? raw.pauseBackgroundWhenMinimized
+        : DEFAULT_PERFORMANCE_ADVANCED.pauseBackgroundWhenMinimized,
+    reduceVisualEffects:
+      typeof raw.reduceVisualEffects === 'boolean'
+        ? raw.reduceVisualEffects
+        : mode === 'eco',
+    hardwareMonitorIntervalMs,
+    downloadUiThrottleMs,
+    adaptiveTorrentPolling:
+      typeof raw.adaptiveTorrentPolling === 'boolean'
+        ? raw.adaptiveTorrentPolling
+        : DEFAULT_PERFORMANCE_ADVANCED.adaptiveTorrentPolling,
+    deferBackgroundChecks:
+      typeof raw.deferBackgroundChecks === 'boolean'
+        ? raw.deferBackgroundChecks
+        : mode === 'eco',
+  };
+}
+
+export function getEffectivePerformanceConfig(
+  settings: Pick<LauncherSettings, 'performanceMode' | 'performanceAdvanced'>
+): EffectivePerformanceConfig {
+  const mode = normalizePerformanceMode(settings?.performanceMode);
+  const adv = normalizePerformanceAdvanced(settings?.performanceAdvanced, mode);
+
+  const isEco = mode === 'eco';
+  const isPerf = mode === 'performance';
+
+  const hardwarePollIntervalMs =
+    adv.hardwareMonitorIntervalMs === 'auto'
+      ? isEco
+        ? 3000
+        : isPerf
+        ? 1000
+        : 1500
+      : adv.hardwareMonitorIntervalMs;
+
+  const topBarTelemetryIntervalMs = isEco ? 8000 : isPerf ? 2500 : 4000;
+
+  const downloadUiThrottleMs =
+    adv.downloadUiThrottleMs === 'auto'
+      ? isEco
+        ? 750
+        : isPerf
+        ? 200
+        : 350
+      : adv.downloadUiThrottleMs;
+
+  const torrentActivePollMs = isEco ? 3000 : isPerf ? 1000 : 1500;
+  const torrentIdlePollMs = adv.adaptiveTorrentPolling
+    ? isEco
+      ? 20000
+      : isPerf
+      ? 6000
+      : 12000
+    : torrentActivePollMs;
+
+  const reduceVisualEffects = isEco || adv.reduceVisualEffects;
+  const deferBackgroundChecks = isEco || adv.deferBackgroundChecks;
+
+  return {
+    mode,
+    pauseBackgroundWhenMinimized: adv.pauseBackgroundWhenMinimized,
+    reduceVisualEffects,
+    hardwarePollIntervalMs,
+    topBarTelemetryIntervalMs,
+    downloadUiThrottleMs,
+    torrentActivePollMs,
+    torrentIdlePollMs,
+    adaptiveTorrentPolling: adv.adaptiveTorrentPolling,
+    deferBackgroundChecks,
+    disableHeavyAnimations: reduceVisualEffects,
+    maxImageCacheEntries: isEco ? 140 : isPerf ? 360 : 240,
+  };
+}
+
 export function loadLauncherSettings(): LauncherSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -222,6 +341,7 @@ export function loadLauncherSettings(): LauncherSettings {
       return {
         ...DEFAULT_LAUNCHER_SETTINGS,
         customTheme: { ...DEFAULT_CUSTOM_THEME },
+        performanceAdvanced: { ...DEFAULT_PERFORMANCE_ADVANCED },
       };
     }
     const parsed = JSON.parse(raw) as Partial<LauncherSettings>;
@@ -234,6 +354,11 @@ export function loadLauncherSettings(): LauncherSettings {
         : customTheme.enabled
         ? customTheme.surfaceStyle === 'daylight'
         : Boolean(parsed.lightMode);
+    const performanceMode = normalizePerformanceMode(parsed.performanceMode);
+    const performanceAdvanced = normalizePerformanceAdvanced(
+      parsed.performanceAdvanced,
+      performanceMode
+    );
 
     return {
       language: normalizeLanguage(parsed.language),
@@ -266,11 +391,14 @@ export function loadLauncherSettings(): LauncherSettings {
           : DEFAULT_LAUNCHER_SETTINGS.customCursorEnabled,
       soundVolume: normalizeVolume(parsed.soundVolume),
       customTheme: alwaysXboxTheme || alwaysPs5Theme ? { ...customTheme, enabled: false } : customTheme,
+      performanceMode,
+      performanceAdvanced,
     };
   } catch {
     return {
       ...DEFAULT_LAUNCHER_SETTINGS,
       customTheme: { ...DEFAULT_CUSTOM_THEME },
+      performanceAdvanced: { ...DEFAULT_PERFORMANCE_ADVANCED },
     };
   }
 }
@@ -363,6 +491,24 @@ export function applyDocumentThemeSettings(settings: LauncherSettings): void {
       html.style.removeProperty(key);
     }
   }
+}
+
+export function applyDocumentPerformanceSettings(settings: LauncherSettings): EffectivePerformanceConfig {
+  const effective = getEffectivePerformanceConfig(settings);
+  if (typeof document !== 'undefined') {
+    const html = document.documentElement;
+    html.classList.toggle('sa-perf-eco', effective.mode === 'eco');
+    html.classList.toggle('sa-perf-balanced', effective.mode === 'balanced');
+    html.classList.toggle('sa-perf-performance', effective.mode === 'performance');
+    html.classList.toggle('sa-reduce-effects', effective.reduceVisualEffects);
+  }
+  return effective;
+}
+
+export function buildPerformancePayloadForDesktop(
+  settings: Pick<LauncherSettings, 'performanceMode' | 'performanceAdvanced'>
+): EffectivePerformanceConfig {
+  return getEffectivePerformanceConfig(settings);
 }
 
 const ONBOARDING_STORAGE_KEY = 'secretarea_onboarding_completed_v1';

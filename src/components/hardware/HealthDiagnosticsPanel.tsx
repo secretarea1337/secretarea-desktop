@@ -24,6 +24,7 @@ import {
 import {
   buildHardwareHealthReportPayload,
   buildPrintableReportHtml,
+  reconcileLiveFanSensors,
 } from '../../services/hardwareIntelligence';
 import { ExpandablePanel, KeyValueRow, ProvenanceTag } from './SharedIntelligenceUi';
 
@@ -152,26 +153,11 @@ export function HealthDiagnosticsPanel({
     );
   });
 
-  // Merge live fans from 1.5s snapshot if deep inventory has none or for live RPM refresh
-  const activeFans =
-    inventory.fans.items.length > 0
-      ? inventory.fans.items.map((f) => {
-          const live = snapshot.liveSensors?.fans?.find((lf) => lf.name === f.name);
-          return live ? { ...f, rpm: live.rpm ?? f.rpm } : f;
-        })
-      : (snapshot.liveSensors?.fans || []).map((lf, idx) => ({
-          id: lf.id || `live-fan-${idx}`,
-          name: lf.name,
-          role: 'other' as const,
-          rpm: lf.rpm,
-          percent: lf.percent,
-          minRpm: null,
-          maxRpm: null,
-          status: lf.rpm === 0 ? ('stopped_confirmed' as const) : ('running' as const),
-          linkedTempSensor: null,
-          source: lf.source,
-          provenance: 'measured' as const,
-        }));
+  // Merge live fans from 1.5s snapshot and recompute live status/percent cleanly
+  const activeFans = reconcileLiveFanSensors(
+    inventory.fans.items,
+    snapshot.liveSensors?.fans || []
+  );
 
   return (
     <div className="space-y-4">
@@ -413,7 +399,7 @@ export function HealthDiagnosticsPanel({
                             : ''}
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="text-end shrink-0">
                         <div dir="ltr" className="text-[13px] font-mono-tabular font-bold text-slate-900 dark:text-white">
                           {fan.rpm !== null
                             ? `${fan.rpm} RPM`
@@ -504,7 +490,7 @@ export function HealthDiagnosticsPanel({
                   {isDesktopApp ? t.pnpNoErrors : t.desktopOnlyHint}
                 </div>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-60 overflow-y-auto pe-1">
                   {inventory.diagnosticEvents.pnpErrors.map((err, i) => (
                     <div
                       key={i}
@@ -543,7 +529,7 @@ export function HealthDiagnosticsPanel({
                   {t.eventLogsEmpty}
                 </div>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-60 overflow-y-auto pe-1">
                   {inventory.diagnosticEvents.eventLogWarnings.map((ev) => (
                     <div
                       key={ev.id}
@@ -583,7 +569,7 @@ export function HealthDiagnosticsPanel({
                 />
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-white/[0.08] max-h-72">
-                <table className="w-full text-left text-[12px] border-collapse">
+                <table className="w-full text-start text-[12px] border-collapse">
                   <thead className="bg-slate-100 dark:bg-[#10151c] text-slate-600 dark:text-[#8b9bb4] sticky top-0">
                     <tr>
                       <th className="py-2 px-3 font-semibold">{t.driverDeviceCol}</th>
@@ -606,9 +592,13 @@ export function HealthDiagnosticsPanel({
                         </td>
                         <td className="py-2 px-3">
                           {drv.isSigned === true ? (
-                            <span className="text-emerald-600 dark:text-[#34d399] font-semibold">Signed</span>
+                            <span className="text-emerald-600 dark:text-[#34d399] font-semibold">
+                              {t.driverSigned}
+                            </span>
                           ) : drv.isSigned === false ? (
-                            <span className="text-rose-600 dark:text-[#fb7185] font-semibold">Unsigned</span>
+                            <span className="text-rose-600 dark:text-[#fb7185] font-semibold">
+                              {t.driverUnsigned}
+                            </span>
                           ) : (
                             t.naValue
                           )}

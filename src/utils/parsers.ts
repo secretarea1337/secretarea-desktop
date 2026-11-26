@@ -3,6 +3,7 @@ import type {
   MirrorLink,
   ParsedRequirements,
   RawSheetRow,
+  SheetCatalogData,
   SheetTabKey,
   ToolLink,
 } from '../types';
@@ -26,6 +27,46 @@ export const ALL_SHEET_TABS: SheetTabKey[] = [
   'ps5',
   'onlinegames',
 ];
+
+export const EMPTY_SHEET_CATALOG: SheetCatalogData = {
+  game: [],
+  hypervisor: [],
+  steamtools: [],
+  architect: [],
+  extra: [],
+  upcoming: [],
+  steamaccounts: [],
+  mastergift: [],
+  profil: [],
+  topgames: [],
+  upcominglist: [],
+  popularrepacks: [],
+  bestgameseries: [],
+  maintenance: [],
+  upcomingtrailers: [],
+  ps5: [],
+  onlinegames: [],
+};
+
+export function resolveSheetRefItem(
+  refToken: string,
+  catalog: SheetCatalogData
+): GameItem | null {
+  const token = refToken.trim().toLowerCase();
+  if (!token) return null;
+  const match = token.match(/^([ghsa])(\d+)$/);
+  if (!match) return null;
+  const [, prefix, numId] = match;
+  const tabMap: Record<string, SheetTabKey> = {
+    g: 'game',
+    h: 'hypervisor',
+    s: 'steamtools',
+    a: 'architect',
+  };
+  const targetTab = tabMap[prefix];
+  if (!targetTab) return null;
+  return catalog[targetTab]?.find((x) => x.id === numId) || null;
+}
 
 export function sanitizeUrl(raw?: unknown): string {
   if (typeof raw !== 'string') return '';

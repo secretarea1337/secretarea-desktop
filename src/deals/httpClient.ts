@@ -75,6 +75,29 @@ const providerHealthRegistry = new Map<DealsProviderId, ProviderHealthStatus>();
 
 const DEFAULT_TIMEOUT_MS = 14000;
 const MAX_RETRY_ATTEMPTS = 2;
+const MAX_DEALS_CACHE_ENTRIES = 120;
+
+function writeBoundedDealsCache(
+  key: string,
+  entry: CacheEntry<unknown>,
+  now = Date.now()
+): void {
+  // Prune expired entries first, then enforce LRU cap
+  for (const [k, v] of memoryCache) {
+    if (v.expiresAt <= now) {
+      memoryCache.delete(k);
+    }
+  }
+  if (memoryCache.has(key)) {
+    memoryCache.delete(key);
+  }
+  while (memoryCache.size >= MAX_DEALS_CACHE_ENTRIES) {
+    const oldestKey = memoryCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    memoryCache.delete(oldestKey);
+  }
+  memoryCache.set(key, entry);
+}
 
 export function getDesktopDealsBridge(): DesktopDealsBridge | null {
   if (typeof window === 'undefined') return null;
@@ -412,7 +435,7 @@ export async function fetchCachedProviderJson<T>(opts: {
         }
 
         const parsed = JSON.parse(res.body) as T;
-        memoryCache.set(cacheKey, {
+        writeBoundedDealsCache(cacheKey, {
           expiresAt: Date.now() + ttlMs,
           data: parsed,
           headers: res.headers,

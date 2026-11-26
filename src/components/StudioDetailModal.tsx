@@ -10,7 +10,7 @@ import {
 import type { GameItem, SheetCatalogData } from '../types';
 import { GameCover } from './GameCover';
 import { SectionSourceBadge } from './SectionBadge';
-import { resolveSheetRefItem } from './ExtrasView';
+import { resolveSheetRefItem } from '../utils/parsers';
 import type { AppLanguage } from '../services/launcherSettings';
 import { getTranslations } from '../i18n/translations';
 

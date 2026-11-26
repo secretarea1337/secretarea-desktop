@@ -42,6 +42,7 @@ interface TopUtilityBarProps {
   isNotificationCenterOpen?: boolean;
   onOpenNotifications?: () => void;
   hardwareSnapshot?: HardwareMonitorSnapshot | null;
+  telemetryIntervalMs?: number;
   language?: AppLanguage;
 }
 
@@ -72,6 +73,7 @@ const TopHardwareTelemetryStrip = memo(function TopHardwareTelemetryStrip({
   onSelectSection,
   hasConsoleAudio,
   externalSnapshot,
+  telemetryIntervalMs = 4000,
   label,
 }: {
   activeTheme: AppThemeMode;
@@ -79,10 +81,12 @@ const TopHardwareTelemetryStrip = memo(function TopHardwareTelemetryStrip({
   onSelectSection: (section: PrimarySection) => void;
   hasConsoleAudio: boolean;
   externalSnapshot?: HardwareMonitorSnapshot | null;
+  telemetryIntervalMs?: number;
   label: string;
 }) {
   const hardwareBridge = useMemo(() => getDesktopHardwareMonitorBridge(), []);
   const [liveSnapshot, setLiveSnapshot] = useState<HardwareMonitorSnapshot | null>(null);
+  const pollIntervalMs = Math.max(2000, Math.min(30000, Number(telemetryIntervalMs) || 4000));
 
   useEffect(() => {
     if (!hardwareBridge) return;
@@ -118,7 +122,7 @@ const TopHardwareTelemetryStrip = memo(function TopHardwareTelemetryStrip({
       };
     }
 
-    const timer = window.setInterval(fetchOnce, 3500);
+    const timer = window.setInterval(fetchOnce, pollIntervalMs);
     const handleRestore = () => {
       if (!document.hidden && document.hasFocus()) {
         fetchOnce();
@@ -134,7 +138,7 @@ const TopHardwareTelemetryStrip = memo(function TopHardwareTelemetryStrip({
       document.removeEventListener('visibilitychange', handleRestore);
       window.removeEventListener('focus', handleRestore);
     };
-  }, [hardwareBridge, activeSection]);
+  }, [hardwareBridge, activeSection, pollIntervalMs]);
 
   const hardwareSnapshot = externalSnapshot ?? liveSnapshot;
   const isPs5Theme = activeTheme === 'ps5';
@@ -334,6 +338,7 @@ export const TopUtilityBar = memo(function TopUtilityBar({
   isNotificationCenterOpen = false,
   onOpenNotifications,
   hardwareSnapshot = null,
+  telemetryIntervalMs = 4000,
   language = 'en',
 }: TopUtilityBarProps) {
   const t = getTranslations(language);
@@ -376,6 +381,7 @@ export const TopUtilityBar = memo(function TopUtilityBar({
         onSelectSection={onSelectSection}
         hasConsoleAudio={hasConsoleAudio}
         externalSnapshot={hardwareSnapshot}
+        telemetryIntervalMs={telemetryIntervalMs}
         label={t.nav.hardwareMonitor}
       />
 

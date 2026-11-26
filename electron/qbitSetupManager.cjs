@@ -1414,6 +1414,10 @@ function createQbitSetupManager({
     const flags = readPersistedSetupFlags();
     patchState({ firstLaunchDismissed: flags.firstLaunchDismissed });
     setTimeout(() => {
+      if (process.platform !== 'win32') {
+        void refreshLocalOnly();
+        return;
+      }
       void checkStatus({ isStartup: true });
     }, 1800);
   }

@@ -4,6 +4,7 @@ const fsp = fs.promises;
 const path = require('path');
 const { execFile } = require('child_process');
 const si = require('systeminformation');
+const { readManagedLhmSensors } = require('./lhmLibBridge.cjs');
 
 function runExecFile(cmd, args, timeoutMs = 6500) {
   return new Promise((resolve) => {
@@ -59,18 +60,18 @@ function classifyIsIntegratedGpu(name, vendor) {
     /microsoft basic|virtual|parsec|vnc|citrix|mirage|remote display/i.test(combined);
   if (isVirtual) return true;
   const explicitlyDiscrete =
-    /\b(?:geforce|rtx|gtx|quadro|tesla|titan|rx\s*\d{3,4}|radeon\s*pro|radeon\s*rx|arc\s*[ab]\d{3})\b/i.test(
+    /\b(?:geforce|rtx|gtx|quadro|tesla|titan|rx\s*\d{3,4}|radeon\s*pro|radeon\s*rx|arc(?:\((?:r|tm)\)|[®™])?\s*(?:pro\s*)?[ab]\d{2,3})\b/i.test(
       combined
     );
   if (explicitlyDiscrete) return false;
   if (
-    /\b(?:uhd|hd\s*graphics|iris|vega\s*\d+|radeon\(tm\)\s*graphics|radeon\s*graphics|[678]\d0m|apple\s*m\d)\b/i.test(
+    /\b(?:uhd|hd\s*graphics|iris|vega\s*\d+|radeon\(tm\)\s*graphics|radeon\s*graphics|[678]\d0m|apple\s*m\d|arc(?:\((?:r|tm)\)|[®™])?\s*graphics|arc(?:\((?:r|tm)\)|[®™])?\s*1[34]0[vt])\b/i.test(
       combined
     )
   ) {
     return true;
   }
-  if (/\bintel\b/i.test(combined) && !/\barc\b/i.test(combined)) {
+  if (/\bintel\b/i.test(combined)) {
     return true;
   }
   return false;
@@ -97,7 +98,40 @@ function normalizeWmiInstanceKey(raw) {
   return s.replace(/_\d+$/, '');
 }
 
-function matchWmiMonitors(siDispList, monIds, monParams, monConns) {
+function extractPciParentToken(raw) {
+  const s = String(raw || '').toUpperCase();
+  const m = s.match(/\\([0-9A-F]+&[0-9A-F]+&[0-9A-F]+)/);
+  return m ? m[1] : null;
+}
+
+function resolveMonitorGpuPnpId({ pnpSeg, instanceName, isInternal, videoCtrls }) {
+  const ctrls = Array.isArray(videoCtrls) ? videoCtrls : [];
+  if (ctrls.length > 0) {
+    const parentTok = extractPciParentToken(instanceName);
+    if (parentTok) {
+      const tokenMatch = ctrls.find((vc) => String(vc?.PNPDeviceID || '').toUpperCase().includes(parentTok));
+      if (tokenMatch && cleanStr(tokenMatch?.PNPDeviceID)) {
+        return cleanStr(tokenMatch.PNPDeviceID);
+      }
+    }
+    const activeNonVirtual = ctrls.filter((vc) => {
+      const nm = `${vc?.Name || ''} ${vc?.AdapterCompatibility || ''}`;
+      return !/microsoft basic|virtual|parsec|vnc|citrix|mirage|remote display/i.test(nm);
+    });
+    if (activeNonVirtual.length === 1 && cleanStr(activeNonVirtual[0]?.PNPDeviceID)) {
+      return cleanStr(activeNonVirtual[0].PNPDeviceID);
+    }
+    if (activeNonVirtual.length > 1 && isInternal) {
+      const igpu = activeNonVirtual.find((vc) => classifyIsIntegratedGpu(vc?.Name, vc?.AdapterCompatibility));
+      if (igpu && cleanStr(igpu?.PNPDeviceID)) {
+        return cleanStr(igpu.PNPDeviceID);
+      }
+    }
+  }
+  return pnpSeg ? `DISPLAY\\${pnpSeg}` : null;
+}
+
+function matchWmiMonitors(siDispList, monIds, monParams, monConns, videoCtrls = []) {
   const ids = Array.isArray(monIds) ? monIds : [];
   const params = Array.isArray(monParams) ? monParams : [];
   const conns = Array.isArray(monConns) ? monConns : [];
@@ -114,28 +148,38 @@ function matchWmiMonitors(siDispList, monIds, monParams, monConns) {
     if (k && !connByKey.has(k)) connByKey.set(k, c);
   }
 
-  const wmiBundles = ids.map((mId, i) => {
-    const key = normalizeWmiInstanceKey(mId?.InstanceName);
-    const param = (key && paramByKey.get(key)) || params[i] || null;
-    const conn = (key && connByKey.get(key)) || conns[i] || null;
-    const friendly = decodeEdidBytesToText(mId?.UserFriendlyName);
-    const mfg = decodeEdidBytesToText(mId?.ManufacturerName);
-    const serial = decodeEdidBytesToText(mId?.SerialNumberID);
-    const instUpper = String(mId?.InstanceName || '').toUpperCase();
-    const pnpSeg = instUpper.match(/^DISPLAY\\([^\\]+)/)?.[1] || null;
-    return {
-      idx: i,
-      key,
-      instanceName: mId?.InstanceName || null,
-      pnpSeg,
-      friendly,
-      mfg,
-      serial,
-      param,
-      conn,
-      used: false,
-    };
-  });
+  const singleWmi = ids.length === 1 && params.length <= 1 && conns.length <= 1;
+  const wmiBundles = ids
+    .map((mId, i) => {
+      const key = normalizeWmiInstanceKey(mId?.InstanceName);
+      const param = (key && paramByKey.get(key)) || (singleWmi ? params[0] : null) || null;
+      const conn = (key && connByKey.get(key)) || (singleWmi ? conns[0] : null) || null;
+      const friendly = decodeEdidBytesToText(mId?.UserFriendlyName);
+      const mfg = decodeEdidBytesToText(mId?.ManufacturerName);
+      const serial = decodeEdidBytesToText(mId?.SerialNumberID);
+      const instUpper = String(mId?.InstanceName || '').toUpperCase();
+      const pnpSeg = instUpper.match(/^DISPLAY\\([^\\]+)/)?.[1] || null;
+      const isConnInternal =
+        String(conn?.VideoOutputTechnology || '') === '2147483648' ||
+        Number(conn?.VideoOutputTechnology) === 11 ||
+        Number(conn?.VideoOutputTechnology) === 13;
+      const isActive = conn && typeof conn.Active === 'boolean' ? conn.Active : true;
+      return {
+        idx: i,
+        key,
+        instanceName: mId?.InstanceName || null,
+        pnpSeg,
+        friendly,
+        mfg,
+        serial,
+        param,
+        conn,
+        isConnInternal,
+        isActive,
+        used: false,
+      };
+    })
+    .sort((a, b) => Number(b.isActive) - Number(a.isActive));
 
   if (disps.length === 0 && wmiBundles.length > 0) {
     return wmiBundles.map((b, idx) => {
@@ -156,11 +200,13 @@ function matchWmiMonitors(siDispList, monIds, monParams, monConns) {
         maxRefreshRateHz: null,
         colorDepthBits: null,
         connectionType: mapVideoConnector(b.conn?.VideoOutputTechnology),
-        gpuPnpDeviceId: b.pnpSeg ? `DISPLAY\\${b.pnpSeg}` : null,
-        isInternal:
-          String(b.conn?.VideoOutputTechnology || '') === '2147483648' ||
-          Number(b.conn?.VideoOutputTechnology) === 11 ||
-          Number(b.conn?.VideoOutputTechnology) === 13,
+        gpuPnpDeviceId: resolveMonitorGpuPnpId({
+          pnpSeg: b.pnpSeg,
+          instanceName: b.instanceName,
+          isInternal: b.isConnInternal,
+          videoCtrls,
+        }),
+        isInternal: b.isConnInternal,
         isPrimary: idx === 0,
         hdrCapable: null,
         vrrCapable: null,
@@ -174,17 +220,45 @@ function matchWmiMonitors(siDispList, monIds, monParams, monConns) {
     const dDevice = cleanStr(d?.deviceName) || '';
     const dModelLower = dModel.toLowerCase();
     const dDevLower = dDevice.toLowerCase();
+    const dBuiltin = Boolean(d?.builtin);
 
+    // 1. Match by device / PNP ID or normalized instance key
     let matched =
       wmiBundles.find(
         (b) =>
           !b.used &&
-          ((b.friendly && dModelLower && (b.friendly.toLowerCase() === dModelLower || dModelLower.includes(b.friendly.toLowerCase()) || b.friendly.toLowerCase().includes(dModelLower))) ||
-            (b.pnpSeg && dDevLower && dDevLower.includes(b.pnpSeg.toLowerCase())))
-      ) ||
-      wmiBundles.find((b) => !b.used && b.idx === idx) ||
-      wmiBundles.find((b) => !b.used) ||
-      null;
+          b.isActive &&
+          ((b.pnpSeg && dDevLower && dDevLower.includes(b.pnpSeg.toLowerCase())) ||
+            (b.key && dDevLower && dDevLower.includes(b.key)))
+      ) || null;
+
+    // 2. Match by EDID UserFriendlyName against reported display model
+    if (!matched && dModelLower) {
+      matched =
+        wmiBundles.find(
+          (b) =>
+            !b.used &&
+            b.isActive &&
+            b.friendly &&
+            (b.friendly.toLowerCase() === dModelLower ||
+              dModelLower.includes(b.friendly.toLowerCase()) ||
+              b.friendly.toLowerCase().includes(dModelLower))
+        ) || null;
+    }
+
+    // 3. Match internal laptop panel strictly by built-in flag when unambiguous
+    if (!matched && dBuiltin) {
+      const internalCandidates = wmiBundles.filter((b) => !b.used && b.isActive && b.isConnInternal);
+      if (internalCandidates.length === 1) {
+        matched = internalCandidates[0];
+      }
+    }
+
+    // 4. Only fall back positionally in unambiguous single-display setups
+    if (!matched && disps.length === 1 && wmiBundles.length === 1 && !wmiBundles[0].used) {
+      matched = wmiBundles[0];
+    }
+
     if (matched) matched.used = true;
 
     const param = matched?.param || null;
@@ -199,6 +273,7 @@ function matchWmiMonitors(siDispList, monIds, monParams, monConns) {
     const curH = toNum(d?.currentResY) ?? toNum(d?.resolutionY);
     const maxW = toNum(d?.resolutionX) ?? curW;
     const maxH = toNum(d?.resolutionY) ?? curH;
+    const isInternal = Boolean(d?.builtin || matched?.isConnInternal);
 
     return {
       id: `disp-${idx}`,
@@ -214,13 +289,13 @@ function matchWmiMonitors(siDispList, monIds, monParams, monConns) {
       maxRefreshRateHz: toNum(d?.currentRefreshRate),
       colorDepthBits: toNum(d?.pixelDepth),
       connectionType: mapVideoConnector(conn?.VideoOutputTechnology) || cleanStr(d?.connection),
-      gpuPnpDeviceId: matched?.pnpSeg ? `DISPLAY\\${matched.pnpSeg}` : null,
-      isInternal: Boolean(
-        d?.builtin ||
-          String(conn?.VideoOutputTechnology || '') === '2147483648' ||
-          Number(conn?.VideoOutputTechnology) === 11 ||
-          Number(conn?.VideoOutputTechnology) === 13
-      ),
+      gpuPnpDeviceId: resolveMonitorGpuPnpId({
+        pnpSeg: matched?.pnpSeg || null,
+        instanceName: matched?.instanceName || null,
+        isInternal,
+        videoCtrls,
+      }),
+      isInternal,
       isPrimary: Boolean(d?.main || idx === 0),
       hdrCapable: null,
       vrrCapable: null,
@@ -608,7 +683,7 @@ function decodeBatteryChemistry(raw) {
   }
 }
 
-function createDeepInventoryCollector() {
+function createDeepInventoryCollector({ getLhmLibraryInfo, onElevationDetected } = {}) {
   let cachedInventory = null;
   let lastCollectedAt = 0;
   let pendingPromise = null;
@@ -710,30 +785,77 @@ function createDeepInventoryCollector() {
   }
 
   async function readLinuxTpmInfo() {
+    let permissionDenied = false;
+    const checkAccess = async (p) => {
+      try {
+        await fsp.access(p, fs.constants.R_OK);
+        return true;
+      } catch (err) {
+        if (err && (err.code === 'EACCES' || err.code === 'EPERM')) {
+          permissionDenied = true;
+        }
+        return false;
+      }
+    };
+
     try {
       const hasTpmSys = fs.existsSync('/sys/class/tpm/tpm0');
       const hasTpmDev = fs.existsSync('/dev/tpmrm0') || fs.existsSync('/dev/tpm0');
-      if (!hasTpmSys && !hasTpmDev) return { present: false };
+      if (!hasTpmSys && !hasTpmDev) {
+        // Probe read access on /sys/class/tpm and /dev/tpmrm0 in case permissions hide nodes
+        await checkAccess('/dev/tpmrm0');
+        await checkAccess('/dev/tpm0');
+        await checkAccess('/sys/class/tpm');
+        return { present: null, permissionDenied };
+      }
       let specVersion = null;
       const verPath = '/sys/class/tpm/tpm0/tpm_version_major';
       if (fs.existsSync(verPath)) {
-        const major = (await fsp.readFile(verPath, 'utf8').catch(() => '')).trim();
-        if (major) specVersion = `${major}.0`;
+        try {
+          const major = (await fsp.readFile(verPath, 'utf8')).trim();
+          if (major) specVersion = `${major}.0`;
+        } catch (err) {
+          if (err && (err.code === 'EACCES' || err.code === 'EPERM')) {
+            permissionDenied = true;
+          }
+        }
       }
-      return { present: true, enabled: true, specVersion };
-    } catch {
-      return { present: false };
+      if (!hasTpmSys && hasTpmDev) {
+        const readableDev = (await checkAccess('/dev/tpmrm0')) || (await checkAccess('/dev/tpm0'));
+        if (!readableDev && permissionDenied) {
+          return { present: true, permissionDenied: true };
+        }
+      }
+      return { present: true, enabled: true, specVersion, permissionDenied: false };
+    } catch (err) {
+      if (err && (err.code === 'EACCES' || err.code === 'EPERM')) {
+        return { present: null, permissionDenied: true };
+      }
+      return { present: null, permissionDenied };
     }
   }
 
   async function queryNvidiaSmiDeep() {
     const candidates =
       process.platform === 'win32'
-        ? [
-            'C:\\Windows\\System32\\nvidia-smi.exe',
-            'C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe',
-            'nvidia-smi.exe',
-          ]
+        ? Array.from(
+            new Set(
+              [
+                process.env.SystemRoot
+                  ? path.win32.join(process.env.SystemRoot, 'System32', 'nvidia-smi.exe')
+                  : null,
+                process.env.ProgramFiles
+                  ? path.win32.join(process.env.ProgramFiles, 'NVIDIA Corporation', 'NVSMI', 'nvidia-smi.exe')
+                  : null,
+                process.env.ProgramW6432
+                  ? path.win32.join(process.env.ProgramW6432, 'NVIDIA Corporation', 'NVSMI', 'nvidia-smi.exe')
+                  : null,
+                'C:\\Windows\\System32\\nvidia-smi.exe',
+                'C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe',
+                'nvidia-smi.exe',
+              ].filter(Boolean)
+            )
+          )
         : ['nvidia-smi'];
 
     for (const candidate of candidates) {
@@ -927,14 +1049,49 @@ function createDeepInventoryCollector() {
           ? 'laptop'
           : 'unknown';
 
+      if (isWindows && typeof winData?.isAdmin === 'boolean' && typeof onElevationDetected === 'function') {
+        try {
+          onElevationDetected(winData.isAdmin);
+        } catch {
+          // ignore
+        }
+      }
+
       const lhmArr = asArray(winData?.lhmSensors);
       const ohmArr = asArray(winData?.ohmSensors);
-      const lhmRunning = lhmArr.length > 0;
+      const lhmWmiRunning = lhmArr.length > 0;
       const ohmRunning = ohmArr.length > 0;
       const nvSmiAvailable = Boolean(nvSmiRes?.ok && nvSmiRes.stdout);
 
+      const lhmLibInfo =
+        isWindows && typeof getLhmLibraryInfo === 'function' ? getLhmLibraryInfo() : null;
+      const lhmDirectInstalled = Boolean(lhmLibInfo?.installed && lhmLibInfo?.healthy && lhmLibInfo?.dllPath);
+      const lhmDirectVersion = lhmLibInfo?.version || null;
+      let directLhmRes = null;
+      if (isWindows && !lhmWmiRunning && !ohmRunning && lhmDirectInstalled) {
+        directLhmRes = await readManagedLhmSensors({
+          dllPath: lhmLibInfo.dllPath,
+          timeoutMs: 7000,
+        }).catch(() => null);
+      }
+      const directLhmSensors =
+        directLhmRes?.ok && Array.isArray(directLhmRes.sensors) ? directLhmRes.sensors : [];
+      const lhmDirectActive = directLhmSensors.length > 0;
+      const lhmRunning = lhmWmiRunning || lhmDirectActive;
+      const lhmRequiresAdmin = Boolean(
+        lhmDirectInstalled &&
+        directLhmRes?.requiresAdminHint &&
+        winData?.isAdmin === false
+      );
+
       if (isWindows && !lhmRunning && !ohmRunning) {
-        limitations.push('LibreHardwareMonitor / OpenHardwareMonitor WMI bridge is not running; motherboard fan headers, board voltages, and some CPU/VRM sensors are unavailable to Windows standard APIs.');
+        limitations.push(
+          lhmDirectInstalled
+            ? 'LibreHardwareMonitorLib.dll is installed, but standard user permissions blocked Ring0 SuperIO/motherboard sensors. Supported GPU/NVMe sensors work without Admin; run once elevated for motherboard VRM, voltage, and fan RPM headers.'
+            : 'LibreHardwareMonitorLib is not installed and LibreHardwareMonitor / OpenHardwareMonitor WMI bridge is not running; motherboard fan headers, board voltages, and some CPU/VRM sensors are unavailable to standard Windows APIs.'
+        );
+      } else if (isWindows && lhmDirectActive && lhmRequiresAdmin) {
+        limitations.push('LibreHardwareMonitorLib (Direct) is active in standard user mode; low-level Ring0 motherboard VRM, voltage, and SuperIO fan headers may require Administrator sensor access.');
       }
       if (isWindows && winData?.isAdmin === false) {
         limitations.push('Running without Administrator elevation; some Windows Security/WHEA Event Viewer logs or low-level SMART pass-through registers may be restricted.');
@@ -944,9 +1101,11 @@ function createDeepInventoryCollector() {
       const boardModel = cleanStr(winData?.bb?.Product) || cleanStr(siBoard?.model);
       const guessedPlatform = detectPlatformSupportAndChipset(boardModel, cpuModel);
 
-      // Parse sensors from LHM/OHM or Linux hwmon
-      const parsedWinSensors = lhmRunning
+      // Parse sensors from LHM WMI, Direct LibreHardwareMonitorLib, OHM WMI, or Linux hwmon
+      const parsedWinSensors = lhmWmiRunning
         ? parseSensorsList(lhmArr, 'LibreHardwareMonitor WMI')
+        : lhmDirectActive
+        ? parseSensorsList(directLhmSensors, 'LibreHardwareMonitorLib (Direct)')
         : ohmRunning
         ? parseSensorsList(ohmArr, 'OpenHardwareMonitor WMI')
         : { fans: [], boardTemps: [], allTemps: [], voltages: [] };
@@ -1222,7 +1381,7 @@ function createDeepInventoryCollector() {
       const monIds = asArray(winData?.monIds);
       const monParams = asArray(winData?.monParams);
       const monConns = asArray(winData?.monConn);
-      const displays = matchWmiMonitors(siDispList, monIds, monParams, monConns);
+      const displays = matchWmiMonitors(siDispList, monIds, monParams, monConns, asArray(winData?.videoCtrls));
 
       // Ports & Connectors (4 Strict Categories)
       const confirmedPhysical = [];
@@ -1507,6 +1666,9 @@ function createDeepInventoryCollector() {
           tpm: resolveTpmState({ platform: process.platform, winData, linuxTpmInfo }),
           sensorBackends: {
             lhmRunning,
+            lhmDirectInstalled,
+            lhmDirectVersion,
+            lhmRequiresAdmin,
             ohmRunning,
             nvidiaSmiAvailable: nvSmiAvailable,
             smartctlAvailable,
@@ -1628,8 +1790,10 @@ function createDeepInventoryCollector() {
           totalDetectedCount: fansList.length,
           runningCount: fansList.filter((f) => f.status === 'running').length,
           stoppedCount: fansList.filter((f) => f.status === 'stopped_confirmed').length,
-          sensorSource: lhmRunning
+          sensorSource: lhmWmiRunning
             ? 'LibreHardwareMonitor WMI'
+            : lhmDirectActive
+            ? 'LibreHardwareMonitorLib (Direct)'
             : ohmRunning
             ? 'OpenHardwareMonitor WMI'
             : isLinux && fansList.length > 0

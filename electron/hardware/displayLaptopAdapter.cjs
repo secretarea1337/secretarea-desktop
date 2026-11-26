@@ -141,6 +141,152 @@ function mapConnectionType(raw) {
   return sanitize(String(raw));
 }
 
+function isIntegratedGpuModel(model, manufacturer) {
+  const m = `${model || ''} ${manufacturer || ''}`.toLowerCase();
+  if (/microsoft basic|virtual|parsec|vnc|citrix|mirage|remote display/i.test(m)) return true;
+  if (/\b(?:geforce|rtx|gtx|quadro|tesla|titan|rx\s*\d{3,4}|radeon\s*pro|radeon\s*rx|arc(?:\((?:r|tm)\)|[®™])?\s*(?:pro\s*)?[ab]\d{2,3})\b/i.test(m)) {
+    return false;
+  }
+  if (
+    /\b(?:uhd|hd\s*graphics|iris|vega\s*\d+|radeon\(tm\)\s*graphics|radeon\s*graphics|[678]\d0m|apple\s*m\d|arc(?:\((?:r|tm)\)|[®™])?\s*graphics|arc(?:\((?:r|tm)\)|[®™])?\s*1[34]0[vt])\b/i.test(
+      m
+    )
+  ) {
+    return true;
+  }
+  return /\bintel\b/i.test(m);
+}
+
+function normalizeWmiInstanceKey(raw) {
+  const s = String(raw || '').trim().toLowerCase();
+  return s ? s.replace(/_\d+$/, '') : '';
+}
+
+function decodeEdidText(arr) {
+  if (!Array.isArray(arr)) return null;
+  const chars = arr.filter((n) => Number.isFinite(n) && n > 0).map((n) => String.fromCharCode(n));
+  return sanitize(chars.join(''));
+}
+
+function matchDisplayMonitors(rawDisplays, winDisplays, winMonIds, winVideoCtrls) {
+  const rawList = Array.isArray(rawDisplays) ? rawDisplays : [];
+  const connList = Array.isArray(winDisplays) ? winDisplays : [];
+  const idList = Array.isArray(winMonIds) ? winMonIds : [];
+  const vcList = Array.isArray(winVideoCtrls) ? winVideoCtrls : [];
+
+  const connByKey = new Map();
+  for (const c of connList) {
+    const k = normalizeWmiInstanceKey(c?.InstanceName);
+    if (k && !connByKey.has(k)) connByKey.set(k, c);
+  }
+  const idByKey = new Map();
+  for (const mId of idList) {
+    const k = normalizeWmiInstanceKey(mId?.InstanceName);
+    if (k && !idByKey.has(k)) idByKey.set(k, mId);
+  }
+
+  // Merge WMI connection + monitor ID entries by normalized InstanceName
+  const allKeys = new Set();
+  for (const k of connByKey.keys()) allKeys.add(k);
+  for (const k of idByKey.keys()) allKeys.add(k);
+
+  const singleWmiFallback = allKeys.size === 0 && connList.length === 1;
+  const wmiEntries = Array.from(allKeys)
+    .map((key) => {
+      const conn = connByKey.get(key) || null;
+      const idObj = idByKey.get(key) || null;
+      const instUpper = String(conn?.InstanceName || idObj?.InstanceName || '').toUpperCase();
+      const pnpSeg = instUpper.match(/^DISPLAY\\([^\\]+)/)?.[1] || null;
+      const parentTok = instUpper.match(/\\([0-9A-F]+&[0-9A-F]+&[0-9A-F]+)/)?.[1] || null;
+      const friendly = decodeEdidText(idObj?.UserFriendlyName);
+      const isInternalConn =
+        String(conn?.VideoOutputTechnology || '') === '2147483648' ||
+        Number(conn?.VideoOutputTechnology) === 11 ||
+        Number(conn?.VideoOutputTechnology) === 13;
+      const isActive = conn && typeof conn.Active === 'boolean' ? conn.Active : true;
+      return {
+        key,
+        instanceName: conn?.InstanceName || idObj?.InstanceName || null,
+        pnpSeg,
+        parentTok,
+        friendly,
+        conn,
+        isInternalConn,
+        isActive,
+        used: false,
+      };
+    })
+    .sort((a, b) => Number(b.isActive) - Number(a.isActive));
+
+  return rawList.map((d, idx) => {
+    const width = toNum(d?.currentResX) ?? toNum(d?.resolutionX);
+    const height = toNum(d?.currentResY) ?? toNum(d?.resolutionY);
+    const refreshRateHz = toNum(d?.currentRefreshRate);
+    const dModelLower = (sanitize(d?.model) || '').toLowerCase();
+    const dDevLower = (sanitize(d?.deviceName) || '').toLowerCase();
+    const dBuiltin = Boolean(d?.builtin);
+
+    let matched =
+      wmiEntries.find(
+        (b) =>
+          !b.used &&
+          b.isActive &&
+          ((b.pnpSeg && dDevLower && dDevLower.includes(b.pnpSeg.toLowerCase())) ||
+            (b.key && dDevLower && dDevLower.includes(b.key)))
+      ) || null;
+
+    if (!matched && dModelLower) {
+      matched =
+        wmiEntries.find(
+          (b) =>
+            !b.used &&
+            b.isActive &&
+            b.friendly &&
+            (b.friendly.toLowerCase() === dModelLower ||
+              dModelLower.includes(b.friendly.toLowerCase()) ||
+              b.friendly.toLowerCase().includes(dModelLower))
+        ) || null;
+    }
+
+    if (!matched && dBuiltin) {
+      const internalMatches = wmiEntries.filter((b) => !b.used && b.isActive && b.isInternalConn);
+      if (internalMatches.length === 1) {
+        matched = internalMatches[0];
+      }
+    }
+
+    if (!matched && rawList.length === 1 && wmiEntries.length === 1 && !wmiEntries[0].used) {
+      matched = wmiEntries[0];
+    }
+
+    if (matched) matched.used = true;
+
+    const wmiConn = matched?.conn || (singleWmiFallback ? connList[0] : null);
+    const connectionType =
+      mapConnectionType(wmiConn?.VideoOutputTechnology) ||
+      mapConnectionType(d?.connection) ||
+      null;
+
+    const matchedGpu =
+      (matched?.parentTok &&
+        vcList.find((vc) => String(vc?.PNPDeviceID || '').toUpperCase().includes(matched.parentTok))) ||
+      null;
+
+    return {
+      id: `disp-${idx}`,
+      model: matched?.friendly || sanitize(d?.model) || sanitize(d?.deviceName) || (idx === 0 ? 'Primary Display' : `Display ${idx + 1}`),
+      isPrimary: Boolean(d?.main || idx === 0),
+      width,
+      height,
+      resolutionText: width && height ? `${width} × ${height}` : null,
+      refreshRateHz: refreshRateHz && refreshRateHz > 0 ? Math.round(refreshRateHz) : null,
+      connectionType,
+      builtin: Boolean(d?.builtin || matched?.isInternalConn),
+      ...(matchedGpu?.PNPDeviceID ? { gpuPnpDeviceId: String(matchedGpu.PNPDeviceID) } : {}),
+    };
+  });
+}
+
 function determineHybridGpuMode({ gpus, hasBattery }) {
   if (!Array.isArray(gpus) || gpus.length === 0) {
     return 'Unavailable';
@@ -151,7 +297,7 @@ function determineHybridGpuMode({ gpus, hasBattery }) {
   const hasIntel = vendors.some((v) => v.includes('intel'));
   const hasAmd = vendors.some((v) => v.includes('amd'));
   const hasIntegratedHint =
-    hasIntel ||
+    gpus.some((g) => isIntegratedGpuModel(g.model, g.manufacturer)) ||
     models.some((m) =>
       m.includes('uhd') ||
       m.includes('iris') ||
@@ -172,7 +318,7 @@ function determineHybridGpuMode({ gpus, hasBattery }) {
   if (gpus.length >= 2) {
     return `Multi-GPU (${gpus.length} Adapters)`;
   }
-  if (hasIntegratedHint && !hasNvidia && !/\brx\s*\d{4}/i.test(models[0] || '')) {
+  if (isIntegratedGpuModel(gpus[0]?.model, gpus[0]?.manufacturer)) {
     return 'Integrated Graphics Only';
   }
   return 'Discrete GPU Mode';
@@ -185,7 +331,7 @@ function estimateDirectXVersionFromGpus(gpus, dxdiagText) {
   }
   if (process.platform === 'win32' && Array.isArray(gpus) && gpus.length > 0) {
     const combined = gpus.map((g) => String(g.model || '').toLowerCase()).join(' ');
-    if (/(rtx\s*[2345]0|rx\s*[679]\d{3}|arc\s*[ab]\d{3})/.test(combined)) {
+    if (/(rtx\s*[2345]0|rx\s*[679]\d{3}|arc(?:\((?:r|tm)\)|[®™])?\s*[ab]\d{3})/.test(combined)) {
       return 'DirectX 12 Ultimate (12_2)';
     }
     if (/(gtx\s*1[06]|rx\s*5\d{3}|rx\s*[45]\d{2}|iris\s*xe|uhd)/.test(combined)) {
@@ -210,6 +356,7 @@ function createDisplayLaptopAdapter() {
     const script = [
       '$ErrorActionPreference = "SilentlyContinue";',
       '$displays = @(Get-CimInstance -Namespace root\\wmi WmiMonitorConnectionParams | Select-Object InstanceName,VideoOutputTechnology,Active);',
+      '$monIds = @(Get-CimInstance -Namespace root\\wmi WmiMonitorID | Select-Object InstanceName,ManufacturerName,UserFriendlyName);',
       '$hdrMon = @(Get-CimInstance -Namespace root\\wmi WmiMonitorColorCharacteristics | Select-Object InstanceName);',
       '$bat = Get-CimInstance Win32_Battery | Select-Object -First 1 EstimatedChargeRemaining,BatteryStatus,DesignVoltage,Name;',
       '$batStatic = Get-CimInstance -Namespace root\\wmi BatteryStaticData | Select-Object -First 1 DesignedCapacity;',
@@ -219,8 +366,8 @@ function createDisplayLaptopAdapter() {
       '$hdrReg = Get-ChildItem -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\Store\\DefaultAccount\\Current" | Where-Object { $_.Name -match "Display|HDR" } | Select-Object -First 1 Name;',
       '$dxVer = (Get-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\DirectX" -Name Version).Version;',
       '$powerPlan = (powercfg /getactivescheme) 2>$null;',
-      '$videoCtrls = @(Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,AdapterDACType);',
-      '@{ displays = $displays; hdrMon = $hdrMon; bat = $bat; batStatic = $batStatic; batFull = $batFull; hags = $hagsKey.HwSchMode; gameMode = $gmKey.AutoGameModeEnabled; allowGameMode = $gmKey.AllowAutoGameMode; dxVer = $dxVer; powerPlan = $powerPlan; videoCtrls = $videoCtrls } | ConvertTo-Json -Depth 4 -Compress',
+      '$videoCtrls = @(Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,AdapterDACType,PNPDeviceID);',
+      '@{ displays = $displays; monIds = $monIds; hdrMon = $hdrMon; bat = $bat; batStatic = $batStatic; batFull = $batFull; hags = $hagsKey.HwSchMode; gameMode = $gmKey.AutoGameModeEnabled; allowGameMode = $gmKey.AllowAutoGameMode; dxVer = $dxVer; powerPlan = $powerPlan; videoCtrls = $videoCtrls } | ConvertTo-Json -Depth 4 -Compress',
     ].join(' ');
 
     const raw = await runExec(
@@ -251,34 +398,18 @@ function createDisplayLaptopAdapter() {
       : winExt?.displays
       ? [winExt.displays]
       : [];
+    const winMonIds = Array.isArray(winExt?.monIds)
+      ? winExt.monIds
+      : winExt?.monIds
+      ? [winExt.monIds]
+      : [];
     const winVideoCtrls = Array.isArray(winExt?.videoCtrls)
       ? winExt.videoCtrls
       : winExt?.videoCtrls
       ? [winExt.videoCtrls]
       : [];
 
-    const monitors = rawDisplays.map((d, idx) => {
-      const width = toNum(d?.currentResX) ?? toNum(d?.resolutionX);
-      const height = toNum(d?.currentResY) ?? toNum(d?.resolutionY);
-      const refreshRateHz = toNum(d?.currentRefreshRate);
-      const wmiConn = winDisplays[idx];
-      const connectionType =
-        mapConnectionType(wmiConn?.VideoOutputTechnology) ||
-        mapConnectionType(d?.connection) ||
-        null;
-
-      return {
-        id: `disp-${idx}`,
-        model: sanitize(d?.model) || sanitize(d?.deviceName) || (idx === 0 ? 'Primary Display' : `Display ${idx + 1}`),
-        isPrimary: Boolean(d?.main || idx === 0),
-        width,
-        height,
-        resolutionText: width && height ? `${width} × ${height}` : null,
-        refreshRateHz: refreshRateHz && refreshRateHz > 0 ? Math.round(refreshRateHz) : null,
-        connectionType,
-        builtin: Boolean(d?.builtin),
-      };
-    });
+    const monitors = matchDisplayMonitors(rawDisplays, winDisplays, winMonIds, winVideoCtrls);
 
     // If si.graphics().displays was empty on headless Linux or certain Windows drivers, inspect Win32_VideoController
     if (monitors.length === 0 && winVideoCtrls.length > 0) {
@@ -382,7 +513,7 @@ function createDisplayLaptopAdapter() {
 
     const activeRenderingGpu =
       Array.isArray(gpus) && gpus.length > 0
-        ? (gpus.find((g) => !String(g.model || '').toLowerCase().includes('uhd')) || gpus[0]).model
+        ? (gpus.find((g) => !isIntegratedGpuModel(g.model, g.manufacturer)) || gpus[0]).model
         : null;
 
     return {
@@ -420,4 +551,6 @@ module.exports = {
   classifyMemoryChannels,
   determineHybridGpuMode,
   mapConnectionType,
+  matchDisplayMonitors,
+  isIntegratedGpuModel,
 };

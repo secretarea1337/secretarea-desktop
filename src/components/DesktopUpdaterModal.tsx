@@ -562,6 +562,18 @@ export function DesktopUpdaterModal({
 
                   {renderWhatsNewBox()}
 
+                  {state.autoUpdateSupported === false && state.linuxPackageType === 'deb' && (
+                    <p
+                      className={`text-[11.5px] leading-relaxed rounded-md px-3 py-2 border ${
+                        isPs5Theme || isXboxTheme
+                          ? 'bg-black/25 border-white/[0.08] text-[#b8c7dc]'
+                          : 'bg-white/75 border-sky-200 text-slate-600 dark:bg-black/25 dark:border-white/[0.08] dark:text-[#b8c7dc]'
+                      }`}
+                    >
+                      Automatic in-place updates are only supported on Windows and Linux AppImage builds. Clicking download will open the GitHub Release page to download the latest .deb package manually.
+                    </p>
+                  )}
+
                   <div className="flex items-center justify-end gap-2 pt-1">
                     <button
                       type="button"

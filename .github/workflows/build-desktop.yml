@@ -1,4 +1,3 @@
-
 name: Release SecretArea Desktop App
 
 on:
@@ -20,10 +19,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check-version:
     name: Check Version for Release
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     outputs:
       should_release: ${{ steps.meta.outputs.should_release }}
@@ -36,9 +39,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Check package.json version against existing GitHub Releases
+      - name: Validate package.json version against tag and GitHub Releases
         id: meta
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -47,102 +50,81 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           FORCE_RELEASE: ${{ inputs.force_release }}
         run: |
-          $ErrorActionPreference = "Stop"
+          set -euo pipefail
 
-          # Read and validate package.json
-          $pkg = Get-Content -Raw package.json | ConvertFrom-Json
+          node << 'EOF'
+          const fs = require('fs');
 
-          if ([string]::IsNullOrWhiteSpace([string]$pkg.version)) {
-            throw "package.json version is empty or missing."
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const version = typeof pkg.version === 'string' ? pkg.version.trim() : '';
+          if (!version) {
+            throw new Error('package.json version is empty or missing.');
+          }
+          if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(version)) {
+            throw new Error(`Invalid package.json version: ${version}`);
           }
 
-          $version = ([string]$pkg.version).Trim()
+          const tag = `v${version}`;
+          console.log(`Package version: ${version}`);
+          console.log(`Release tag: ${tag}`);
 
-          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$') {
-            throw "Invalid package.json version: $version"
+          const githubRef = process.env.GITHUB_REF || '';
+          const refName = process.env.GITHUB_REF_NAME || '';
+          if (githubRef.startsWith('refs/tags/') && refName !== tag) {
+            throw new Error(`Tag '${refName}' does not match package.json version '${tag}'. Update package.json version first.`);
           }
 
-          $tag = "v$version"
+          (async () => {
+            const repo = process.env.REPOSITORY;
+            const token = process.env.GH_TOKEN;
+            const releaseUrl = `https://api.github.com/repos/${repo}/releases/tags/${encodeURIComponent(tag)}`;
 
-          Write-Host "Package version: $version"
-          Write-Host "Release tag: $tag"
+            const res = await fetch(releaseUrl, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+              },
+            });
 
-          # Validate pushed Git tag
-          if ($env:GITHUB_REF.StartsWith("refs/tags/")) {
-            $pushedTag = $env:GITHUB_REF_NAME
-
-            if ($pushedTag -ne $tag) {
-              throw "Tag '$pushedTag' does not match package.json version '$tag'. Update package.json version first."
-            }
-          }
-
-          # Check whether the GitHub Release already exists
-          $releaseExists = $false
-
-          $releaseUrl = "https://api.github.com/repos/$env:REPOSITORY/releases/tags/$tag"
-
-          $headers = @{
-            Authorization = "Bearer $env:GH_TOKEN"
-            Accept = "application/vnd.github+json"
-            "X-GitHub-Api-Version" = "2022-11-28"
-          }
-
-          try {
-            $release = Invoke-RestMethod `
-              -Uri $releaseUrl `
-              -Headers $headers `
-              -Method Get
-
-            $releaseExists = $true
-            Write-Host "Release $tag already exists."
-          }
-          catch {
-            $statusCode = 0
-
-            if ($_.Exception.Response) {
-              $statusCode = [int]$_.Exception.Response.StatusCode
+            let releaseExists = false;
+            if (res.status === 200) {
+              releaseExists = true;
+              console.log(`Release ${tag} already exists.`);
+            } else if (res.status === 404) {
+              releaseExists = false;
+              console.log(`Release ${tag} does not exist.`);
+            } else {
+              const text = await res.text().catch(() => '');
+              throw new Error(`GitHub API error while checking release (HTTP ${res.status}): ${text}`);
             }
 
-            if ($statusCode -eq 404) {
-              $releaseExists = $false
-              Write-Host "Release $tag does not exist."
-            }
-            else {
-              throw "GitHub API error while checking release: $($_.Exception.Message)"
-            }
-          }
+            const isManualForce =
+              process.env.EVENT_NAME === 'workflow_dispatch' &&
+              process.env.FORCE_RELEASE === 'true';
+            const isTagPush = githubRef.startsWith('refs/tags/');
 
-          # Determine whether to publish
-          $isManualForce = (
-            $env:EVENT_NAME -eq "workflow_dispatch" -and
-            $env:FORCE_RELEASE -eq "true"
-          )
+            const shouldRelease = (!releaseExists || isManualForce || isTagPush) ? 'true' : 'false';
+            console.log(
+              shouldRelease === 'true'
+                ? `Release ${tag} will be built for Windows and Linux and published.`
+                : `Release ${tag} already exists. Skipping build.`
+            );
 
-          $isTagPush = $env:GITHUB_REF.StartsWith("refs/tags/")
+            const outputFile = process.env.GITHUB_OUTPUT;
+            fs.appendFileSync(outputFile, `version=${version}\n`);
+            fs.appendFileSync(outputFile, `tag=${tag}\n`);
+            fs.appendFileSync(outputFile, `should_release=${shouldRelease}\n`);
+          })().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          EOF
 
-          if (-not $releaseExists -or $isManualForce -or $isTagPush) {
-            $shouldRelease = "true"
-            Write-Host "Release $tag will be built and published."
-          }
-          else {
-            $shouldRelease = "false"
-            Write-Host "Release $tag already exists. Skipping build."
-          }
-
-          # Export GitHub Actions outputs
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "should_release=$shouldRelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-
-  build-and-release-windows:
-    name: Build & Publish Windows Installer
+  build-windows:
+    name: Build Windows x64 (NSIS)
     needs: check-version
-
     if: needs.check-version.outputs.should_release == 'true'
-
-    permissions:
-      contents: write
-
     runs-on: windows-latest
 
     steps:
@@ -157,6 +139,16 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Cache Electron & Electron Builder (Windows)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: electron-win-${{ runner.os }}-${{ hashFiles('package-lock.json', 'package.json') }}
+          restore-keys: |
+            electron-win-${{ runner.os }}-
+
       - name: Install project dependencies
         shell: pwsh
         run: |
@@ -169,27 +161,30 @@ jobs:
             -not (Test-Path "node_modules/@rolldown/binding-win32-x64-msvc")
           ) {
             Write-Host "Resolving Windows x64 optional native binaries..."
-
             npm install --no-audit --no-fund
           }
 
       - name: Run TypeScript check
         run: npm run lint
 
+      - name: Run desktop & optimization test suites
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          node --test tests/*.cjs.test.cjs
+          npx tsx --test tests/hardwareAudit.ts.test.ts
+
       - name: Install Electron & Electron Builder
-        run: npm install --no-save electron electron-builder
+        run: npm install --no-save --no-audit --no-fund electron electron-builder
 
-      - name: Build production web bundle
-        run: npm run build
-
-      - name: Package Windows NSIS Installer & Updater Metadata
-        run: npx electron-builder --win nsis --publish never
+      - name: Build production web bundle & package Windows NSIS installer
+        run: npm run desktop:build:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
-      - name: Verify installer and updater metadata files
+      - name: Verify Windows installer and updater metadata
         shell: pwsh
         env:
           EXPECTED_VERSION: ${{ needs.check-version.outputs.version }}
@@ -206,14 +201,12 @@ jobs:
 
           foreach ($file in $requiredFiles) {
             if (-not (Test-Path $file)) {
-              throw "Missing required release artifact: $file"
+              throw "Missing required Windows release artifact: $file"
             }
-
             Write-Host "Verified: $file"
           }
 
           $latestYml = Get-Content -Raw release/latest.yml
-
           Write-Host "--- release/latest.yml ---"
           Write-Host $latestYml
 
@@ -225,9 +218,9 @@ jobs:
             throw "release/latest.yml does not reference SecretArea.exe"
           }
 
-          Write-Host "All updater metadata checks passed."
+          Write-Host "All Windows updater metadata checks passed."
 
-      - name: Upload Windows release workflow artifacts
+      - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: SecretArea-${{ needs.check-version.outputs.tag }}-Windows
@@ -236,8 +229,162 @@ jobs:
             release/SecretArea.exe.blockmap
             release/latest.yml
           if-no-files-found: error
+          retention-days: 5
 
-      - name: Publish Installer & Metadata to GitHub Releases
+  build-linux:
+    name: Build Linux x64 (AppImage + DEB)
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cache Electron & Electron Builder (Linux)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: electron-linux-${{ runner.os }}-${{ hashFiles('package-lock.json', 'package.json') }}
+          restore-keys: |
+            electron-linux-${{ runner.os }}-
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+
+          if [ ! -d "node_modules/@typescript/typescript-linux-x64" ] || [ ! -d "node_modules/@rolldown/binding-linux-x64-gnu" ]; then
+            echo "Resolving Linux x64 optional native binaries..."
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Run TypeScript check
+        run: npm run lint
+
+      - name: Run desktop & optimization test suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/*.cjs.test.cjs
+          npx tsx --test tests/hardwareAudit.ts.test.ts
+
+      - name: Install Electron & Electron Builder
+        run: npm install --no-save --no-audit --no-fund electron electron-builder
+
+      - name: Build production web bundle & package Linux AppImage + DEB
+        run: npm run desktop:build:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Linux packages and updater metadata
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          APPIMAGE_FILE="release/SecretArea-${EXPECTED_VERSION}-linux-x86_64.AppImage"
+          DEB_FILE="release/SecretArea-${EXPECTED_VERSION}-linux-amd64.deb"
+          LATEST_LINUX_YML="release/latest-linux.yml"
+
+          for file in "$APPIMAGE_FILE" "$DEB_FILE" "$LATEST_LINUX_YML"; do
+            if [ ! -s "$file" ]; then
+              echo "Missing or empty Linux release artifact: $file" >&2
+              exit 1
+            fi
+            echo "Verified: $file"
+          done
+
+          chmod +x "$APPIMAGE_FILE"
+
+          echo "--- release/latest-linux.yml ---"
+          cat "$LATEST_LINUX_YML"
+
+          EXPECTED_VERSION="$EXPECTED_VERSION" node << 'EOF'
+          const fs = require('fs');
+          const ver = process.env.EXPECTED_VERSION;
+          const yml = fs.readFileSync('release/latest-linux.yml', 'utf8');
+          const verRegex = new RegExp(`^version:\\s*['"]?${ver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]?\\s*$`, 'm');
+          if (!verRegex.test(yml)) {
+            throw new Error(`release/latest-linux.yml version does not match package.json version ${ver}`);
+          }
+          if (!yml.includes(`SecretArea-${ver}-linux-x86_64.AppImage`)) {
+            throw new Error(`release/latest-linux.yml does not reference SecretArea-${ver}-linux-x86_64.AppImage`);
+          }
+          EOF
+
+          dpkg-deb -I "$DEB_FILE"
+          echo "All Linux package & updater metadata checks passed."
+
+      - name: Upload Linux build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SecretArea-${{ needs.check-version.outputs.tag }}-Linux
+          path: |
+            release/SecretArea-${{ needs.check-version.outputs.version }}-linux-x86_64.AppImage
+            release/SecretArea-${{ needs.check-version.outputs.version }}-linux-amd64.deb
+            release/latest-linux.yml
+          if-no-files-found: error
+          retention-days: 5
+
+  publish-release:
+    name: Publish Multi-Platform GitHub Release
+    needs: [check-version, build-windows, build-linux]
+    if: ${{ needs.check-version.outputs.should_release == 'true' && needs.build-windows.result == 'success' && needs.build-linux.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Windows release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: SecretArea-${{ needs.check-version.outputs.tag }}-Windows
+          path: artifacts/windows
+
+      - name: Download Linux release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: SecretArea-${{ needs.check-version.outputs.tag }}-Linux
+          path: artifacts/linux
+
+      - name: Validate all platform release files before publishing
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          REQUIRED=(
+            "artifacts/windows/SecretArea.exe"
+            "artifacts/windows/SecretArea.exe.blockmap"
+            "artifacts/windows/latest.yml"
+            "artifacts/linux/SecretArea-${EXPECTED_VERSION}-linux-x86_64.AppImage"
+            "artifacts/linux/SecretArea-${EXPECTED_VERSION}-linux-amd64.deb"
+            "artifacts/linux/latest-linux.yml"
+          )
+
+          for file in "${REQUIRED[@]}"; do
+            if [ ! -s "$file" ]; then
+              echo "Missing or empty staged release asset: $file" >&2
+              exit 1
+            fi
+            ls -lh "$file"
+          done
+
+      - name: Publish Windows & Linux Assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.check-version.outputs.tag }}
@@ -246,6 +393,9 @@ jobs:
           make_latest: true
           fail_on_unmatched_files: true
           files: |
-            release/SecretArea.exe
-            release/SecretArea.exe.blockmap
-            release/latest.yml
+            artifacts/windows/SecretArea.exe
+            artifacts/windows/SecretArea.exe.blockmap
+            artifacts/windows/latest.yml
+            artifacts/linux/SecretArea-${{ needs.check-version.outputs.version }}-linux-x86_64.AppImage
+            artifacts/linux/SecretArea-${{ needs.check-version.outputs.version }}-linux-amd64.deb
+            artifacts/linux/latest-linux.yml

@@ -1,18 +1,21 @@
 {
   "name": "secretarea",
   "private": true,
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "SecretArea Desktop Game Launcher",
   "repository": "https://github.com/secretarea1337/secretarea-desktop",
   "type": "module",
   "main": "electron/main.cjs",
+  "desktopName": "secretarea.desktop",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist release server.js",
     "lint": "tsc --noEmit",
-    "desktop:build": "vite build && electron-builder --win nsis"
+    "desktop:build": "vite build && electron-builder --win nsis",
+    "desktop:build:win": "vite build && electron-builder --win nsis --x64 --publish never",
+    "desktop:build:linux": "vite build && electron-builder --linux AppImage deb --x64 --publish never"
   },
   "build": {
     "appId": "site.secretarea.desktop",
@@ -54,6 +57,47 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "SecretArea"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "packaging/linux/icons",
+      "category": "Game",
+      "syncDesktopName": true,
+      "synopsis": "SecretArea Desktop Game Launcher",
+      "description": "SecretArea Desktop Game Launcher with hardware monitoring, downloads manager, and multi-store game tools.",
+      "maintainer": "SecretArea <support@secretarea.site>",
+      "vendor": "SecretArea",
+      "desktop": {
+        "entry": {
+          "Name": "SecretArea",
+          "Comment": "SecretArea Desktop Game Launcher",
+          "Categories": "Game;Utility;",
+          "StartupWMClass": "SecretArea",
+          "Terminal": "false"
+        }
+      }
+    },
+    "appImage": {
+      "artifactName": "SecretArea-${version}-linux-x86_64.AppImage"
+    },
+    "deb": {
+      "artifactName": "SecretArea-${version}-linux-amd64.deb",
+      "packageCategory": "games",
+      "priority": "optional",
+      "compression": "gz"
     }
   },
   "dependencies": {

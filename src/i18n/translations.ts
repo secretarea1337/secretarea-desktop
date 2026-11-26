@@ -170,6 +170,51 @@ export interface LauncherTranslations {
     exitAppCancelBtn: string;
     exitAppWebHint: string;
   };
+  performance: {
+    sectionTitle: string;
+    sectionSubtitle: string;
+    liveApplyBadge: string;
+    modeEcoTitle: string;
+    modeEcoDesc: string;
+    modeBalancedTitle: string;
+    modeBalancedDesc: string;
+    modePerformanceTitle: string;
+    modePerformanceDesc: string;
+    recommendedBadge: string;
+    activeBadge: string;
+    advancedTitle: string;
+    advancedDesc: string;
+    pauseOnMinimizeTitle: string;
+    pauseOnMinimizeDesc: string;
+    reduceEffectsTitle: string;
+    reduceEffectsDesc: string;
+    hwIntervalTitle: string;
+    hwIntervalDesc: string;
+    hwIntervalAuto: string;
+    dlThrottleTitle: string;
+    dlThrottleDesc: string;
+    dlThrottleAuto: string;
+    adaptiveTorrentTitle: string;
+    adaptiveTorrentDesc: string;
+    deferSyncTitle: string;
+    deferSyncDesc: string;
+    auditTitle: string;
+    auditDesc: string;
+    auditRefreshBtn: string;
+    auditMainCpuLabel: string;
+    auditMainHeapLabel: string;
+    auditMainRssLabel: string;
+    auditTotalProcessesLabel: string;
+    auditHwMonitorLabel: string;
+    auditDownloadsLabel: string;
+    auditTorrentPollerLabel: string;
+    auditStateActive: string;
+    auditStatePausedHidden: string;
+    auditStateIdle: string;
+    auditStateOff: string;
+    auditWebNote: string;
+    auditGpuProcessNote: string;
+  };
   customTheme: {
     sectionTitle: string;
     sectionSubtitle: string;
@@ -986,6 +1031,8 @@ export interface LauncherTranslations {
     driverVersionCol: string;
     driverDateCol: string;
     driverSignedCol: string;
+    driverSigned: string;
+    driverUnsigned: string;
     sysIdTitle: string;
     sysFormFactor: string;
     sysSku: string;
@@ -1088,6 +1135,51 @@ export interface LauncherTranslations {
     dbUpToDate: string;
     dbImportSuccess: string;
     dbRollbackSuccess: string;
+    tabOpenSourceTools: string;
+    ossTitle: string;
+    ossSubtitle: string;
+    ossPolicyBadge: string;
+    ossPolicyDesc: string;
+    ossCheckUpdatesBtn: string;
+    ossCheckingBtn: string;
+    ossInstallBtn: string;
+    ossUpdateBtn: string;
+    ossReinstallBtn: string;
+    ossRollbackBtn: string;
+    ossCancelBtn: string;
+    ossConfirmDownloadTitle: string;
+    ossConfirmDownloadDesc: string;
+    ossConfirmRollbackDesc: string;
+    ossConfirmProceedBtn: string;
+    ossInstalledVersionLabel: string;
+    ossLatestVersionLabel: string;
+    ossStatusLabel: string;
+    ossLastCheckedLabel: string;
+    ossReleaseDateLabel: string;
+    ossReleaseNotesLabel: string;
+    ossNoReleaseNotes: string;
+    ossStatusNotInstalled: string;
+    ossStatusUpToDate: string;
+    ossStatusUpdateAvailable: string;
+    ossStatusNewerInstalled: string;
+    ossStatusRepairRequired: string;
+    ossStageDownloading: string;
+    ossStageVerifying: string;
+    ossStageInstalling: string;
+    ossLinkRepo: string;
+    ossLinkReleases: string;
+    ossLinkNuget: string;
+    ossLinkLicense: string;
+    ossLinkSource: string;
+    ossDirectLibBadge: string;
+    ossShaVerifiedBadge: string;
+    ossAdminTitle: string;
+    ossAdminDescStandard: string;
+    ossAdminDescElevated: string;
+    ossThirdPartyTitle: string;
+    ossThirdPartyDesc: string;
+    ossWebPreviewNote: string;
+    ossPlatformUnsupportedNote: string;
   };
   updateHistory: {
     title: string;
@@ -1505,6 +1597,51 @@ const EN: LauncherTranslations = {
     exitAppConfirmBtn: 'Confirm Full Exit',
     exitAppCancelBtn: 'Cancel',
     exitAppWebHint: 'Full application shutdown is only available in the SecretArea.exe Desktop App.',
+  },
+  performance: {
+    sectionTitle: 'Performance & Resource Mode',
+    sectionSubtitle: 'Tune CPU, RAM, GPU, and background polling behavior in real time with no restart required.',
+    liveApplyBadge: 'Applies Live',
+    modeEcoTitle: 'Eco Mode',
+    modeEcoDesc: 'Minimum CPU, RAM, and GPU draw. Pauses nonessential effects, extends polling intervals, and suspends background work when minimized.',
+    modeBalancedTitle: 'Balanced Mode',
+    modeBalancedDesc: 'Default profile. Keeps smooth animations and full responsiveness while aggressively throttling idle background tasks.',
+    modePerformanceTitle: 'Performance Mode',
+    modePerformanceDesc: 'Prioritizes maximum UI responsiveness, faster hardware/download updates, and full visual effects without wasted idle work.',
+    recommendedBadge: 'Default',
+    activeBadge: 'Active',
+    advancedTitle: 'Advanced Resource Controls',
+    advancedDesc: 'Fine-tune polling intervals, visual effects, and background behavior independently.',
+    pauseOnMinimizeTitle: 'Pause background telemetry when minimized or hidden',
+    pauseOnMinimizeDesc: 'Immediately suspends sensor loops, ambient animations, and ping checks while window is minimized or in tray.',
+    reduceEffectsTitle: 'Reduce blur & continuous ambient animations',
+    reduceEffectsDesc: 'Disables continuous GPU ambient glows and heavy backdrop blur to minimize GPU compositing overhead.',
+    hwIntervalTitle: 'Hardware Monitor poll rate',
+    hwIntervalDesc: 'Controls sensor update cadence while viewing Hardware Monitor.',
+    hwIntervalAuto: 'Auto (Follow Profile)',
+    dlThrottleTitle: 'Download UI & state coalesce interval',
+    dlThrottleDesc: 'Controls how often active download speed/progress updates trigger UI & disk sync.',
+    dlThrottleAuto: 'Auto (Follow Profile)',
+    adaptiveTorrentTitle: 'Adaptive qBittorrent polling',
+    adaptiveTorrentDesc: 'Slows down Web UI requests automatically when zero torrents are active.',
+    deferSyncTitle: 'Defer background catalog & update checks',
+    deferSyncDesc: 'Extends intervals for nonessential catalog syncs, image precaching, and startup update probes.',
+    auditTitle: 'Runtime Resource Footprint',
+    auditDesc: 'Real-time on-demand snapshot of Electron main/helper processes and active background pollers.',
+    auditRefreshBtn: 'Sample Now',
+    auditMainCpuLabel: 'Main Process CPU',
+    auditMainHeapLabel: 'Main JS Heap',
+    auditMainRssLabel: 'Main Working Set (RSS)',
+    auditTotalProcessesLabel: 'Desktop Processes',
+    auditHwMonitorLabel: 'Hardware Poller',
+    auditDownloadsLabel: 'Active Transfers',
+    auditTorrentPollerLabel: 'qBittorrent Poller',
+    auditStateActive: 'Active',
+    auditStatePausedHidden: 'Paused (Hidden)',
+    auditStateIdle: 'Idle / Stopped',
+    auditStateOff: 'Disabled',
+    auditWebNote: 'Running in browser preview. Detailed Electron multi-process telemetry is available in SecretArea.exe.',
+    auditGpuProcessNote: 'Hardware acceleration stays intelligently enabled for responsive rendering while GPU workload drops via reduced compositing.',
   },
   customTheme: {
     sectionTitle: 'Custom Theme Builder',
@@ -2322,6 +2459,8 @@ const EN: LauncherTranslations = {
     driverVersionCol: 'Version',
     driverDateCol: 'Date',
     driverSignedCol: 'Signature',
+    driverSigned: 'Signed',
+    driverUnsigned: 'Unsigned',
     sysIdTitle: 'System Identification',
     sysFormFactor: 'Form Factor',
     sysSku: 'Product / SKU',
@@ -2424,6 +2563,51 @@ const EN: LauncherTranslations = {
     dbUpToDate: 'Verified local hardware database is active.',
     dbImportSuccess: 'Local JSON hardware database imported and verified.',
     dbRollbackSuccess: 'Rolled back to last-known-good hardware database backup.',
+    tabOpenSourceTools: 'Open-Source Tools',
+    ossTitle: 'Open-Source Hardware Tools & Release Manager',
+    ossSubtitle: 'Verified open-source telemetry engines fetched directly from official GitHub Releases and NuGet with SHA-256 verification.',
+    ossPolicyBadge: 'OSI Open-Source Only',
+    ossPolicyDesc: 'Only genuinely open-source and free software (such as LibreHardwareMonitorLib under MPL-2.0) is eligible. Closed-source proprietary utilities are strictly excluded.',
+    ossCheckUpdatesBtn: 'Check Latest Release',
+    ossCheckingBtn: 'Checking Official Releases...',
+    ossInstallBtn: 'Install Approved Build',
+    ossUpdateBtn: 'Update to Latest',
+    ossReinstallBtn: 'Reinstall & Verify',
+    ossRollbackBtn: 'Rollback Previous',
+    ossCancelBtn: 'Cancel',
+    ossConfirmDownloadTitle: 'Confirm Official Open-Source Download',
+    ossConfirmDownloadDesc: 'SecretArea will download the official build directly from GitHub Releases or NuGet, verify its SHA-256 checksum and binary integrity, and install LibreHardwareMonitorLib locally without standalone GUI clutter.',
+    ossConfirmRollbackDesc: 'Restore the backed-up previous version of LibreHardwareMonitorLib into the active local tools directory.',
+    ossConfirmProceedBtn: 'Approve & Continue',
+    ossInstalledVersionLabel: 'Installed Version',
+    ossLatestVersionLabel: 'Latest Stable Release',
+    ossStatusLabel: 'Status',
+    ossLastCheckedLabel: 'Last Update Check',
+    ossReleaseDateLabel: 'Release Date',
+    ossReleaseNotesLabel: 'Official Release Notes',
+    ossNoReleaseNotes: 'Click "Check Latest Release" to fetch current version, release date, and release notes dynamically from GitHub.',
+    ossStatusNotInstalled: 'Not Installed',
+    ossStatusUpToDate: 'Up to Date',
+    ossStatusUpdateAvailable: 'Update Available',
+    ossStatusNewerInstalled: 'Newer Local Build',
+    ossStatusRepairRequired: 'Repair Required',
+    ossStageDownloading: 'Downloading official archive',
+    ossStageVerifying: 'Verifying SHA-256 & PE integrity',
+    ossStageInstalling: 'Extracting & activating library',
+    ossLinkRepo: 'GitHub Repository',
+    ossLinkReleases: 'Official Releases',
+    ossLinkNuget: 'NuGet Package',
+    ossLinkLicense: 'MPL-2.0 License',
+    ossLinkSource: 'Source Code',
+    ossDirectLibBadge: 'Direct DLL Engine · No GUI Required',
+    ossShaVerifiedBadge: 'SHA-256 Verified',
+    ossAdminTitle: 'Standard User Safety & Elevation Scope',
+    ossAdminDescStandard: 'SecretArea never runs permanently as Administrator. GPU, NVMe/SMART, and memory sensors run safely as a standard user; low-level Ring0 motherboard VRM, voltage, and SuperIO fan RPM headers require elevated Windows sensor access when unavailable in standard mode.',
+    ossAdminDescElevated: 'Current session has Administrator sensor access enabled; full Ring0 motherboard, VRM, voltage, and SuperIO fan sensors can be queried directly via LibreHardwareMonitorLib.',
+    ossThirdPartyTitle: 'Third-Party Open-Source License Compliance (MPL-2.0)',
+    ossThirdPartyDesc: 'LibreHardwareMonitorLib is licensed under the Mozilla Public License 2.0 (MPL-2.0) by the LibreHardwareMonitor Contributors. Official license notices are preserved alongside the local library installation and in THIRD_PARTY_LICENSES.md.',
+    ossWebPreviewNote: 'Desktop Downloads Disabled in Web Preview: Open SecretArea Desktop on Windows 10/11 to download, verify SHA-256 checksums, and run LibreHardwareMonitorLib telemetry.',
+    ossPlatformUnsupportedNote: 'Direct LibreHardwareMonitorLib (.NET DLL) integration targets Windows 10/11 hosts. On Linux, SecretArea uses native sysfs hwmon/DRM kernel telemetry automatically.',
   },
   updateHistory: {
     title: 'Update History',
@@ -2859,6 +3043,51 @@ const FR: LauncherTranslations = {
     exitAppConfirmBtn: 'Confirmer la fermeture',
     exitAppCancelBtn: 'Annuler',
     exitAppWebHint: 'La fermeture complète s’applique uniquement dans SecretArea.exe.',
+  },
+  performance: {
+    sectionTitle: 'Performances et consommation système',
+    sectionSubtitle: 'Ajustez en direct la charge CPU, RAM, GPU et les tâches en arrière-plan sans redémarrage.',
+    liveApplyBadge: 'Application directe',
+    modeEcoTitle: 'Mode Éco',
+    modeEcoDesc: 'Consommation minimale CPU, RAM et GPU. Réduit les effets continus, ralentit les sondes et met en pause l’arrière-plan une fois réduit.',
+    modeBalancedTitle: 'Mode Équilibré',
+    modeBalancedDesc: 'Profil par défaut. Conserve une interface fluide tout en freinant fortement les tâches inactives.',
+    modePerformanceTitle: 'Mode Performance',
+    modePerformanceDesc: 'Priorise la réactivité maximale, le rafraîchissement rapide des capteurs/téléchargements et les effets visuels complets.',
+    recommendedBadge: 'Par défaut',
+    activeBadge: 'Actif',
+    advancedTitle: 'Contrôles avancés des ressources',
+    advancedDesc: 'Personnalisez finement les intervalles, effets visuels et tâches d’arrière-plan.',
+    pauseOnMinimizeTitle: 'Mettre en pause la télémétrie lorsque la fenêtre est réduite ou masquée',
+    pauseOnMinimizeDesc: 'Suspend immédiatement les capteurs, animations ambiantes et pings réseau en arrière-plan.',
+    reduceEffectsTitle: 'Réduire le flou et les animations ambiantes continues',
+    reduceEffectsDesc: 'Désactive les lueurs GPU continues et le flou vitré lourd pour alléger le compositeur graphique.',
+    hwIntervalTitle: 'Fréquence du Moniteur Matériel',
+    hwIntervalDesc: 'Détermine la cadence d’échantillonnage des capteurs lorsque l’onglet est ouvert.',
+    hwIntervalAuto: 'Auto (Selon profil)',
+    dlThrottleTitle: 'Regroupement des mises à jour de téléchargement',
+    dlThrottleDesc: 'Contrôle la fréquence de mise à jour UI et de sauvegarde disque lors des transferts actifs.',
+    dlThrottleAuto: 'Auto (Selon profil)',
+    adaptiveTorrentTitle: 'Interrogation adaptative de qBittorrent',
+    adaptiveTorrentDesc: 'Ralentit automatiquement les requêtes Web UI lorsqu’aucun torrent n’est actif.',
+    deferSyncTitle: 'Espacer les vérifications en arrière-plan',
+    deferSyncDesc: 'Allonge les intervalles de synchronisation du catalogue, pré-cache d’images et recherche de mises à jour.',
+    auditTitle: 'Empreinte système en direct',
+    auditDesc: 'Mesure instantanée à la demande des processus Electron et de l’état des tâches actives.',
+    auditRefreshBtn: 'Mesurer maintenant',
+    auditMainCpuLabel: 'CPU processus principal',
+    auditMainHeapLabel: 'Mémoire JS (Heap)',
+    auditMainRssLabel: 'Mémoire totale (RSS)',
+    auditTotalProcessesLabel: 'Processus Desktop',
+    auditHwMonitorLabel: 'Sonde matérielle',
+    auditDownloadsLabel: 'Transferts actifs',
+    auditTorrentPollerLabel: 'Sonde qBittorrent',
+    auditStateActive: 'Actif',
+    auditStatePausedHidden: 'En pause (Masqué)',
+    auditStateIdle: 'Inactif / Arrêté',
+    auditStateOff: 'Désactivé',
+    auditWebNote: 'Exécution en aperçu navigateur. Les métriques détaillées Electron sont disponibles dans SecretArea.exe.',
+    auditGpuProcessNote: 'L’accélération matérielle reste activée intelligemment tout en réduisant le travail GPU superflu.',
   },
   customTheme: {
     sectionTitle: 'Créateur de thème personnalisé',
@@ -3676,6 +3905,8 @@ const FR: LauncherTranslations = {
     driverVersionCol: 'Version',
     driverDateCol: 'Date',
     driverSignedCol: 'Signature',
+    driverSigned: 'Signé',
+    driverUnsigned: 'Non signé',
     sysIdTitle: 'Identification Système',
     sysFormFactor: 'Format (Châssis)',
     sysSku: 'Produit / SKU',
@@ -3778,6 +4009,51 @@ const FR: LauncherTranslations = {
     dbUpToDate: 'La base matérielle locale vérifiée est active.',
     dbImportSuccess: 'Base JSON locale importée et validée.',
     dbRollbackSuccess: 'Restauration vers la dernière sauvegarde valide réussie.',
+    tabOpenSourceTools: 'Outils Open-Source',
+    ossTitle: 'Outils Matériels Open-Source & Gestionnaire de Versions',
+    ossSubtitle: 'Moteurs de télémétrie open-source vérifiés téléchargés directement depuis GitHub Releases et NuGet avec vérification SHA-256.',
+    ossPolicyBadge: 'Open-Source OSI uniquement',
+    ossPolicyDesc: 'Seuls les logiciels véritablement open-source et gratuits (comme LibreHardwareMonitorLib sous MPL-2.0) sont éligibles. Les utilitaires propriétaires à code fermé sont exclus.',
+    ossCheckUpdatesBtn: 'Vérifier les mises à jour',
+    ossCheckingBtn: 'Vérification des sorties...',
+    ossInstallBtn: 'Installer la version officielle',
+    ossUpdateBtn: 'Mettre à jour',
+    ossReinstallBtn: 'Réinstaller & Vérifier',
+    ossRollbackBtn: 'Restaurer la précédente',
+    ossCancelBtn: 'Annuler',
+    ossConfirmDownloadTitle: 'Confirmer le téléchargement open-source officiel',
+    ossConfirmDownloadDesc: 'SecretArea va télécharger la version officielle depuis GitHub Releases ou NuGet, vérifier sa somme SHA-256 et installer LibreHardwareMonitorLib localement sans interface graphique autonome.',
+    ossConfirmRollbackDesc: 'Restaurer la version précédente sauvegardée de LibreHardwareMonitorLib dans le dossier actif.',
+    ossConfirmProceedBtn: 'Approuver & Continuer',
+    ossInstalledVersionLabel: 'Version installée',
+    ossLatestVersionLabel: 'Dernière version stable',
+    ossStatusLabel: 'Statut',
+    ossLastCheckedLabel: 'Dernière vérification',
+    ossReleaseDateLabel: 'Date de sortie',
+    ossReleaseNotesLabel: 'Notes de version officielles',
+    ossNoReleaseNotes: 'Cliquez sur « Vérifier les mises à jour » pour récupérer dynamiquement la version, la date et les notes depuis GitHub.',
+    ossStatusNotInstalled: 'Non installé',
+    ossStatusUpToDate: 'À jour',
+    ossStatusUpdateAvailable: 'Mise à jour disponible',
+    ossStatusNewerInstalled: 'Version locale plus récente',
+    ossStatusRepairRequired: 'Réparation requise',
+    ossStageDownloading: 'Téléchargement de l’archive officielle',
+    ossStageVerifying: 'Vérification SHA-256 & intégrité PE',
+    ossStageInstalling: 'Extraction & activation de la bibliothèque',
+    ossLinkRepo: 'Dépôt GitHub',
+    ossLinkReleases: 'Versions officielles',
+    ossLinkNuget: 'Paquet NuGet',
+    ossLinkLicense: 'Licence MPL-2.0',
+    ossLinkSource: 'Code source',
+    ossDirectLibBadge: 'Moteur DLL direct · Sans GUI requis',
+    ossShaVerifiedBadge: 'SHA-256 vérifié',
+    ossAdminTitle: 'Sécurité utilisateur standard & Élévation',
+    ossAdminDescStandard: 'SecretArea ne s’exécute jamais en permanence en Administrateur. Les capteurs GPU, NVMe et mémoire fonctionnent en utilisateur standard ; les capteurs carte mère Ring0 (VRM, tensions, ventilateurs SuperIO) nécessitent un accès administrateur lorsqu’ils sont bloqués.',
+    ossAdminDescElevated: 'La session actuelle dispose des droits administrateur ; tous les capteurs carte mère, VRM, tensions et ventilateurs SuperIO sont accessibles via LibreHardwareMonitorLib.',
+    ossThirdPartyTitle: 'Conformité Licence Open-Source Tierce (MPL-2.0)',
+    ossThirdPartyDesc: 'LibreHardwareMonitorLib est distribué sous licence Mozilla Public License 2.0 (MPL-2.0) par les contributeurs LibreHardwareMonitor. Les notices officielles sont conservées localement et dans THIRD_PARTY_LICENSES.md.',
+    ossWebPreviewNote: 'Téléchargements désactivés en Aperçu Web : utilisez SecretArea Desktop sur Windows 10/11 pour télécharger, vérifier le SHA-256 et activer LibreHardwareMonitorLib.',
+    ossPlatformUnsupportedNote: 'L’intégration directe de LibreHardwareMonitorLib (.NET DLL) cible Windows 10/11. Sous Linux, SecretArea utilise automatiquement sysfs hwmon/DRM.',
   },
   updateHistory: {
     title: 'Historique des mises à jour',
@@ -4213,6 +4489,51 @@ const ES: LauncherTranslations = {
     exitAppConfirmBtn: 'Confirmar cierre total',
     exitAppCancelBtn: 'Cancelar',
     exitAppWebHint: 'El cierre completo solo está disponible en SecretArea.exe.',
+  },
+  performance: {
+    sectionTitle: 'Rendimiento y consumo de recursos',
+    sectionSubtitle: 'Ajusta el uso de CPU, RAM, GPU y tareas en segundo plano en tiempo real y sin reiniciar.',
+    liveApplyBadge: 'Aplicación inmediata',
+    modeEcoTitle: 'Modo Eco',
+    modeEcoDesc: 'Mínimo uso de CPU, RAM y GPU. Reduce efectos visuales continuos, espacia sondeos y pausa tareas al minimizar.',
+    modeBalancedTitle: 'Modo Equilibrado',
+    modeBalancedDesc: 'Perfil predeterminado. Mantiene animaciones fluidas y respuesta rápida reduciendo el consumo en reposo.',
+    modePerformanceTitle: 'Modo Rendimiento',
+    modePerformanceDesc: 'Prioriza máxima fluidez visual, actualizaciones rápidas de hardware/descargas y efectos completos sin desperdicio en reposo.',
+    recommendedBadge: 'Predeterminado',
+    activeBadge: 'Activo',
+    advancedTitle: 'Controles avanzados de recursos',
+    advancedDesc: 'Ajusta manualmente los intervalos de sondeo, efectos visuales y tareas en segundo plano.',
+    pauseOnMinimizeTitle: 'Pausar telemetría al minimizar u ocultar la ventana',
+    pauseOnMinimizeDesc: 'Suspende al instante sensores, animaciones ambientales y pings mientras la ventana esté oculta o en bandeja.',
+    reduceEffectsTitle: 'Reducir desenfoque y animaciones continuas',
+    reduceEffectsDesc: 'Desactiva brillos ambientales constantes y desenfoque de fondo pesado para aliviar la carga de GPU.',
+    hwIntervalTitle: 'Frecuencia del Monitor de Hardware',
+    hwIntervalDesc: 'Controla el intervalo de muestreo de sensores mientras la pestaña está abierta.',
+    hwIntervalAuto: 'Auto (Según perfil)',
+    dlThrottleTitle: 'Agrupación de estado de descargas',
+    dlThrottleDesc: 'Controla con qué frecuencia las descargas activas actualizan la interfaz y guardan estado.',
+    dlThrottleAuto: 'Auto (Según perfil)',
+    adaptiveTorrentTitle: 'Sondeo adaptativo de qBittorrent',
+    adaptiveTorrentDesc: 'Reduce automáticamente las consultas Web UI cuando no hay torrents activos.',
+    deferSyncTitle: 'Espaciar comprobaciones en segundo plano',
+    deferSyncDesc: 'Amplía el intervalo de sincronización de catálogo, precarga de imágenes y búsqueda de actualizaciones.',
+    auditTitle: 'Huella de recursos en vivo',
+    auditDesc: 'Lectura instantánea bajo demanda de procesos Electron y estado de tareas activas.',
+    auditRefreshBtn: 'Medir ahora',
+    auditMainCpuLabel: 'CPU proceso principal',
+    auditMainHeapLabel: 'Heap JS principal',
+    auditMainRssLabel: 'Memoria residente (RSS)',
+    auditTotalProcessesLabel: 'Procesos de escritorio',
+    auditHwMonitorLabel: 'Monitor de hardware',
+    auditDownloadsLabel: 'Descargas activas',
+    auditTorrentPollerLabel: 'Sondeo qBittorrent',
+    auditStateActive: 'Activo',
+    auditStatePausedHidden: 'Pausado (Oculto)',
+    auditStateIdle: 'Inactivo / Detenido',
+    auditStateOff: 'Desactivado',
+    auditWebNote: 'Ejecutándose en vista web. La telemetría multiproceso completa está disponible en SecretArea.exe.',
+    auditGpuProcessNote: 'La aceleración por hardware sigue activa de forma inteligente evitando renderizado GPU innecesario.',
   },
   customTheme: {
     sectionTitle: 'Creador de tema personalizado',
@@ -5030,6 +5351,8 @@ const ES: LauncherTranslations = {
     driverVersionCol: 'Versión',
     driverDateCol: 'Fecha',
     driverSignedCol: 'Firma',
+    driverSigned: 'Firmado',
+    driverUnsigned: 'Sin firmar',
     sysIdTitle: 'Identificación del Sistema',
     sysFormFactor: 'Formato',
     sysSku: 'Producto / SKU',
@@ -5132,6 +5455,51 @@ const ES: LauncherTranslations = {
     dbUpToDate: 'La base de datos local verificada está activa.',
     dbImportSuccess: 'Base de datos JSON local importada y validada.',
     dbRollbackSuccess: 'Restaurada la última copia válida de la base de datos.',
+    tabOpenSourceTools: 'Herramientas Open-Source',
+    ossTitle: 'Herramientas Hardware Open-Source y Gestor de Versiones',
+    ossSubtitle: 'Motores de telemetría de código abierto verificados obtenidos directamente de GitHub Releases y NuGet con validación SHA-256.',
+    ossPolicyBadge: 'Solo Open-Source OSI',
+    ossPolicyDesc: 'Solo es elegible el software genuinamente libre y de código abierto (como LibreHardwareMonitorLib bajo MPL-2.0). Las utilidades propietarias de código cerrado quedan excluidas.',
+    ossCheckUpdatesBtn: 'Buscar última versión',
+    ossCheckingBtn: 'Comprobando lanzamientos...',
+    ossInstallBtn: 'Instalar versión oficial',
+    ossUpdateBtn: 'Actualizar a la última',
+    ossReinstallBtn: 'Reinstalar y verificar',
+    ossRollbackBtn: 'Revertir a anterior',
+    ossCancelBtn: 'Cancelar',
+    ossConfirmDownloadTitle: 'Confirmar descarga oficial Open-Source',
+    ossConfirmDownloadDesc: 'SecretArea descargará la compilación oficial desde GitHub Releases o NuGet, verificará su suma SHA-256 e instalará LibreHardwareMonitorLib localmente sin interfaz gráfica independiente.',
+    ossConfirmRollbackDesc: 'Restaurar la copia de seguridad de la versión anterior de LibreHardwareMonitorLib en el directorio activo.',
+    ossConfirmProceedBtn: 'Aprobar y continuar',
+    ossInstalledVersionLabel: 'Versión instalada',
+    ossLatestVersionLabel: 'Última versión estable',
+    ossStatusLabel: 'Estado',
+    ossLastCheckedLabel: 'Última comprobación',
+    ossReleaseDateLabel: 'Fecha de lanzamiento',
+    ossReleaseNotesLabel: 'Notas oficiales de la versión',
+    ossNoReleaseNotes: 'Pulsa «Buscar última versión» para consultar dinámicamente versión, fecha y notas desde GitHub.',
+    ossStatusNotInstalled: 'No instalado',
+    ossStatusUpToDate: 'Actualizado',
+    ossStatusUpdateAvailable: 'Actualización disponible',
+    ossStatusNewerInstalled: 'Versión local más reciente',
+    ossStatusRepairRequired: 'Reparación requerida',
+    ossStageDownloading: 'Descargando archivo oficial',
+    ossStageVerifying: 'Verificando SHA-256 e integridad PE',
+    ossStageInstalling: 'Extrayendo y activando biblioteca',
+    ossLinkRepo: 'Repositorio GitHub',
+    ossLinkReleases: 'Lanzamientos oficiales',
+    ossLinkNuget: 'Paquete NuGet',
+    ossLinkLicense: 'Licencia MPL-2.0',
+    ossLinkSource: 'Código fuente',
+    ossDirectLibBadge: 'Motor DLL directo · Sin GUI',
+    ossShaVerifiedBadge: 'SHA-256 verificado',
+    ossAdminTitle: 'Seguridad de usuario estándar y elevación',
+    ossAdminDescStandard: 'SecretArea nunca se ejecuta permanentemente como Administrador. Los sensores de GPU, NVMe y memoria funcionan como usuario estándar; los sensores Ring0 de placa base (VRM, voltajes y ventiladores SuperIO) pueden requerir permisos de administrador.',
+    ossAdminDescElevated: 'La sesión actual cuenta con privilegios de administrador; se puede acceder directamente a los sensores completos de placa base, VRM, voltajes y ventiladores SuperIO.',
+    ossThirdPartyTitle: 'Cumplimiento de licencia Open-Source de terceros (MPL-2.0)',
+    ossThirdPartyDesc: 'LibreHardwareMonitorLib se distribuye bajo la licencia Mozilla Public License 2.0 (MPL-2.0). Los avisos oficiales se conservan junto a la librería local y en THIRD_PARTY_LICENSES.md.',
+    ossWebPreviewNote: 'Descargas deshabilitadas en Vista Web: abre SecretArea Desktop en Windows 10/11 para descargar, verificar SHA-256 y usar LibreHardwareMonitorLib.',
+    ossPlatformUnsupportedNote: 'La integración directa de LibreHardwareMonitorLib (.NET DLL) está destinada a Windows 10/11. En Linux, SecretArea utiliza sysfs hwmon/DRM de forma nativa.',
   },
   updateHistory: {
     title: 'Historial de actualizaciones',
@@ -5567,6 +5935,51 @@ const AR: LauncherTranslations = {
     exitAppConfirmBtn: 'تأكيد الإغلاق الكامل',
     exitAppCancelBtn: 'إلغاء',
     exitAppWebHint: 'الإغلاق الكامل متاح فقط داخل تطبيق سطح المكتب SecretArea.exe.',
+  },
+  performance: {
+    sectionTitle: 'وضع الأداء واستهلاك الموارد',
+    sectionSubtitle: 'اضبط استهلاك المعالج والذاكرة وكرت الشاشة والمهام الخلفية فوراً دون الحاجة لإعادة التشغيل.',
+    liveApplyBadge: 'تطبيق فوري',
+    modeEcoTitle: 'الوضع الاقتصادي (Eco)',
+    modeEcoDesc: 'أقل استهلاك ممكن للمعالج والذاكرة والرسوميات. يقلل التأثيرات المستمرة ويبطئ الفحص الخلفي ويوقف المراقبة عند التصغير.',
+    modeBalancedTitle: 'الوضع المتوازن',
+    modeBalancedDesc: 'الوضع الافتراضي. يحافظ على سلاسة الواجهة واستجابتها مع تقليص المهام غير الضرورية في الخلفية.',
+    modePerformanceTitle: 'وضع الأداء العالي',
+    modePerformanceDesc: 'أقصى سرعة استجابة وتحديث أسرع للحساسات والتنزيلات مع كامل التأثيرات البصرية دون هدر في الخمول.',
+    recommendedBadge: 'الافتراضي',
+    activeBadge: 'مُفعّل',
+    advancedTitle: 'إعدادات الموارد المتقدمة',
+    advancedDesc: 'تحكم دقيق في فترات التحديث والتأثيرات البصرية وسلوك الخلفية بشكل مستقل.',
+    pauseOnMinimizeTitle: 'إيقاف المراقبة الخلفية عند التصغير أو الإخفاء',
+    pauseOnMinimizeDesc: 'يوقف فوراً حلقات قراءة الحساسات والرسوميات المحيطية وفحص الاتصال عند تصغير النافذة أو وضعها في شريط النظام.',
+    reduceEffectsTitle: 'تقليل الضبابية والرسوميات المستمرة',
+    reduceEffectsDesc: 'يعطّل الإضاءات المتحركة وضبابية الخلفية الثقيلة لتخفيف الحمل عن معالج الرسوميات (GPU).',
+    hwIntervalTitle: 'سرعة تحديث مراقب العتاد',
+    hwIntervalDesc: 'يحدد الفاصل الزمني لقراءة الحساسات أثناء فتح صفحة مراقب العتاد.',
+    hwIntervalAuto: 'تلقائي (حسب الوضع)',
+    dlThrottleTitle: 'تجميع تحديثات واجهة التنزيل',
+    dlThrottleDesc: 'يتحكم في وتيرة تحديث سرعة التنزيل في الواجهة وحفظ الحالة على القرص.',
+    dlThrottleAuto: 'تلقائي (حسب الوضع)',
+    adaptiveTorrentTitle: 'فحص qBittorrent التكيفي',
+    adaptiveTorrentDesc: 'يبطئ طلبات الواجهة البرمجية تلقائياً عندما لا توجد ملفات تورنت نشطة.',
+    deferSyncTitle: 'تأجيل المزامنة وفحص التحديثات الخلفية',
+    deferSyncDesc: 'يمدد الفواصل الزمنية لمزامنة الفهرس وتخزين الصور المؤقت وفحص التحديثات غير العاجل.',
+    auditTitle: 'بصمة استهلاك الموارد الحية',
+    auditDesc: 'قراءة فورية عند الطلب لاستهلاك عمليات Electron وحالة المهام الخلفية النشطة.',
+    auditRefreshBtn: 'قياس الآن',
+    auditMainCpuLabel: 'معالج العملية الرئيسية',
+    auditMainHeapLabel: 'ذاكرة JS (Heap)',
+    auditMainRssLabel: 'الذاكرة الفعلية (RSS)',
+    auditTotalProcessesLabel: 'عمليات سطح المكتب',
+    auditHwMonitorLabel: 'مراقب العتاد',
+    auditDownloadsLabel: 'التنزيلات النشطة',
+    auditTorrentPollerLabel: 'فاحص qBittorrent',
+    auditStateActive: 'نشط',
+    auditStatePausedHidden: 'متوقف مؤقتاً (مخفي)',
+    auditStateIdle: 'خامل / متوقف',
+    auditStateOff: 'معطّل',
+    auditWebNote: 'يعمل في معاينة المتصفح. تتوفر قياسات العمليات التفصيلية داخل تطبيق SecretArea.exe.',
+    auditGpuProcessNote: 'يبقى تسريع العتاد مفعّلاً بذكاء لاستجابة سلسة مع خفض حمل الرسوميات الزائد.',
   },
   customTheme: {
     sectionTitle: 'منشئ المظهر المخصص',
@@ -6384,6 +6797,8 @@ const AR: LauncherTranslations = {
     driverVersionCol: 'الإصدار',
     driverDateCol: 'التاريخ',
     driverSignedCol: 'التوقيع',
+    driverSigned: 'موقّع',
+    driverUnsigned: 'غير موقّع',
     sysIdTitle: 'هوية النظام',
     sysFormFactor: 'نوع الجهاز',
     sysSku: 'المنتج / SKU',
@@ -6486,6 +6901,51 @@ const AR: LauncherTranslations = {
     dbUpToDate: 'قاعدة البيانات المحلية الموثقة نشطة حالياً.',
     dbImportSuccess: 'تم استيراد قاعدة بيانات JSON والتحقق من صحتها.',
     dbRollbackSuccess: 'تمت الاستعادة إلى آخر نسخة احتياطية صالحة.',
+    tabOpenSourceTools: 'أدوات مفتوحة المصدر',
+    ossTitle: 'إدارة أدوات العتاد مفتوحة المصدر والتحديثات التلقائية',
+    ossSubtitle: 'محركات استشعار مفتوحة المصدر وموثوقة يتم جلبها مباشرة من إصدارات GitHub الرسمية وNuGet مع تحقق SHA-256.',
+    ossPolicyBadge: 'مفتوح المصدر OSI فقط',
+    ossPolicyDesc: 'يتم اعتماد البرمجيات الحرة ومفتوحة المصدر بالكامل فقط (مثل LibreHardwareMonitorLib برخصة MPL-2.0). يتم استبعاد الأدوات التجارية أو المغلقة المصدر بالكامل.',
+    ossCheckUpdatesBtn: 'فحص آخر إصدار',
+    ossCheckingBtn: 'جاري التحقق من الإصدارات...',
+    ossInstallBtn: 'تثبيت الإصدار الرسمي',
+    ossUpdateBtn: 'تحديث إلى الأحدث',
+    ossReinstallBtn: 'إعادة التثبيت والتحقق',
+    ossRollbackBtn: 'الرجوع للنسخة السابقة',
+    ossCancelBtn: 'إلغاء',
+    ossConfirmDownloadTitle: 'تأكيد تنزيل الإصدار الرسمي مفتوح المصدر',
+    ossConfirmDownloadDesc: 'سيقوم SecretArea بتنزيل الحزمة الرسمية مباشرة من GitHub Releases أو NuGet والتحقق من بصمة SHA-256 وسلامة الملف، وتثبيت LibreHardwareMonitorLib محلياً دون واجهة مستقلة.',
+    ossConfirmRollbackDesc: 'استعادة النسخة الاحتياطية السابقة من LibreHardwareMonitorLib إلى المجلد النشط.',
+    ossConfirmProceedBtn: 'موافقة ومتابعة',
+    ossInstalledVersionLabel: 'الإصدار المثبت',
+    ossLatestVersionLabel: 'أحدث إصدار مستقر',
+    ossStatusLabel: 'الحالة',
+    ossLastCheckedLabel: 'آخر فحص للتحديثات',
+    ossReleaseDateLabel: 'تاريخ الإصدار',
+    ossReleaseNotesLabel: 'ملاحظات الإصدار الرسمية',
+    ossNoReleaseNotes: 'اضغط على «فحص آخر إصدار» لجلب رقم الإصدار وتاريخه وملاحظاته مباشرة من GitHub.',
+    ossStatusNotInstalled: 'غير مثبت',
+    ossStatusUpToDate: 'محدّث',
+    ossStatusUpdateAvailable: 'يتوفر تحديث',
+    ossStatusNewerInstalled: 'إصدار محلي أحدث',
+    ossStatusRepairRequired: 'يتطلب إصلاحاً',
+    ossStageDownloading: 'جاري تنزيل الحزمة الرسمية',
+    ossStageVerifying: 'جاري التحقق من SHA-256 وسلامة المكتبة',
+    ossStageInstalling: 'جاري فك الضغط وتفعيل المكتبة',
+    ossLinkRepo: 'مستودع GitHub',
+    ossLinkReleases: 'الإصدارات الرسمية',
+    ossLinkNuget: 'حزمة NuGet',
+    ossLinkLicense: 'رخصة MPL-2.0',
+    ossLinkSource: 'الشيفرة المصدرية',
+    ossDirectLibBadge: 'مكتبة DLL مباشرة · بدون واجهة مستقلة',
+    ossShaVerifiedBadge: 'تم التحقق عبر SHA-256',
+    ossAdminTitle: 'أمان المستخدم القياسي وصلاحيات الاستشعار',
+    ossAdminDescStandard: 'لا يعمل SecretArea أبداً بشكل دائم بصلاحيات المسؤول. تعمل مستشعرات كرت الشاشة وNVMe والذاكرة بأمان كمستخدم عادي، بينما تتطلب مستشعرات اللوحة الأم منخفضة المستوى (VRM والفولتية وسرعة المراوح) صلاحية وصول إضافية عند الحاجة.',
+    ossAdminDescElevated: 'الجلسة الحالية تمتلك صلاحيات المسؤول؛ يمكن قراءة مستشعرات اللوحة الأم وVRM والفولتية والمراوح مباشرة عبر LibreHardwareMonitorLib.',
+    ossThirdPartyTitle: 'إشعار تراخيص البرمجيات مفتوحة المصدر (MPL-2.0)',
+    ossThirdPartyDesc: 'مكتبة LibreHardwareMonitorLib مرخصة بموجب رخصة Mozilla Public License 2.0 (MPL-2.0) من مساهمي LibreHardwareMonitor. يتم حفظ إشعارات الرخصة الرسمية محلياً وفي ملف THIRD_PARTY_LICENSES.md.',
+    ossWebPreviewNote: 'التنزيل معطّل في معاينة الويب: افتح تطبيق SecretArea Desktop على Windows 10/11 لتنزيل المكتبة والتحقق من بصمتها وتشغيلها.',
+    ossPlatformUnsupportedNote: 'التكامل المباشر مع LibreHardwareMonitorLib (.NET DLL) مخصص لنظام Windows 10/11. على نظام Linux يستخدم التطبيق واجهة sysfs hwmon/DRM تلقائياً.',
   },
   updateHistory: {
     title: 'سجل التحديثات',

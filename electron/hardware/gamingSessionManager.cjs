@@ -503,8 +503,11 @@ function createGamingSessionManager({ getMainWindow, getUserDataPath, getPresent
     }
   }
 
+  let pausedPingByHide = false;
+
   function startPingPolling() {
     if (pingTimer) clearInterval(pingTimer);
+    pausedPingByHide = false;
     void runPingProbe();
     pingTimer = setInterval(() => {
       if (activeSession) {
@@ -514,10 +517,23 @@ function createGamingSessionManager({ getMainWindow, getUserDataPath, getPresent
   }
 
   function stopPingPolling() {
+    pausedPingByHide = false;
     if (pingTimer) {
       clearInterval(pingTimer);
       pingTimer = null;
     }
+  }
+
+  function pauseForHidden() {
+    if (!activeSession || !pingTimer) return;
+    clearInterval(pingTimer);
+    pingTimer = null;
+    pausedPingByHide = true;
+  }
+
+  function resumeFromHidden() {
+    if (!pausedPingByHide || !activeSession) return;
+    startPingPolling();
   }
 
   function buildGamingState() {
@@ -805,6 +821,9 @@ function createGamingSessionManager({ getMainWindow, getUserDataPath, getPresent
     refreshPresentMonAvailability,
     ingestHardwareSnapshot,
     buildGamingState,
+    pauseForHidden,
+    resumeFromHidden,
+    isActiveSession: () => Boolean(activeSession),
     shutdown,
   };
 }

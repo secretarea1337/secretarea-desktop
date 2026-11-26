@@ -12,6 +12,7 @@ const {
   classifyCpuFamily,
   classifyMemoryChannels,
 } = require('./hardware/displayLaptopAdapter.cjs');
+const { readManagedLhmSensors } = require('./hardware/lhmLibBridge.cjs');
 
 function runExecFile(cmd, args, timeoutMs = 2500) {
   return new Promise((resolve) => {
@@ -491,7 +492,7 @@ function scoreGpuForOrdering(gpu) {
   } else if (
     /\brx\s*\d{3,4}/i.test(model) ||
     model.includes('radeon pro') ||
-    (mfg.includes('intel') && /\barc\b.*\b[ab]\d{3}/i.test(model))
+    (mfg.includes('intel') && /\barc(?:\((?:r|tm)\)|[®™])?\s*(?:pro\s*)?[ab]\d{2,3}/i.test(model))
   ) {
     score += 90;
   } else if (mfg.includes('amd') || model.includes('radeon')) {
@@ -500,7 +501,12 @@ function scoreGpuForOrdering(gpu) {
       model.includes('radeon graphics') ||
       /\b[678]\d0m\b/.test(model);
     score += isIgpu ? 30 : 55;
-  } else if (mfg.includes('intel') || model.includes('uhd') || model.includes('iris')) {
+  } else if (
+    mfg.includes('intel') ||
+    model.includes('uhd') ||
+    model.includes('iris') ||
+    /\barc\b/i.test(model)
+  ) {
     score += 25;
   } else {
     score += 10;
@@ -912,10 +918,12 @@ async function readLinuxNetStatsAsync(ifaceNames) {
   return results;
 }
 
-function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
+function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } = {}) {
   let isMonitoring = false;
   let pausedByHide = false;
+  let pauseOnMinimize = true;
   let intervalMs = 1500;
+  let lastSampleDurationMs = null;
   let pollTimer = null;
   let isSampling = false;
   let pendingImmediateSample = false;
@@ -929,9 +937,15 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
   const displayLaptopAdapter = createDisplayLaptopAdapter();
   let cachedDisplayLaptop = null;
   let lastDisplayLaptopAt = 0;
+  let cachedManagedLhm = null;
+  let lastManagedLhmAt = 0;
+  let managedLhmInFlight = false;
 
   let cachedFsSize = null;
   let lastFsFetchAt = 0;
+
+  let cachedFsStats = null;
+  let lastFsStatsAt = 0;
 
   let cachedDiskLayout = null;
   let lastDiskLayoutAt = 0;
@@ -953,11 +967,24 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
     if (nvidiaSmiPath !== undefined) return nvidiaSmiPath;
     const candidates =
       process.platform === 'win32'
-        ? [
-            'C:\\Windows\\System32\\nvidia-smi.exe',
-            'C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe',
-            'nvidia-smi.exe',
-          ]
+        ? Array.from(
+            new Set(
+              [
+                process.env.SystemRoot
+                  ? path.win32.join(process.env.SystemRoot, 'System32', 'nvidia-smi.exe')
+                  : null,
+                process.env.ProgramFiles
+                  ? path.win32.join(process.env.ProgramFiles, 'NVIDIA Corporation', 'NVSMI', 'nvidia-smi.exe')
+                  : null,
+                process.env.ProgramW6432
+                  ? path.win32.join(process.env.ProgramW6432, 'NVIDIA Corporation', 'NVSMI', 'nvidia-smi.exe')
+                  : null,
+                'C:\\Windows\\System32\\nvidia-smi.exe',
+                'C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe',
+                'nvidia-smi.exe',
+              ].filter(Boolean)
+            )
+          )
         : ['nvidia-smi'];
 
     for (const candidate of candidates) {
@@ -1302,6 +1329,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
   }
 
   async function collectSnapshot() {
+    const sampleStartNs = process.hrtime.bigint();
     const profile = await loadStaticProfile();
     const now = Date.now();
     const isLinux = process.platform === 'linux';
@@ -1375,10 +1403,15 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
       await new Promise((r) => setTimeout(r, 220));
     }
 
-    const shouldRefreshFs = !cachedFsSize || now - lastFsFetchAt >= 3000;
-    const diskLayoutInterval = isWindows ? 30000 : 12000;
+    const adaptiveScale = Math.max(1, intervalMs / 1500);
+    const shouldRefreshFs = !cachedFsSize || now - lastFsFetchAt >= Math.round(3000 * adaptiveScale);
+    const diskLayoutInterval = Math.round((isWindows ? 30000 : 12000) * Math.min(2.5, adaptiveScale));
     const shouldRefreshDiskLayout = !cachedDiskLayout || now - lastDiskLayoutAt >= diskLayoutInterval;
-    const shouldRefreshNetIfaces = !cachedNetIfaces || now - lastNetIfacesAt >= 15000;
+    const shouldRefreshNetIfaces =
+      !cachedNetIfaces || now - lastNetIfacesAt >= Math.round(15000 * Math.min(2, adaptiveScale));
+    const fsStatsIntervalMs = Math.max(1400, intervalMs);
+    const shouldRefreshFsStats =
+      (isLinux || isDarwin) && (!cachedFsStats || now - lastFsStatsAt >= fsStatsIntervalMs);
 
     const [
       linuxCpuRes,
@@ -1401,7 +1434,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
       isWindows ? Promise.resolve(null) : si.mem().catch(() => null),
       nvidiaSmiPath ? queryNvidiaSmi().catch(() => []) : Promise.resolve([]),
       isLinux ? readLinuxDrmGpuDynamicAsync() : Promise.resolve({ AMD: [], Intel: [] }),
-      isLinux || isDarwin ? si.fsStats().catch(() => null) : Promise.resolve(null),
+      shouldRefreshFsStats ? si.fsStats().catch(() => cachedFsStats) : Promise.resolve(cachedFsStats),
       isLinux ? fsp.readFile('/proc/diskstats', 'utf8').catch(() => null) : Promise.resolve(null),
       shouldRefreshNetIfaces
         ? si.networkInterfaces().catch(() => cachedNetIfaces || [])
@@ -1419,6 +1452,10 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
       cachedFsSize = fsSizeRes;
       lastFsFetchAt = sampleTimestamp;
     }
+    if (shouldRefreshFsStats && fsStatsRes) {
+      cachedFsStats = fsStatsRes;
+      lastFsStatsAt = sampleTimestamp;
+    }
     if (shouldRefreshDiskLayout && Array.isArray(diskLayoutRes)) {
       cachedDiskLayout = diskLayoutRes;
       lastDiskLayoutAt = sampleTimestamp;
@@ -1426,6 +1463,43 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
     if (shouldRefreshNetIfaces && Array.isArray(netIfacesRes)) {
       cachedNetIfaces = netIfacesRes;
       lastNetIfacesAt = sampleTimestamp;
+    }
+
+    let activeHwSensors = winPerfRes?.hwSensors;
+    let usedDirectLhm = false;
+    const hasWmiSensors = Array.isArray(activeHwSensors) && activeHwSensors.length > 0;
+    const lhmLibInfo =
+      isWindows && typeof getLhmLibraryInfo === 'function' ? getLhmLibraryInfo() : null;
+
+    if (
+      isWindows &&
+      !hasWmiSensors &&
+      lhmLibInfo?.installed &&
+      lhmLibInfo?.healthy &&
+      lhmLibInfo?.dllPath
+    ) {
+      const shouldPollDirectLhm =
+        !cachedManagedLhm ||
+        sampleTimestamp - lastManagedLhmAt >= Math.round(2000 * Math.min(2.5, adaptiveScale));
+      if (shouldPollDirectLhm && !managedLhmInFlight) {
+        managedLhmInFlight = true;
+        try {
+          const directRes = await readManagedLhmSensors({
+            dllPath: lhmLibInfo.dllPath,
+            timeoutMs: 5500,
+          }).catch(() => null);
+          if (directRes) {
+            cachedManagedLhm = directRes;
+            lastManagedLhmAt = Date.now();
+          }
+        } finally {
+          managedLhmInFlight = false;
+        }
+      }
+      if (cachedManagedLhm?.ok && Array.isArray(cachedManagedLhm.sensors) && cachedManagedLhm.sensors.length > 0) {
+        activeHwSensors = cachedManagedLhm.sensors;
+        usedDirectLhm = true;
+      }
     }
 
     // --- 1. CPU Metrics ---
@@ -1436,8 +1510,8 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
     let cpuPowerWatts = null;
     let cpuVoltageVolts = null;
     const winSensorsBundle =
-      isWindows && winPerfRes
-        ? extractWindowsSensorReadings(winPerfRes.hwSensors, winPerfRes.powerMeters)
+      isWindows && (winPerfRes || usedDirectLhm)
+        ? extractWindowsSensorReadings(activeHwSensors, winPerfRes?.powerMeters)
         : { cpuTempC: null, cpuPowerWatts: null, cpuVoltageVolts: null, gpuSensorsByVendor: {}, fans: [], extraTemps: [] };
 
     if (isLinux && linuxCpuRes) {
@@ -2141,6 +2215,8 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
         extraTemps: winSensorsBundle.extraTemps || [],
         source: profile.winFeatures?.hasLhm
           ? 'LibreHardwareMonitor WMI'
+          : usedDirectLhm
+          ? 'LibreHardwareMonitorLib (Direct)'
           : profile.winFeatures?.hasOhm
           ? 'OpenHardwareMonitor WMI'
           : null,
@@ -2166,6 +2242,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
     };
 
     lastSnapshot = snapshot;
+    lastSampleDurationMs = Number((Number(process.hrtime.bigint() - sampleStartNs) / 1e6).toFixed(1));
     if (typeof onSnapshot === 'function') {
       try {
         onSnapshot(snapshot);
@@ -2265,7 +2342,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
   }
 
   function pauseForHidden() {
-    if (!isMonitoring) return;
+    if (!pauseOnMinimize || !isMonitoring) return;
     sessionToken += 1;
     isMonitoring = false;
     pausedByHide = true;
@@ -2287,6 +2364,28 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
       }, intervalMs);
     }
     return { ok: true, intervalMs };
+  }
+
+  function setPerformanceConfig(cfg = {}) {
+    if (!cfg || typeof cfg !== 'object') return getRuntimeStats();
+    if (typeof cfg.pauseOnMinimize === 'boolean') {
+      pauseOnMinimize = cfg.pauseOnMinimize;
+    }
+    if (cfg.intervalMs !== undefined) {
+      setIntervalMs(cfg.intervalMs);
+    }
+    return getRuntimeStats();
+  }
+
+  function getRuntimeStats() {
+    return {
+      isMonitoring,
+      pausedByHide,
+      pauseOnMinimize,
+      intervalMs,
+      lastSampleDurationMs,
+      cachedStaticProfile: Boolean(staticProfile),
+    };
   }
 
   async function getSnapshot() {
@@ -2340,6 +2439,8 @@ function createHardwareMonitor({ getMainWindow, onSnapshot } = {}) {
     resumeFromHidden,
     isActive: () => isMonitoring,
     setIntervalMs,
+    setPerformanceConfig,
+    getRuntimeStats,
     shutdown,
   };
 }

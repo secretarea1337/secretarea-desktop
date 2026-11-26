@@ -22,9 +22,17 @@ function resolvePrimaryGpus(
   const discreteInv = inventory.gpus.find((g) => !g.isIntegrated) || null;
   const firstInv = discreteInv || inventory.gpus[0] || null;
   const bestSnap = selectPrimaryGpu(snapshot.gpus);
+  const matchingInvForSnap = bestSnap?.model
+    ? inventory.gpus.find(
+        (g) => g.model && g.model.toLowerCase() === bestSnap.model!.toLowerCase()
+      )
+    : undefined;
   const snapIsIntegrated = bestSnap
-    ? /\b(?:uhd|hd\s*graphics|iris|vega\s*\d+|radeon\(tm\)\s*graphics|radeon\s*graphics)\b/i.test(
-        bestSnap.model || ''
+    ? Boolean(
+        matchingInvForSnap?.isIntegrated ||
+          /\b(?:uhd|hd\s*graphics|iris|vega\s*\d+|radeon\(tm\)\s*graphics|radeon\s*graphics|[678]\d0m|arc(?:\((?:r|tm)\)|[®™])?\s*graphics|arc(?:\((?:r|tm)\)|[®™])?\s*1[34]0[vt])\b/i.test(
+            bestSnap.model || ''
+          )
       )
     : false;
   const chosenModel =
@@ -45,7 +53,10 @@ function resolvePrimaryGpus(
     vramTotalMB,
     isDiscreteGpu:
       Boolean(discreteInv) ||
-      Boolean(chosenModel && /(rtx|gtx|rx\s*\d{3,4}|radeon\s*pro|arc\s*[ab]\d{3}|quadro)/i.test(chosenModel)),
+      Boolean(
+        chosenModel &&
+          /(rtx|gtx|rx\s*\d{3,4}|radeon\s*pro|arc(?:\((?:r|tm)\)|[®™])?\s*(?:pro\s*)?[ab]\d{2,3}|quadro)/i.test(chosenModel)
+      ),
   };
 }
 
@@ -343,7 +354,13 @@ export function computeHealthAssessment(params: {
 
   // --- Performance Capability Score (separate from Physical Health!) ---
   const cpuTier = cpuDb?.tierScore ?? (inventory.cpu.logicalThreads ? Math.min(820, 260 + inventory.cpu.logicalThreads * 26) : null);
-  const gpuTier = gpuDb?.tierScore ?? (isDiscreteGpu ? 520 : gpuName ? 220 : null);
+  const isNamedGpu = Boolean(
+    gpuName &&
+      !/^(?:unknown(?:\s+(?:gpu|graphics|adapter|device))?|unavailable|browser\s*gpu|not\s*detected|generic(?:\s+pnp)?|microsoft basic display adapter)$/i.test(
+        gpuName.trim()
+      )
+  );
+  const gpuTier = gpuDb?.tierScore ?? (isDiscreteGpu ? 520 : isNamedGpu ? 220 : null);
   const ramCapScore = totalRamGb ? Math.min(960, totalRamGb >= 64 ? 950 : totalRamGb >= 32 ? 860 : totalRamGb >= 16 ? 680 : totalRamGb >= 8 ? 420 : 220) : null;
   const storScore = storageDb?.tierScore ?? (inventory.storage.length > 0 ? 550 : null);
 
@@ -381,13 +398,14 @@ export function computeHealthAssessment(params: {
       ? `Mid-Cycle (${oldestYear}, ~${ageYears} yrs old)`
       : `Aging Generation (${oldestYear}, ~${ageYears} yrs old)`;
 
-  const perfVal = performanceCapabilityScore ?? 50;
   const estimatedUsefulLifeRange =
-    perfVal >= 80
+    performanceCapabilityScore === null
+      ? 'Unknown (Insufficient verified hardware specifications)'
+      : performanceCapabilityScore >= 80
       ? 'Strong runway through 2030+ for mainstream & demanding apps'
-      : perfVal >= 60
+      : performanceCapabilityScore >= 60
       ? 'Practical through ~2028–2030 with selective upgrades/settings'
-      : perfVal >= 40
+      : performanceCapabilityScore >= 40
       ? 'Practical through ~2026–2028 for light/everyday tasks'
       : 'Near practical upgrade horizon for modern gaming & heavy workloads';
 
@@ -414,94 +432,165 @@ export function computeHealthAssessment(params: {
   }
 
   // --- Gaming Suitability (720p / 1080p / 1440p / 4K) ---
-  const gpuScore = gpuTier ?? 250;
+  const gpuScore = gpuTier;
   const isVramTight = vramGb !== null && vramGb <= 4;
   const isVramModest = vramGb !== null && vramGb <= 8;
 
   const gamingSuitability: HealthAssessmentReport['gamingSuitability'] = {
-    resolutions: [
-      {
-        resolution: '720p',
-        verdict: gpuScore >= 320 ? 'Strong' : gpuScore >= 200 ? 'Playable' : 'Not Ideal',
-        recommendedPreset: gpuScore >= 450 ? 'High / Ultra' : 'Low–Medium + Upscaling',
-        notes: gpuScore >= 320 ? 'Comfortable resolution for esports & modern engines.' : 'Viable with FSR/XeSS Performance on modern iGPUs.',
-      },
-      {
-        resolution: '1080p',
-        verdict: gpuScore >= 620 ? 'Strong' : gpuScore >= 420 ? 'Playable' : gpuScore >= 280 ? 'Entry / Upscaled' : 'Not Ideal',
-        recommendedPreset: gpuScore >= 720 ? 'High–Ultra' : gpuScore >= 460 ? 'Medium–High + DLSS/FSR' : 'Low + Upscaling',
-        notes: isVramTight ? '4 GB or less VRAM forces Low/Medium textures in recent AAA releases.' : 'Standard target for mainstream gaming.',
-      },
-      {
-        resolution: '1440p',
-        verdict: gpuScore >= 800 && !isVramModest ? 'Strong' : gpuScore >= 620 ? 'Playable' : gpuScore >= 450 ? 'Entry / Upscaled' : 'Not Ideal',
-        recommendedPreset: gpuScore >= 820 ? 'High–Ultra' : 'Medium + DLSS/FSR Quality',
-        notes: isVramModest ? '8 GB VRAM can limit Ultra textures or Ray Tracing at 1440p.' : 'Well suited for 1440p high-refresh gaming.',
-      },
-      {
-        resolution: '4K',
-        verdict: gpuScore >= 900 && (vramGb === null || vramGb >= 12) ? 'Strong' : gpuScore >= 760 ? 'Playable' : gpuScore >= 600 ? 'Entry / Upscaled' : 'Not Ideal',
-        recommendedPreset: gpuScore >= 900 ? 'High + Upscaling' : 'Medium + Performance Upscaling',
-        notes: 'Native 4K modern AAA games generally require 12–16 GB+ VRAM and upper-tier RTX 40/50 or RX 7000/9000 GPUs.',
-      },
-    ],
+    resolutions:
+      gpuScore === null
+        ? (['720p', '1080p', '1440p', '4K'] as const).map((resolution) => ({
+            resolution,
+            verdict: 'Unknown' as const,
+            recommendedPreset: 'Unknown (GPU unverified)',
+            notes: 'GPU specifications are unavailable in this environment to evaluate gaming readiness.',
+          }))
+        : [
+            {
+              resolution: '720p',
+              verdict: gpuScore >= 320 ? 'Strong' : gpuScore >= 200 ? 'Playable' : 'Not Ideal',
+              recommendedPreset: gpuScore >= 450 ? 'High / Ultra' : 'Low–Medium + Upscaling',
+              notes: gpuScore >= 320 ? 'Comfortable resolution for esports & modern engines.' : 'Viable with FSR/XeSS Performance on modern iGPUs.',
+            },
+            {
+              resolution: '1080p',
+              verdict: gpuScore >= 620 ? 'Strong' : gpuScore >= 420 ? 'Playable' : gpuScore >= 280 ? 'Entry / Upscaled' : 'Not Ideal',
+              recommendedPreset: gpuScore >= 720 ? 'High–Ultra' : gpuScore >= 460 ? 'Medium–High + DLSS/FSR' : 'Low + Upscaling',
+              notes: isVramTight ? '4 GB or less VRAM forces Low/Medium textures in recent AAA releases.' : 'Standard target for mainstream gaming.',
+            },
+            {
+              resolution: '1440p',
+              verdict: gpuScore >= 800 && !isVramModest ? 'Strong' : gpuScore >= 620 ? 'Playable' : gpuScore >= 450 ? 'Entry / Upscaled' : 'Not Ideal',
+              recommendedPreset: gpuScore >= 820 ? 'High–Ultra' : 'Medium + DLSS/FSR Quality',
+              notes: isVramModest ? '8 GB VRAM can limit Ultra textures or Ray Tracing at 1440p.' : 'Well suited for 1440p high-refresh gaming.',
+            },
+            {
+              resolution: '4K',
+              verdict: gpuScore >= 900 && (vramGb === null || vramGb >= 12) ? 'Strong' : gpuScore >= 760 ? 'Playable' : gpuScore >= 600 ? 'Entry / Upscaled' : 'Not Ideal',
+              recommendedPreset: gpuScore >= 900 ? 'High + Upscaling' : 'Medium + Performance Upscaling',
+              notes: 'Native 4K modern AAA games generally require 12–16 GB+ VRAM and upper-tier RTX 40/50 or RX 7000/9000 GPUs.',
+            },
+          ],
     featureMatrix: [
       {
         name: 'DirectX 12 Ultimate',
-        status: gpuDb?.supportedTechnologies.some((x) => x.includes('Ultimate')) ? 'Supported' : snapshot.capabilities?.display?.directXVersion || 'Check GPU Generation',
-        provenance: gpuDb ? 'manufacturer_spec' : 'estimated',
+        status: gpuDb?.supportedTechnologies.some((x) => x.includes('Ultimate'))
+          ? 'Supported'
+          : snapshot.capabilities?.display?.directXVersion || (gpuScore === null ? 'Unknown' : 'Check GPU Generation'),
+        provenance: gpuDb ? 'manufacturer_spec' : gpuScore === null ? 'unknown' : 'estimated',
       },
       {
         name: 'Hardware Ray Tracing',
-        status: gpuDb?.supportedTechnologies.some((x) => x.toLowerCase().includes('ray tracing')) ? 'Supported' : 'Not Supported / Software Only',
-        provenance: gpuDb ? 'manufacturer_spec' : 'estimated',
+        status: gpuDb?.supportedTechnologies.some((x) => x.toLowerCase().includes('ray tracing'))
+          ? 'Supported'
+          : gpuScore === null
+          ? 'Unknown'
+          : 'Not Supported / Software Only',
+        provenance: gpuDb ? 'manufacturer_spec' : gpuScore === null ? 'unknown' : 'estimated',
       },
       {
         name: 'AI / Spatial Upscaling',
-        status: gpuDb?.supportedTechnologies.find((x) => /dlss|fsr|xess/i.test(x)) || 'FSR (Shader-based)',
-        provenance: gpuDb ? 'manufacturer_spec' : 'estimated',
+        status: gpuDb?.supportedTechnologies.find((x) => /dlss|fsr|xess/i.test(x)) || (gpuScore === null ? 'Unknown' : 'FSR (Shader-based)'),
+        provenance: gpuDb ? 'manufacturer_spec' : gpuScore === null ? 'unknown' : 'estimated',
       },
       {
         name: 'DirectStorage Readiness',
-        status: inventory.storage.some((d) => d.mediaType === 'NVMe SSD') ? 'NVMe SSD Detected (Ready)' : 'SATA / HDD Detected (Limited)',
-        provenance: 'detected',
+        status:
+          inventory.storage.length === 0
+            ? 'Unknown'
+            : inventory.storage.some((d) => d.mediaType === 'NVMe SSD')
+            ? 'NVMe SSD Detected (Ready)'
+            : 'SATA / HDD Detected (Limited)',
+        provenance: inventory.storage.length === 0 ? 'unknown' : 'detected',
       },
     ],
   };
 
   // --- Pro Software Compatibility ---
-  const ramVal = totalRamGb ?? 0;
   const hasNvCuda = Boolean(primaryGpuObj?.manufacturer === 'NVIDIA' || /nvidia|geforce|rtx|gtx/i.test(gpuName || ''));
   const proCompatibility: HealthAssessmentReport['proCompatibility'] = [
     {
       workload: 'Office, Browsing & Productivity',
-      verdict: ramVal >= 8 ? 'Excellent' : 'Basic',
-      reason: ramVal >= 8 ? 'Ample RAM and modern multi-core execution for documents, video calls & heavy tabs.' : '8 GB or less tightens multi-tab browser usage.',
-      limitingFactor: ramVal < 8 ? 'RAM <= 8 GB' : null,
+      verdict: totalRamGb === null ? 'Unknown' : totalRamGb >= 8 ? 'Excellent' : 'Basic',
+      reason:
+        totalRamGb === null
+          ? 'System RAM capacity could not be verified in this environment.'
+          : totalRamGb >= 8
+          ? 'Ample RAM and modern multi-core execution for documents, video calls & heavy tabs.'
+          : '8 GB or less tightens multi-tab browser usage.',
+      limitingFactor: totalRamGb !== null && totalRamGb < 8 ? 'RAM <= 8 GB' : null,
     },
     {
       workload: 'Programming, Compilers & Containers/VMs',
-      verdict: ramVal >= 32 && (cpuTier ?? 0) >= 650 ? 'Excellent' : ramVal >= 16 ? 'Good' : 'Limited',
-      reason: `Virtualization firmware: ${inventory.cpu.virtualizationFirmwareEnabled === true ? 'Enabled' : inventory.cpu.virtualizationFirmwareEnabled === false ? 'Disabled in BIOS' : 'Unconfirmed'}.`,
-      limitingFactor: ramVal < 16 ? 'Recommend 16–32 GB RAM for Docker/VMs' : null,
+      verdict:
+        totalRamGb === null
+          ? 'Unknown'
+          : totalRamGb >= 32 && (cpuTier ?? 0) >= 650
+          ? 'Excellent'
+          : totalRamGb >= 16
+          ? 'Good'
+          : 'Limited',
+      reason:
+        totalRamGb === null
+          ? 'System RAM capacity could not be verified; 16–32 GB+ recommended for Docker/VMs.'
+          : `Virtualization firmware: ${inventory.cpu.virtualizationFirmwareEnabled === true ? 'Enabled' : inventory.cpu.virtualizationFirmwareEnabled === false ? 'Disabled in BIOS' : 'Unconfirmed'}.`,
+      limitingFactor: totalRamGb !== null && totalRamGb < 16 ? 'Recommend 16–32 GB RAM for Docker/VMs' : null,
     },
     {
       workload: '1080p / 4K Video Editing',
-      verdict: ramVal >= 32 && gpuScore >= 680 ? 'Excellent' : ramVal >= 16 && gpuScore >= 430 ? 'Good' : 'Basic',
-      reason: gpuDb?.supportedTechnologies.some((x) => x.includes('AV1')) ? 'Hardware AV1/HEVC media engine accelerates timeline scrubbing.' : 'Lacks modern AV1 encode hardware.',
-      limitingFactor: ramVal < 16 ? '16–32 GB RAM recommended for 4K timelines' : null,
+      verdict:
+        totalRamGb === null || gpuScore === null
+          ? 'Unknown'
+          : totalRamGb >= 32 && gpuScore >= 680
+          ? 'Excellent'
+          : totalRamGb >= 16 && gpuScore >= 430
+          ? 'Good'
+          : 'Basic',
+      reason:
+        totalRamGb === null || gpuScore === null
+          ? 'System RAM or GPU capabilities could not be verified in this environment.'
+          : gpuDb?.supportedTechnologies.some((x) => x.includes('AV1'))
+          ? 'Hardware AV1/HEVC media engine accelerates timeline scrubbing.'
+          : 'Lacks modern AV1 encode hardware.',
+      limitingFactor: totalRamGb !== null && totalRamGb < 16 ? '16–32 GB RAM recommended for 4K timelines' : null,
     },
     {
       workload: '3D Modeling, CAD & GPU Rendering',
-      verdict: isDiscreteGpu && gpuScore >= 720 && ramVal >= 16 ? 'Excellent' : isDiscreteGpu && gpuScore >= 450 ? 'Good' : 'Limited',
-      reason: hasNvCuda ? 'NVIDIA CUDA/OptiX acceleration available for Blender/Unreal/CAD.' : isDiscreteGpu ? 'Discrete GPU supports Vulkan/OpenCL viewports.' : 'Integrated GPU lacks dedicated VRAM for complex 3D scenes.',
-      limitingFactor: !isDiscreteGpu ? 'Dedicated GPU with 8+ GB VRAM' : null,
+      verdict:
+        gpuScore === null || totalRamGb === null
+          ? 'Unknown'
+          : isDiscreteGpu && gpuScore >= 720 && totalRamGb >= 16
+          ? 'Excellent'
+          : isDiscreteGpu && gpuScore >= 450
+          ? 'Good'
+          : 'Limited',
+      reason:
+        gpuScore === null || totalRamGb === null
+          ? 'GPU or RAM capabilities could not be verified.'
+          : hasNvCuda
+          ? 'NVIDIA CUDA/OptiX acceleration available for Blender/Unreal/CAD.'
+          : isDiscreteGpu
+          ? 'Discrete GPU supports Vulkan/OpenCL viewports.'
+          : 'Integrated GPU lacks dedicated VRAM for complex 3D scenes.',
+      limitingFactor: gpuScore !== null && !isDiscreteGpu ? 'Dedicated GPU with 8+ GB VRAM' : null,
     },
     {
       workload: 'Local AI / ML Inference',
-      verdict: hasNvCuda && (vramGb ?? 0) >= 12 ? 'Excellent' : hasNvCuda && (vramGb ?? 0) >= 8 ? 'Good' : 'Limited',
-      reason: hasNvCuda ? `NVIDIA GPU (${vramGb ?? '?'} GB VRAM) supports CUDA/Tensor local models.` : 'Non-CUDA or shared-memory graphics rely primarily on CPU/system RAM or NPU.',
-      limitingFactor: (vramGb ?? 0) < 8 ? '8–16 GB+ discrete VRAM needed for mid/large LLMs' : null,
+      verdict:
+        gpuScore === null
+          ? 'Unknown'
+          : hasNvCuda && (vramGb ?? 0) >= 12
+          ? 'Excellent'
+          : hasNvCuda && (vramGb ?? 0) >= 8
+          ? 'Good'
+          : 'Limited',
+      reason:
+        gpuScore === null
+          ? 'GPU architecture and VRAM could not be verified.'
+          : hasNvCuda
+          ? `NVIDIA GPU (${vramGb ?? 'Unknown'} GB VRAM) supports CUDA/Tensor local models.`
+          : 'Non-CUDA or shared-memory graphics rely primarily on CPU/system RAM or NPU.',
+      limitingFactor: gpuScore !== null && (vramGb ?? 0) < 8 ? '8–16 GB+ discrete VRAM needed for mid/large LLMs' : null,
     },
   ];
 
@@ -1221,6 +1310,72 @@ function scrubSensitiveMessage(rawText: string, hostname?: string | null): strin
 
 const PRIVACY_REDACTED = '[Redacted by Privacy Shield]';
 
+export function reconcileLiveFanSensors(
+  inventoryFans: DeepHardwareInventory['fans']['items'],
+  liveFans: HardwareMonitorSnapshot['liveSensors'] extends infer T
+    ? T extends { fans: infer F }
+      ? F
+      : never
+    : never
+): DeepHardwareInventory['fans']['items'] {
+  const liveList = Array.isArray(liveFans) ? liveFans : [];
+
+  const computeFanStatus = (
+    rpm: number | null | undefined,
+    percent: number | null | undefined
+  ): DeepHardwareInventory['fans']['items'][number]['status'] => {
+    if (rpm === 0 || ((rpm === null || rpm === undefined) && percent === 0)) {
+      return 'stopped_confirmed';
+    }
+    if (typeof rpm === 'number' && Number.isFinite(rpm)) {
+      if (rpm < 150 || rpm > 9500) {
+        return 'abnormal_rpm';
+      }
+      return 'running';
+    }
+    if (typeof percent === 'number' && Number.isFinite(percent) && percent > 0) {
+      return 'running';
+    }
+    return 'sensor_unavailable';
+  };
+
+  if (Array.isArray(inventoryFans) && inventoryFans.length > 0) {
+    return inventoryFans.map((f) => {
+      const live =
+        liveList.find((lf) => lf.id && f.id && lf.id === f.id) ||
+        liveList.find((lf) => lf.name.trim().toLowerCase() === f.name.trim().toLowerCase());
+      if (!live) return f;
+      const nextRpm = live.rpm !== undefined ? live.rpm : f.rpm;
+      const nextPercent = live.percent !== undefined ? live.percent : f.percent;
+      const nextStatus = computeFanStatus(nextRpm, nextPercent);
+      return {
+        ...f,
+        rpm: nextRpm,
+        percent: nextPercent,
+        status: nextStatus,
+        provenance: nextStatus === 'sensor_unavailable' ? 'sensor_unavailable' : 'measured',
+      };
+    });
+  }
+
+  return liveList.map((lf, idx) => {
+    const nextStatus = computeFanStatus(lf.rpm, lf.percent);
+    return {
+      id: lf.id || `live-fan-${idx}`,
+      name: lf.name,
+      role: /cpu/i.test(lf.name) ? ('cpu' as const) : /gpu/i.test(lf.name) ? ('gpu' as const) : ('other' as const),
+      rpm: lf.rpm ?? null,
+      percent: lf.percent ?? null,
+      minRpm: null,
+      maxRpm: null,
+      status: nextStatus,
+      linkedTempSensor: null,
+      source: lf.source,
+      provenance: nextStatus === 'sensor_unavailable' ? ('sensor_unavailable' as const) : ('measured' as const),
+    };
+  });
+}
+
 export function buildHardwareHealthReportPayload(params: {
   snapshot: HardwareMonitorSnapshot;
   inventory: DeepHardwareInventory;
@@ -1229,6 +1384,7 @@ export function buildHardwareHealthReportPayload(params: {
   privacyShield: boolean;
 }) {
   const { snapshot, inventory, assessment, workload, privacyShield } = params;
+  const hostForScrub = snapshot.hostname;
   const maskedHostname = privacyShield ? '[Privacy Protected]' : snapshot.hostname || 'Unknown';
   const redactedStorage = privacyShield
     ? inventory.storage.map((d) => ({
@@ -1249,6 +1405,7 @@ export function buildHardwareHealthReportPayload(params: {
     ? inventory.displays.map((d) => ({
         ...d,
         serialMasked: PRIVACY_REDACTED,
+        gpuPnpDeviceId: d.gpuPnpDeviceId ? PRIVACY_REDACTED : null,
       }))
     : inventory.displays;
   const redactedDiagnosticEvents = privacyShield
@@ -1256,6 +1413,7 @@ export function buildHardwareHealthReportPayload(params: {
         ...inventory.diagnosticEvents,
         pnpErrors: inventory.diagnosticEvents.pnpErrors.map((e) => ({
           ...e,
+          name: scrubSensitiveMessage(e.name, hostForScrub),
           deviceId: PRIVACY_REDACTED,
         })),
         eventLogWarnings: inventory.diagnosticEvents.eventLogWarnings.map((ev) => ({
@@ -1263,7 +1421,7 @@ export function buildHardwareHealthReportPayload(params: {
           message: PRIVACY_REDACTED,
         })),
         eventLogErrorNote: inventory.diagnosticEvents.eventLogErrorNote
-          ? scrubSensitiveMessage(inventory.diagnosticEvents.eventLogErrorNote, snapshot.hostname)
+          ? scrubSensitiveMessage(inventory.diagnosticEvents.eventLogErrorNote, hostForScrub)
           : null,
       }
     : inventory.diagnosticEvents;
@@ -1277,6 +1435,36 @@ export function buildHardwareHealthReportPayload(params: {
         })),
       }
     : inventory.network;
+  const redactedPorts = privacyShield
+    ? {
+        ...inventory.ports,
+        connectedDevices: inventory.ports.connectedDevices.map((p) => ({
+          ...p,
+          name: scrubSensitiveMessage(p.name, hostForScrub),
+          connectedDeviceName: p.connectedDeviceName
+            ? scrubSensitiveMessage(p.connectedDeviceName, hostForScrub)
+            : null,
+        })),
+      }
+    : inventory.ports;
+  const redactedAssessment = privacyShield
+    ? {
+        ...assessment,
+        componentScores: assessment.componentScores.map((c) => ({
+          ...c,
+          summary: scrubSensitiveMessage(c.summary, hostForScrub),
+        })),
+        bottleneckSummary: {
+          ...assessment.bottleneckSummary,
+          explanation: scrubSensitiveMessage(assessment.bottleneckSummary.explanation, hostForScrub),
+        },
+        maintenanceAdvisories: assessment.maintenanceAdvisories.map((m) => ({
+          ...m,
+          whyItMatters: scrubSensitiveMessage(m.whyItMatters, hostForScrub),
+          steps: m.steps.map((s) => scrubSensitiveMessage(s, hostForScrub)),
+        })),
+      }
+    : assessment;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -1298,10 +1486,10 @@ export function buildHardwareHealthReportPayload(params: {
     memory: redactedMemory,
     storage: redactedStorage,
     fans: inventory.fans,
-    ports: inventory.ports,
+    ports: redactedPorts,
     displays: redactedDisplays,
     network: redactedNetwork,
-    healthAssessment: assessment,
+    healthAssessment: redactedAssessment,
     diagnosticEvents: redactedDiagnosticEvents,
   };
 }
@@ -1314,19 +1502,19 @@ export function buildPrintableReportHtml(params: {
   privacyShield: boolean;
 }): string {
   const payload = buildHardwareHealthReportPayload(params);
-  const { assessment, inventory, snapshot } = params;
+  const { healthAssessment: safeAssessment, system: safeSystem, cpu: safeCpu, motherboard: safeMobo, memory: safeMemory, gpus: safeGpus } = payload;
 
-  const tpmSummaryText = inventory.system.tpm.present
-    ? `Present (${escapeHtml(inventory.system.tpm.specVersion || 'v2')})`
-    : inventory.system.tpm.status === 'requires_admin'
+  const tpmSummaryText = safeSystem.tpm.present === true
+    ? `Present${safeSystem.tpm.specVersion ? ` (${escapeHtml(safeSystem.tpm.specVersion)})` : ''}`
+    : safeSystem.tpm.status === 'requires_admin'
     ? 'Requires Administrator'
-    : inventory.system.tpm.status === 'not_supported'
+    : safeSystem.tpm.status === 'not_supported'
     ? 'Not Supported'
-    : inventory.system.tpm.status === 'unknown'
-    ? 'Unknown'
-    : 'Not detected';
+    : safeSystem.tpm.status === 'not_detected'
+    ? 'Not detected'
+    : 'Unknown';
 
-  const compRows = assessment.componentScores
+  const compRows = safeAssessment.componentScores
     .map(
       (c) => `<tr>
         <td>${escapeHtml(c.label)}</td>
@@ -1372,23 +1560,23 @@ export function buildPrintableReportHtml(params: {
 <body>
   <h1>SecretArea PC Hardware Health &amp; Diagnostics Report</h1>
   <div class="meta">
-    Generated: ${escapeHtml(payload.generatedAt)} &middot; Workload Profile: ${escapeHtml(params.workload)} &middot; Privacy Shield: ${params.privacyShield ? 'ON (Serials/MACs/SSIDs/Logs Redacted)' : 'OFF'} &middot; Host: ${escapeHtml(payload.hostname)}
+    Generated: ${escapeHtml(payload.generatedAt)} &middot; Workload Profile: ${escapeHtml(payload.selectedWorkload)} &middot; Privacy Shield: ${payload.privacyShieldEnabled ? 'ON (Serials/MACs/SSIDs/Logs Redacted)' : 'OFF'} &middot; Host: ${escapeHtml(payload.hostname)}
   </div>
 
   <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-label">Physical Health</div><div class="kpi-val">${assessment.overallPhysicalHealthScore !== null ? `${assessment.overallPhysicalHealthScore}/100` : 'Partial'}</div></div>
-    <div class="kpi"><div class="kpi-label">Performance Capability</div><div class="kpi-val">${assessment.performanceCapabilityScore !== null ? `${assessment.performanceCapabilityScore}/100` : 'Unknown'}</div></div>
-    <div class="kpi"><div class="kpi-label">Form Factor &amp; OS</div><div class="kpi-val">${escapeHtml(inventory.system.formFactor.toUpperCase())}</div></div>
-    <div class="kpi"><div class="kpi-label">Hardware Age</div><div class="kpi-val">${escapeHtml(assessment.oldestDetectedComponentYear || 'Unknown')}</div></div>
+    <div class="kpi"><div class="kpi-label">Physical Health</div><div class="kpi-val">${safeAssessment.overallPhysicalHealthScore !== null ? `${safeAssessment.overallPhysicalHealthScore}/100` : 'Partial'}</div></div>
+    <div class="kpi"><div class="kpi-label">Performance Capability</div><div class="kpi-val">${safeAssessment.performanceCapabilityScore !== null ? `${safeAssessment.performanceCapabilityScore}/100` : 'Unknown'}</div></div>
+    <div class="kpi"><div class="kpi-label">Form Factor &amp; OS</div><div class="kpi-val">${escapeHtml(safeSystem.formFactor.toUpperCase())}</div></div>
+    <div class="kpi"><div class="kpi-label">Hardware Age</div><div class="kpi-val">${escapeHtml(safeAssessment.oldestDetectedComponentYear || 'Unknown')}</div></div>
   </div>
 
   <h2>System &amp; Core Hardware</h2>
   <table>
-    <tr><th>CPU</th><td>${escapeHtml(inventory.cpu.model || snapshot.cpu.model || 'Unknown')} (${escapeHtml(inventory.cpu.physicalCores ?? '?')}C / ${escapeHtml(inventory.cpu.logicalThreads ?? '?')}T)</td></tr>
-    <tr><th>GPU(s)</th><td>${escapeHtml(snapshot.gpus.map((g) => g.model).filter(Boolean).join(', ') || 'Unknown')}</td></tr>
-    <tr><th>Motherboard &amp; BIOS</th><td>${escapeHtml([inventory.motherboard.manufacturer, inventory.motherboard.model].filter(Boolean).join(' ') || 'Unavailable')} &middot; BIOS ${escapeHtml(inventory.motherboard.biosVersion || 'N/A')} (${escapeHtml(inventory.motherboard.biosReleaseDate || 'N/A')})</td></tr>
-    <tr><th>Memory</th><td>${inventory.memory.totalBytes ? `${Math.round(inventory.memory.totalBytes / (1024 ** 3))} GB` : 'Unknown'} (${escapeHtml(inventory.memory.channelMode || 'Unknown channel')})</td></tr>
-    <tr><th>Boot / Security</th><td>${escapeHtml(inventory.system.bootMode)} &middot; Secure Boot: ${inventory.system.secureBoot === null ? 'Unknown' : inventory.system.secureBoot ? 'Enabled' : 'Disabled'} &middot; TPM: ${tpmSummaryText}</td></tr>
+    <tr><th>CPU</th><td>${escapeHtml(safeCpu.model || 'Unknown')} (${escapeHtml(safeCpu.physicalCores ?? 'N/A')}C / ${escapeHtml(safeCpu.logicalThreads ?? 'N/A')}T)</td></tr>
+    <tr><th>GPU(s)</th><td>${escapeHtml(safeGpus.map((g) => g.model).filter(Boolean).join(', ') || 'Unknown')}</td></tr>
+    <tr><th>Motherboard &amp; BIOS</th><td>${escapeHtml([safeMobo.manufacturer, safeMobo.model].filter(Boolean).join(' ') || 'Unavailable')} &middot; BIOS ${escapeHtml(safeMobo.biosVersion || 'N/A')} (${escapeHtml(safeMobo.biosReleaseDate || 'N/A')})</td></tr>
+    <tr><th>Memory</th><td>${safeMemory.totalBytes ? `${Math.round(safeMemory.totalBytes / (1024 ** 3))} GB` : 'Unknown'} (${escapeHtml(safeMemory.channelMode || 'Unknown channel')})</td></tr>
+    <tr><th>Boot / Security</th><td>${escapeHtml(safeSystem.bootMode)} &middot; Secure Boot: ${safeSystem.secureBoot === null ? 'Unknown' : safeSystem.secureBoot ? 'Enabled' : 'Disabled'} &middot; TPM: ${tpmSummaryText}</td></tr>
   </table>
 
   <h2>Component Health Breakdown</h2>
@@ -1404,8 +1592,8 @@ export function buildPrintableReportHtml(params: {
   </table>
 
   <h2>Bottleneck &amp; Useful Life Guidance</h2>
-  <p><strong>Primary Limiting Factor:</strong> ${escapeHtml(assessment.bottleneckSummary.primaryLimitingFactor)} — ${escapeHtml(assessment.bottleneckSummary.explanation)}</p>
-  <p><strong>Estimated Useful Life:</strong> ${escapeHtml(assessment.estimatedUsefulLifeRange)}</p>
+  <p><strong>Primary Limiting Factor:</strong> ${escapeHtml(safeAssessment.bottleneckSummary.primaryLimitingFactor)} — ${escapeHtml(safeAssessment.bottleneckSummary.explanation)}</p>
+  <p><strong>Estimated Useful Life:</strong> ${escapeHtml(safeAssessment.estimatedUsefulLifeRange)}</p>
 
   <div class="note">
     Note: Software sensors cannot directly detect dust accumulation or dried thermal paste; elevated temperatures require physical inspection. Unexposed sensors are marked Unavailable and never estimated as healthy.

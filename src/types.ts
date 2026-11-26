@@ -1060,6 +1060,9 @@ export interface DeepHardwareInventory {
     };
     sensorBackends: {
       lhmRunning: boolean;
+      lhmDirectInstalled?: boolean;
+      lhmDirectVersion?: string | null;
+      lhmRequiresAdmin?: boolean;
       ohmRunning: boolean;
       nvidiaSmiAvailable: boolean;
       smartctlAvailable: boolean;
@@ -1315,4 +1318,145 @@ export interface BenchmarkRunProgress {
   abortedReason: string | null;
 }
 
+export interface OpenSourceToolReleaseInfo {
+  sourceType: 'github_release' | 'nuget';
+  version: string;
+  rawVersion: string;
+  tagName: string;
+  releaseName: string;
+  releaseDate: string | null;
+  releaseNotes: string | null;
+  releaseUrl: string;
+  assetName: string;
+  assetSizeBytes: number | null;
+  assetKind: 'zip' | 'nupkg';
+  downloadUrl: string;
+  expectedSha256: string | null;
+  checksumAssetUrl: string | null;
+}
+
+export interface OpenSourceToolProgressInfo {
+  percent: number;
+  downloadedBytes: number;
+  totalBytes: number;
+  speedBytesPerSec: number;
+  etaSeconds: number | null;
+}
+
+export interface OpenSourceToolVerificationInfo {
+  sha256Expected: string | null;
+  sha256Actual: string | null;
+  sha256Verified: boolean;
+  binaryValidPe: boolean;
+  fileVersion: string | null;
+  sourceHost: string;
+  verifiedAt: string;
+}
+
+export interface OpenSourceToolItemState {
+  id: string;
+  name: string;
+  displayName: string;
+  category: string;
+  licenseId: string;
+  licenseName: string;
+  licenseUrl: string;
+  repositoryUrl: string;
+  websiteUrl: string;
+  sourceCodeUrl: string;
+  nugetUrl: string;
+  officialReleasesUrl: string;
+  supportsDirectLibrary: boolean;
+  requiresStandaloneGui: boolean;
+  requiresPermanentAdmin: boolean;
+  description: string;
+  adminNote: string;
+  stage: 'idle' | 'checking' | 'ready' | 'downloading' | 'verifying' | 'installing' | 'completed' | 'error' | 'cancelled';
+  statusBadge: 'not_installed' | 'update_available' | 'up_to_date' | 'newer_installed' | 'repair_required';
+  actionNeeded: 'install_required' | 'update_available' | 'up_to_date' | 'newer_installed' | 'repair_required';
+  installed: boolean;
+  healthy: boolean;
+  healthIssue: string | null;
+  installedVersion: string | null;
+  installedSource: string | null;
+  installDirectory: string | null;
+  libraryPath: string | null;
+  hasBackup: boolean;
+  backupVersion: string | null;
+  latestRelease: OpenSourceToolReleaseInfo | null;
+  updateAvailable: boolean;
+  lastCheckedAt: string | null;
+  lastRateLimitRemaining: number | null;
+  progress: OpenSourceToolProgressInfo | null;
+  verification: OpenSourceToolVerificationInfo | null;
+  error: string | null;
+}
+
+export interface OpenSourceToolsManagerState {
+  platform: string;
+  platformSupported: boolean;
+  isElevated: boolean | null;
+  approvedCount: number;
+  policySummary: string;
+  tools: OpenSourceToolItemState[];
+}
+
+export type PerformanceMode = 'eco' | 'balanced' | 'performance';
+
+export interface PerformanceAdvancedSettings {
+  pauseBackgroundWhenMinimized: boolean;
+  reduceVisualEffects: boolean;
+  hardwareMonitorIntervalMs: 'auto' | 1000 | 1500 | 2000 | 3000 | 5000;
+  downloadUiThrottleMs: 'auto' | 200 | 350 | 750;
+  adaptiveTorrentPolling: boolean;
+  deferBackgroundChecks: boolean;
+}
+
+export interface EffectivePerformanceConfig {
+  mode: PerformanceMode;
+  pauseBackgroundWhenMinimized: boolean;
+  reduceVisualEffects: boolean;
+  hardwarePollIntervalMs: number;
+  topBarTelemetryIntervalMs: number;
+  downloadUiThrottleMs: number;
+  torrentActivePollMs: number;
+  torrentIdlePollMs: number;
+  adaptiveTorrentPolling: boolean;
+  deferBackgroundChecks: boolean;
+  disableHeavyAnimations: boolean;
+  maxImageCacheEntries: number;
+}
+
+export interface InternalPerfProcessMetric {
+  pid: number;
+  type: string;
+  name: string;
+  cpuPercent: number;
+  rssMB: number;
+}
+
+export interface InternalPerfMetricsSnapshot {
+  sampledAt: number;
+  mainCpuPercent: number;
+  rendererCpuPercent?: number | null;
+  gpuCpuPercent?: number | null;
+  mainProcessRssMB: number;
+  mainHeapUsedMB: number;
+  rendererRssMB: number;
+  gpuProcessRssMB: number;
+  totalAppRssMB: number;
+  processCount: number;
+  processes: InternalPerfProcessMetric[];
+  windowHidden: boolean;
+  pollers: {
+    hardwareMonitorActive: boolean;
+    hardwarePausedByHide: boolean;
+    hardwareIntervalMs: number | null;
+    lastHardwareSampleMs: number | null;
+    torrentPollerActive: boolean;
+    torrentPollIntervalMs: number | null;
+    activeDownloadsCount: number;
+    gamingSessionActive: boolean;
+  };
+}
 

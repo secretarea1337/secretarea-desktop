@@ -7,7 +7,24 @@ const netTcp = require('net');
 const { dialog } = require('electron');
 
 const DEFAULT_DB_FEED_URL = 'https://raw.githubusercontent.com/secretarea1337/secretarea-desktop/main/hardware-db.json';
+const TRUSTED_DB_FEED_HOSTS = new Set([
+  'raw.githubusercontent.com',
+  'github.com',
+  'objects.githubusercontent.com',
+  'www.secretarea.site',
+  'secretarea.site',
+]);
 const ALLOWED_CATEGORIES = new Set(['cpu', 'gpu', 'ram', 'storage', 'chipset_platform', 'network']);
+const FORBIDDEN_IDS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function isTrustedFeedHost(rawUrl) {
+  try {
+    const parsed = new URL(String(rawUrl || '').trim());
+    return TRUSTED_DB_FEED_HOSTS.has(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
 
 function isPrivateOrLoopbackHostname(rawHostname) {
   const host = String(rawHostname || '').trim().toLowerCase().replace(/^\[|\]$/g, '');
@@ -96,10 +113,13 @@ function validateHardwareDbPayload(raw) {
     return { valid: false, error: 'Database entries exceed maximum safe limit of 5000.' };
   }
   const cleanEntries = [];
+  const seenIds = new Set();
   for (let i = 0; i < raw.entries.length; i++) {
     const item = raw.entries[i];
     if (!item || typeof item !== 'object') continue;
     if (typeof item.id !== 'string' || !item.id.trim()) continue;
+    const trimmedId = item.id.trim();
+    if (FORBIDDEN_IDS.has(trimmedId) || seenIds.has(trimmedId)) continue;
     if (!ALLOWED_CATEGORIES.has(item.category)) continue;
     if (typeof item.family !== 'string' || !item.family.trim()) continue;
     if (!Array.isArray(item.matchPatterns) || item.matchPatterns.length === 0) continue;
@@ -111,10 +131,11 @@ function validateHardwareDbPayload(raw) {
     const releaseYear = Number(item.releaseYear);
     const tierScore = Number(item.tierScore);
     const suit2030 = Number(item.suitability2030Score ?? 50);
-    if (!Number.isFinite(releaseYear) || !Number.isFinite(tierScore)) continue;
+    if (!Number.isFinite(releaseYear) || releaseYear < 1995 || releaseYear > 2040 || !Number.isFinite(tierScore)) continue;
 
+    seenIds.add(trimmedId);
     cleanEntries.push({
-      id: item.id.trim(),
+      id: trimmedId,
       category: item.category,
       vendor: typeof item.vendor === 'string' ? item.vendor.trim() : 'Generic',
       family: item.family.trim(),
@@ -269,7 +290,8 @@ function readBundledBaselineInfo() {
   const candidates = [
     path.resolve(__dirname, '../../hardware-db.json'),
     path.resolve(process.cwd(), 'hardware-db.json'),
-  ];
+    process.resourcesPath ? path.join(process.resourcesPath, 'hardware-db.json') : null,
+  ].filter(Boolean);
   for (const p of candidates) {
     try {
       if (!fs.existsSync(p)) continue;
@@ -370,6 +392,24 @@ function createHardwareDbManager({ getMainWindow, getUserDataPath, bundledBaseli
           state.sourceLabel = checked.payload.sourceLabel;
           state.customEntriesCount = customEntries.length;
           state.entryCount = computeMergedEntryCount(customEntries);
+          if (!fs.existsSync(paths.backupFile)) {
+            await fsp.writeFile(
+              paths.backupFile,
+              JSON.stringify(
+                {
+                  schemaVersion: 1,
+                  isBaselineRestore: true,
+                  dbVersion: baselineInfo.dbVersion,
+                  lastUpdatedAt: baselineInfo.lastUpdatedAt,
+                  sourceLabel: baselineInfo.sourceLabel,
+                  entries: [],
+                },
+                null,
+                2
+              ),
+              'utf8'
+            );
+          }
         }
       }
       state.hasBackup = fs.existsSync(paths.backupFile);
@@ -529,6 +569,19 @@ function createHardwareDbManager({ getMainWindow, getUserDataPath, bundledBaseli
     await ensureLoaded();
     const paths = getPaths();
     if (!fs.existsSync(paths.backupFile)) {
+      if (fs.existsSync(paths.activeFile)) {
+        await fsp.unlink(paths.activeFile).catch(() => {});
+        customEntries = [];
+        state.dbVersion = baselineInfo.dbVersion;
+        state.lastUpdatedAt = baselineInfo.lastUpdatedAt;
+        state.sourceLabel = `${baselineInfo.sourceLabel} (Rolled Back)`;
+        state.customEntriesCount = 0;
+        state.entryCount = effectiveBaselineCount;
+        state.hasBackup = false;
+        state.lastError = null;
+        await saveMeta();
+        return { ok: true, state: { ...state }, error: null };
+      }
       return { ok: false, state: { ...state }, error: 'No backup database exists.' };
     }
     try {
@@ -537,6 +590,7 @@ function createHardwareDbManager({ getMainWindow, getUserDataPath, bundledBaseli
         if (fs.existsSync(paths.activeFile)) {
           await fsp.unlink(paths.activeFile).catch(() => {});
         }
+        await fsp.unlink(paths.backupFile).catch(() => {});
         customEntries = [];
         state.dbVersion = typeof parsed.dbVersion === 'string' ? parsed.dbVersion : baselineInfo.dbVersion;
         state.lastUpdatedAt =
@@ -544,6 +598,7 @@ function createHardwareDbManager({ getMainWindow, getUserDataPath, bundledBaseli
         state.sourceLabel = `${baselineInfo.sourceLabel} (Rolled Back)`;
         state.customEntriesCount = 0;
         state.entryCount = effectiveBaselineCount;
+        state.hasBackup = false;
         state.lastError = null;
         await saveMeta();
         return { ok: true, state: { ...state }, error: null };
@@ -554,12 +609,30 @@ function createHardwareDbManager({ getMainWindow, getUserDataPath, bundledBaseli
         return { ok: false, state: { ...state }, error: checked.error };
       }
       await fsp.copyFile(paths.backupFile, paths.activeFile);
+      // Preserve a baseline restore sentinel so subsequent rollback still reaches bundled baseline
+      await fsp.writeFile(
+        paths.backupFile,
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            isBaselineRestore: true,
+            dbVersion: baselineInfo.dbVersion,
+            lastUpdatedAt: baselineInfo.lastUpdatedAt,
+            sourceLabel: baselineInfo.sourceLabel,
+            entries: [],
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
       customEntries = checked.payload.entries;
       state.dbVersion = checked.payload.dbVersion;
       state.lastUpdatedAt = checked.payload.lastUpdatedAt;
       state.sourceLabel = `${checked.payload.sourceLabel} (Rolled Back)`;
       state.customEntriesCount = customEntries.length;
       state.entryCount = computeMergedEntryCount(customEntries);
+      state.hasBackup = fs.existsSync(paths.backupFile);
       state.lastError = null;
       await saveMeta();
       return { ok: true, state: { ...state }, error: null };
@@ -580,6 +653,8 @@ function createHardwareDbManager({ getMainWindow, getUserDataPath, bundledBaseli
 
 module.exports = {
   DEFAULT_DB_FEED_URL,
+  TRUSTED_DB_FEED_HOSTS,
+  isTrustedFeedHost,
   readBundledBaselineInfo,
   createHardwareDbManager,
   validateHardwareDbPayload,

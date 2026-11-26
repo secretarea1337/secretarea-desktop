@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowsClockwise, ArrowUpRight, X } from '@phosphor-icons/react';
 import type { GameItem, SheetCatalogData } from '../types';
 import type { AppLanguage, AppThemeMode } from '../services/launcherSettings';
-import { resolveSheetRefItem } from './ExtrasView';
+import { resolveSheetRefItem } from '../utils/parsers';
 import { GameCover } from './GameCover';
 import { getTranslations } from '../i18n/translations';
 import { playWheelTickSound, playWheelWinSound } from '../utils/uiCursorSounds';

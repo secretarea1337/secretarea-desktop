@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowClockwise,
   Database,
@@ -62,11 +62,20 @@ export function BenchmarksAndDatabasePanel({
   const [dbCategory, setDbCategory] = useState<HardwareDbCategory | 'all'>('all');
   const [dbSearch, setDbSearch] = useState('');
   const [feedUrl, setFeedUrl] = useState(dbState.updateFeedUrl);
+  const [customFeedConsented, setCustomFeedConsented] = useState(false);
   const [dbStatusMsg, setDbStatusMsg] = useState<string | null>(null);
   const [isUpdatingDb, setIsUpdatingDb] = useState(false);
+  const webAbortRef = useRef<AbortController | null>(null);
+
+  const OFFICIAL_FEED_URL = 'https://raw.githubusercontent.com/secretarea1337/secretarea-desktop/main/hardware-db.json';
+  const isCustomFeedUrl =
+    feedUrl.trim().length > 0 &&
+    feedUrl.trim() !== OFFICIAL_FEED_URL &&
+    feedUrl.trim() !== dbState.updateFeedUrl;
 
   useEffect(() => {
     setFeedUrl(dbState.updateFeedUrl);
+    setCustomFeedConsented(false);
   }, [dbState.updateFeedUrl]);
 
   useEffect(() => {
@@ -77,6 +86,12 @@ export function BenchmarksAndDatabasePanel({
     });
     return unsub;
   }, [isDesktopApp]);
+
+  useEffect(() => {
+    return () => {
+      webAbortRef.current?.abort();
+    };
+  }, []);
 
   const toggleTestSelection = (id: string) => {
     setSelectedTests((prev) =>
@@ -110,7 +125,11 @@ export function BenchmarksAndDatabasePanel({
       return;
     }
 
-    // Web Preview safe micro-benchmarks
+    // Web Preview safe micro-benchmarks (cancellable non-blocking async / Web Worker)
+    webAbortRef.current?.abort();
+    const controller = new AbortController();
+    webAbortRef.current = controller;
+
     setBenchProgress({
       running: true,
       activeTestId: 'cpu_single',
@@ -126,6 +145,7 @@ export function BenchmarksAndDatabasePanel({
       'network_latency',
     ];
     for (let i = 0; i < webTests.length; i++) {
+      if (controller.signal.aborted) break;
       setBenchProgress({
         running: true,
         activeTestId: webTests[i],
@@ -134,14 +154,26 @@ export function BenchmarksAndDatabasePanel({
         currentTempC: null,
         abortedReason: null,
       });
-      out.push(await runSafeBrowserMicroBenchmark(webTests[i]));
+      const metric = await runSafeBrowserMicroBenchmark(webTests[i], { signal: controller.signal });
+      if (metric.cancelled || controller.signal.aborted) {
+        setBenchProgress({
+          running: false,
+          activeTestId: null,
+          progressPercent: 100,
+          statusMessage: t.benchCancelled,
+          currentTempC: null,
+          abortedReason: null,
+        });
+        return;
+      }
+      out.push(metric);
     }
     setBenchResults(out);
     setBenchProgress({
       running: false,
       activeTestId: null,
       progressPercent: 100,
-      statusMessage: t.benchCompleted,
+      statusMessage: controller.signal.aborted ? t.benchCancelled : t.benchCompleted,
       currentTempC: null,
       abortedReason: null,
     });
@@ -151,7 +183,15 @@ export function BenchmarksAndDatabasePanel({
     const bridge = getDesktopHardwareIntelligenceBridge();
     if (isDesktopApp && bridge) {
       await bridge.cancelBenchmark();
+      return;
     }
+    webAbortRef.current?.abort();
+    setBenchProgress((prev) => ({
+      ...prev,
+      running: false,
+      activeTestId: null,
+      statusMessage: t.benchCancelled,
+    }));
   };
 
   const handleCheckDbUpdate = async () => {
@@ -160,10 +200,17 @@ export function BenchmarksAndDatabasePanel({
       setDbStatusMsg(t.dbWebOfflineNote);
       return;
     }
+    if (isCustomFeedUrl && !customFeedConsented) {
+      setDbStatusMsg(t.dbCustomFeedConsentLabel);
+      return;
+    }
     setIsUpdatingDb(true);
     setDbStatusMsg(null);
     try {
-      const res = await bridge.checkDbUpdate(feedUrl);
+      const res = await bridge.checkDbUpdate(
+        feedUrl,
+        isCustomFeedUrl ? { allowCustomFeed: customFeedConsented } : undefined
+      );
       if (res) {
         const entries = await bridge.getDbEntries();
         onDbUpdated(res.state, entries || []);
@@ -264,7 +311,7 @@ export function BenchmarksAndDatabasePanel({
               <span>{isDesktopApp ? t.benchStartBtn : t.benchStartWebBtn}</span>
             </button>
 
-            {benchProgress.running && isDesktopApp && (
+            {benchProgress.running && (
               <button
                 type="button"
                 onClick={() => void handleCancelBenchmark()}
@@ -323,7 +370,10 @@ export function BenchmarksAndDatabasePanel({
               <input
                 type="url"
                 value={feedUrl}
-                onChange={(e) => setFeedUrl(e.target.value)}
+                onChange={(e) => {
+                  setFeedUrl(e.target.value);
+                  setCustomFeedConsented(false);
+                }}
                 disabled={!isDesktopApp}
                 dir="ltr"
                 placeholder="https://.../hardware-db.json"
@@ -332,7 +382,7 @@ export function BenchmarksAndDatabasePanel({
               <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  disabled={isUpdatingDb}
+                  disabled={isUpdatingDb || (isDesktopApp && isCustomFeedUrl && !customFeedConsented)}
                   onClick={() => void handleCheckDbUpdate()}
                   className="inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-[12px] font-semibold whitespace-nowrap cursor-pointer disabled:opacity-50"
                 >
@@ -361,6 +411,18 @@ export function BenchmarksAndDatabasePanel({
                 )}
               </div>
             </div>
+
+            {isDesktopApp && isCustomFeedUrl && (
+              <label className="flex items-start gap-2 text-[11.5px] text-amber-800 dark:text-amber-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={customFeedConsented}
+                  onChange={(e) => setCustomFeedConsented(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 dark:border-white/20"
+                />
+                <span>{t.dbCustomFeedConsentLabel}</span>
+              </label>
+            )}
 
             {dbStatusMsg && (
               <div className="text-[12px] text-sky-800 dark:text-[#bae6fd]">{dbStatusMsg}</div>

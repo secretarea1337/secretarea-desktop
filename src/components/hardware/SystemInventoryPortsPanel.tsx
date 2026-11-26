@@ -98,11 +98,19 @@ export function SystemInventoryPortsPanel({
             <KeyValueRow
               label={t.sysTpm}
               value={
-                inventory.system.tpm.present
-                  ? `${inventory.system.tpm.enabled ? 'Enabled' : 'Present'} (${inventory.system.tpm.specVersion || '2.0'})`
-                  : t.intelNotDetected
+                inventory.system.tpm.present === true
+                  ? `${inventory.system.tpm.enabled ? 'Enabled' : 'Present'}${
+                      inventory.system.tpm.specVersion ? ` (${inventory.system.tpm.specVersion})` : ''
+                    }`
+                  : inventory.system.tpm.status === 'requires_admin'
+                  ? t.provRequiresAdmin
+                  : inventory.system.tpm.status === 'not_supported'
+                  ? t.provNotSupported
+                  : inventory.system.tpm.status === 'not_detected'
+                  ? t.intelNotDetected
+                  : t.intelUnknown
               }
-              ltr
+              ltr={inventory.system.tpm.present === true}
             />
             <KeyValueRow
               label={t.sysSensorBackends}
@@ -140,8 +148,8 @@ export function SystemInventoryPortsPanel({
             <KeyValueRow
               label={t.moboRamSupport}
               value={`${inventory.motherboard.ramGenSupported || t.naValue} · ${
-                inventory.motherboard.memorySlotsUsed ?? '?'
-              }/${inventory.motherboard.memorySlotsTotal ?? '?'} slots${
+                inventory.motherboard.memorySlotsUsed ?? t.naValue
+              }/${inventory.motherboard.memorySlotsTotal ?? t.naValue} slots${
                 inventory.motherboard.maxRamGB ? ` (Max ${inventory.motherboard.maxRamGB} GB)` : ''
               }`}
               ltr
@@ -184,6 +192,15 @@ export function SystemInventoryPortsPanel({
         title={t.portsTitle}
         subtitle={t.portsSubtitle}
         icon={<Plug weight="duotone" className="w-4.5 h-4.5" />}
+        rightSlot={
+          <ProvenanceTag
+            provenance={
+              inventory.ports.provenance ||
+              (inventory.sourceMode === 'web_browser' ? 'not_supported' : 'unknown')
+            }
+            labels={provenanceLabels}
+          />
+        }
       >
         <div className="space-y-4">
           <div className="rounded-lg bg-sky-50/80 dark:bg-[#38bdf8]/10 border border-sky-200 dark:border-[#38bdf8]/25 px-3.5 py-2.5 text-[12px] text-sky-900 dark:text-[#bae6fd]">
@@ -291,7 +308,7 @@ export function SystemInventoryPortsPanel({
                       {d.interfaceDetail || d.mediaType} · {formatStorageBytes(d.sizeBytes, t.naValue)}
                     </p>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-end shrink-0">
                     <div className={`text-[12px] font-bold uppercase ${smartBadgeClass(d.smartHealthStatus)}`}>
                       {d.smartHealthStatus === 'unavailable' ? t.smartUnavailable : d.smartHealthStatus}
                     </div>
@@ -361,7 +378,7 @@ export function SystemInventoryPortsPanel({
               <KeyValueRow label={t.cpuTitle} value={inventory.cpu.model || snapshot.cpu.model || t.naValue} />
               <KeyValueRow
                 label={t.coresThreadsLabel}
-                value={`${inventory.cpu.physicalCores ?? snapshot.cpu.physicalCores ?? '?'}C / ${inventory.cpu.logicalThreads ?? snapshot.cpu.logicalThreads ?? '?'}T`}
+                value={`${inventory.cpu.physicalCores ?? snapshot.cpu.physicalCores ?? t.naValue}C / ${inventory.cpu.logicalThreads ?? snapshot.cpu.logicalThreads ?? t.naValue}T`}
                 ltr
               />
               <KeyValueRow
@@ -414,7 +431,7 @@ export function SystemInventoryPortsPanel({
 
         <ExpandablePanel
           title={t.ramDimmsTitle}
-          subtitle={`${inventory.memory.slotsUsed ?? '?'} / ${inventory.memory.slotsTotal ?? '?'} ${t.ramSlotsLabel} · ${inventory.memory.channelMode || t.intelUnknown}`}
+          subtitle={`${inventory.memory.slotsUsed ?? t.naValue} / ${inventory.memory.slotsTotal ?? t.naValue} ${t.ramSlotsLabel} · ${inventory.memory.channelMode || t.intelUnknown}`}
           icon={<Memory weight="duotone" className="w-4.5 h-4.5" />}
           defaultExpanded={false}
         >
@@ -448,8 +465,8 @@ export function SystemInventoryPortsPanel({
                       </span>
                     </div>
                     <div className="text-[11.5px] text-slate-600 dark:text-[#9cb0c9] mt-0.5" dir="ltr">
-                      {m.manufacturer || 'Unknown Vendor'} · {m.partNumber || 'Part N/A'} ·{' '}
-                      {m.configuredSpeedMhz || m.ratedSpeedMhz ? `${m.configuredSpeedMhz || m.ratedSpeedMhz} MT/s` : 'Speed N/A'}
+                      {m.manufacturer || t.intelUnknown} · {m.partNumber || t.naValue} ·{' '}
+                      {m.configuredSpeedMhz || m.ratedSpeedMhz ? `${m.configuredSpeedMhz || m.ratedSpeedMhz} MT/s` : t.naValue}
                       {m.formFactor ? ` · ${m.formFactor}` : ''}
                       {m.isSolderedHint ? ' · Soldered' : ''}
                     </div>
@@ -486,8 +503,8 @@ export function SystemInventoryPortsPanel({
                     </span>
                   </div>
                   <div dir="ltr" className="font-mono-tabular text-[11.5px] text-slate-600 dark:text-[#9cb0c9]">
-                    {d.currentResolution || t.naValue} @ {d.refreshRateHz ? `${d.refreshRateHz} Hz` : '? Hz'} ·{' '}
-                    {d.connectionType || 'Connection N/A'}
+                    {d.currentResolution || t.naValue} @ {d.refreshRateHz ? `${d.refreshRateHz} Hz` : t.naValue} ·{' '}
+                    {d.connectionType || t.naValue}
                     {d.colorDepthBits ? ` · ${d.colorDepthBits}-bit` : ''}
                   </div>
                 </div>
@@ -508,7 +525,11 @@ export function SystemInventoryPortsPanel({
             </div>
             {inventory.power.battery?.present && (
               <div className="space-y-0.5">
-                <KeyValueRow label={t.laptopBatteryLabel} value={`${inventory.power.battery.chargePercent ?? '?'}%`} ltr />
+                <KeyValueRow
+                  label={t.laptopBatteryLabel}
+                  value={inventory.power.battery.chargePercent !== null ? `${inventory.power.battery.chargePercent}%` : t.naValue}
+                  ltr
+                />
                 <KeyValueRow
                   label={t.laptopHealthLabel}
                   value={
@@ -565,7 +586,7 @@ export function SystemInventoryPortsPanel({
               <WifiHigh className="w-4 h-4" />
               <span>{t.networkTitle}</span>
             </h4>
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-64 overflow-y-auto pe-1">
               {inventory.network.adapters
                 .filter((a) => a.kind !== 'virtual')
                 .map((a) => (
@@ -594,7 +615,7 @@ export function SystemInventoryPortsPanel({
             <h4 className="text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#8b9bb4]">
               {t.peripheralsLabel} & {t.systemComponentsLabel}
             </h4>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-64 overflow-y-auto pe-1">
               {inventory.peripherals.length === 0 && inventory.otherComponents.length === 0 ? (
                 <div className="text-[12px] text-slate-500 dark:text-[#8b9bb4]">{t.desktopOnlyHint}</div>
               ) : (

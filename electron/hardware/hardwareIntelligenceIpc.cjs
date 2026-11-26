@@ -20,10 +20,24 @@ function injectStrictReportCsp(rawHtml) {
   return `<!doctype html><html><head>${cspTag}</head><body>${html}</body></html>`;
 }
 
-function createHardwareIntelligenceManager({ getMainWindow, getUserDataPath, getLatestSnapshot }) {
-  const deepCollector = createDeepInventoryCollector();
+function createHardwareIntelligenceManager({
+  getMainWindow,
+  getUserDataPath,
+  getLatestSnapshot,
+  getFreshSnapshot,
+  getLhmLibraryInfo,
+  onElevationDetected,
+}) {
+  const deepCollector = createDeepInventoryCollector({
+    getLhmLibraryInfo,
+    onElevationDetected,
+  });
   const dbManager = createHardwareDbManager({ getMainWindow, getUserDataPath });
-  const benchmarkRunner = createBenchmarkRunner({ getMainWindow, getLatestSnapshot });
+  const benchmarkRunner = createBenchmarkRunner({
+    getMainWindow,
+    getLatestSnapshot,
+    getFreshSnapshot,
+  });
 
   async function exportReportJson({ jsonContent, defaultFilename }) {
     const rawJson = String(jsonContent || '{}');

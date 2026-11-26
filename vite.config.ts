@@ -70,6 +70,56 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      chunkSizeWarningLimit: 1800,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const norm = id.replace(/\\/g, '/');
+            if (norm.includes('/node_modules/')) {
+              if (norm.includes('/@phosphor-icons/')) {
+                return 'vendor-icons';
+              }
+              if (
+                norm.includes('/node_modules/react-dom/') ||
+                norm.includes('/node_modules/react/') ||
+                norm.includes('/node_modules/scheduler/')
+              ) {
+                return 'vendor-react';
+              }
+              if (
+                norm.includes('/node_modules/motion/') ||
+                norm.includes('/node_modules/motion-dom/') ||
+                norm.includes('/node_modules/motion-utils/') ||
+                norm.includes('/node_modules/framer-motion/')
+              ) {
+                return 'vendor-motion';
+              }
+              return 'vendor-misc';
+            }
+            if (norm.includes('/src/i18n/')) {
+              return 'app-i18n';
+            }
+            if (norm.includes('/src/utils/') || norm.includes('/src/services/')) {
+              return 'app-shared';
+            }
+            if (norm.includes('/src/data/sheetExtrasSnapshot.json')) {
+              return 'data-sheet-extras';
+            }
+            if (norm.includes('/src/data/gamesBatch')) {
+              return 'data-games-batches';
+            }
+            if (norm.includes('/src/data/hardwareDatabase.ts')) {
+              return 'data-hardware-db';
+            }
+            if (norm.includes('/src/data/releaseChangelog.ts')) {
+              return 'data-release-notes';
+            }
+            return undefined;
+          },
+        },
+      },
+    },
     server: {
       host: '0.0.0.0',
       port: 3000,

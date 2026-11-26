@@ -22,18 +22,18 @@ import {
   Warning,
 } from '@phosphor-icons/react';
 import type { GameItem, SheetCatalogData } from '../types';
-import { getStudioTotalCount, sortStudiosByTop } from '../utils/parsers';
+import { getStudioTotalCount, resolveSheetRefItem, sortStudiosByTop } from '../utils/parsers';
 import { evaluateCanRunGame, type CanRunEvaluation } from '../services/canRunIt';
 import type { SystemHardwareSpecs } from '../services/systemSpecs';
 import { GameCover } from './GameCover';
-import { resolveSheetRefItem } from './ExtrasView';
 import { SectionSourceBadge } from './SectionBadge';
-import { StudioEmblem } from './StudiosView';
+import { StudioEmblem } from './StudioEmblem';
 import type { AppLanguage } from '../services/launcherSettings';
 import { getTranslations } from '../i18n/translations';
 
 interface StoreViewProps {
   catalog: SheetCatalogData;
+  isCatalogLoading?: boolean;
   favorites: Set<string>;
   systemSpecs?: SystemHardwareSpecs;
   canRunItEnabled?: boolean;
@@ -700,6 +700,7 @@ const HeroSpotlightSection = memo(function HeroSpotlightSection({
 
 export const StoreView = memo(function StoreView({
   catalog,
+  isCatalogLoading = false,
   systemSpecs,
   canRunItEnabled = true,
   isRefreshingSpecs = false,
@@ -1036,7 +1037,11 @@ export const StoreView = memo(function StoreView({
   if (!fallbackFeatured) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#f4f6f9] text-slate-600 dark:bg-[#1b222c] dark:text-[#8b9bb4]">
-        {t.noCatalogLoaded}
+        {isCatalogLoading ? (
+          <div className="w-7 h-7 border-2 border-[#1a9fff] border-t-transparent rounded-full animate-spin" />
+        ) : (
+          t.noCatalogLoaded
+        )}
       </div>
     );
   }

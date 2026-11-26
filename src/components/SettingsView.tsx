@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react';
 import {
   AppWindow,
   ArrowCounterClockwise,
+  ArrowsClockwise,
   ArrowSquareOut,
   Bell,
+  CaretDown,
+  CaretUp,
+  ChartLineUp,
   Check,
   CheckCircle,
   ClockCounterClockwise,
@@ -11,15 +15,20 @@ import {
   DownloadSimple,
   FloppyDisk,
   FolderOpen,
+  Gauge,
   Globe,
   Info,
   Laptop,
+  Leaf,
+  Lightning,
   Magnet,
   MagnifyingGlass,
   Moon,
   MusicNotes,
   PlugsConnected,
   Power,
+  Scales,
+  SlidersHorizontal,
   Sparkle,
   SpeakerHigh,
   SpeakerLow,
@@ -29,12 +38,17 @@ import {
 } from '@phosphor-icons/react';
 import {
   getAppVersionString,
+  getEffectivePerformanceConfig,
   type AppLanguage,
   type CustomThemeConfig,
   type LauncherSettings,
 } from '../services/launcherSettings';
 import type {
   CloseBehaviorMode,
+  EffectivePerformanceConfig,
+  InternalPerfMetricsSnapshot,
+  PerformanceAdvancedSettings,
+  PerformanceMode,
   PresentMonSetupState,
   QbitSetupState,
   TorrentConnectionTestResult,
@@ -42,6 +56,7 @@ import type {
   TorrentIntegrationConfig,
 } from '../types';
 import { DEFAULT_TORRENT_CONFIG, isLoopbackHost } from '../services/downloadManager';
+import { getDesktopSettingsBridge } from '../services/desktopUpdater';
 import { getTranslations, LANGUAGE_OPTIONS } from '../i18n/translations';
 import { CustomThemeBuilder } from './CustomThemeBuilder';
 import { Ps5Icon } from './SectionBadge';
@@ -94,6 +109,9 @@ interface SettingsViewProps {
   onOpenUpdateHistory?: () => void;
   onOpenNotifications?: () => void;
   onReplayOnboarding?: () => void;
+  effectivePerformance?: EffectivePerformanceConfig;
+  onChangePerformanceMode?: (mode: PerformanceMode) => void;
+  onUpdatePerformanceAdvanced?: (patch: Partial<PerformanceAdvancedSettings>) => void;
 }
 
 interface ToggleSwitchProps {
@@ -242,12 +260,63 @@ export function SettingsView({
   onOpenUpdateHistory,
   onOpenNotifications,
   onReplayOnboarding,
+  effectivePerformance: effectivePerformanceProp,
+  onChangePerformanceMode,
+  onUpdatePerformanceAdvanced,
 }: SettingsViewProps) {
   const tr = getTranslations(settings.language);
   const t = tr.settings;
+  const tPerf = tr.performance;
   const tp = tr.presentMonSetup;
   const hasConsoleTheme = settings.alwaysPs5Theme || settings.alwaysXboxTheme;
   const currentVersion = desktopVersion || getAppVersionString();
+  const effectivePerf =
+    effectivePerformanceProp || getEffectivePerformanceConfig(settings);
+
+  const [showAdvancedPerf, setShowAdvancedPerf] = useState(false);
+  const [desktopPerfMetrics, setDesktopPerfMetrics] =
+    useState<InternalPerfMetricsSnapshot | null>(null);
+  const [webPerfSample, setWebPerfSample] = useState<{
+    jsHeapUsedMB: number | null;
+    domNodes: number;
+    sampledAt: number;
+  } | null>(null);
+  const [isSamplingPerf, setIsSamplingPerf] = useState(false);
+
+  const sampleRuntimeFootprint = async () => {
+    setIsSamplingPerf(true);
+    try {
+      const bridge = getDesktopSettingsBridge();
+      if (isDesktopApp && bridge?.getPerformanceMetrics) {
+        const snapshot = await bridge.getPerformanceMetrics();
+        if (snapshot) {
+          setDesktopPerfMetrics(snapshot);
+          return;
+        }
+      }
+      const perfMem = (
+        performance as unknown as { memory?: { usedJSHeapSize?: number } }
+      )?.memory;
+      const heapMB =
+        typeof perfMem?.usedJSHeapSize === 'number'
+          ? Number((perfMem.usedJSHeapSize / (1024 * 1024)).toFixed(1))
+          : null;
+      const domNodes =
+        typeof document !== 'undefined' ? document.querySelectorAll('*').length : 0;
+      setWebPerfSample({
+        jsHeapUsedMB: heapMB,
+        domNodes,
+        sampledAt: Date.now(),
+      });
+    } finally {
+      setIsSamplingPerf(false);
+    }
+  };
+
+  useEffect(() => {
+    void sampleRuntimeFootprint();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDesktopApp]);
 
   const [draftTorrent, setDraftTorrent] = useState<TorrentIntegrationConfig>(torrentConfig);
   const [isDetectingTorrent, setIsDetectingTorrent] = useState(false);
@@ -1013,7 +1082,440 @@ export function SettingsView({
           </div>
         </section>
 
-        {/* 5. Downloads & Storage */}
+        {/* 5. Performance & Resource Mode */}
+        <section className="sa-ps5-panel rounded-xl bg-white dark:bg-[#171d25] border border-slate-200 dark:border-white/[0.08] p-4 sm:p-5 space-y-4 shadow-sm dark:shadow-lg">
+          <div className="flex flex-wrap items-start justify-between gap-3 pb-2.5 border-b border-slate-200 dark:border-white/[0.06]">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <span className="w-9 h-9 rounded-lg bg-sky-500/10 dark:bg-[#1a9fff]/15 border border-sky-500/25 dark:border-[#1a9fff]/35 text-[#0284c7] dark:text-[#66c0f4] flex items-center justify-center shrink-0">
+                <Gauge className="w-4.5 h-4.5" />
+              </span>
+              <div className="space-y-0.5 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-[14.5px] font-bold text-slate-900 dark:text-white tracking-tight">
+                    {tPerf.sectionTitle}
+                  </h2>
+                  <span className="px-2 py-0.5 rounded text-[10.5px] font-semibold bg-emerald-500/12 border border-emerald-500/30 text-emerald-700 dark:text-[#4ade80]">
+                    {tPerf.liveApplyBadge}
+                  </span>
+                </div>
+                <p className="text-[12px] text-slate-600 dark:text-[#8b9bb4] leading-relaxed">
+                  {tPerf.sectionSubtitle}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Performance Preset Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {(
+              [
+                {
+                  id: 'eco' as const,
+                  title: tPerf.modeEcoTitle,
+                  desc: tPerf.modeEcoDesc,
+                  Icon: Leaf,
+                  recommended: false,
+                },
+                {
+                  id: 'balanced' as const,
+                  title: tPerf.modeBalancedTitle,
+                  desc: tPerf.modeBalancedDesc,
+                  Icon: Scales,
+                  recommended: true,
+                },
+                {
+                  id: 'performance' as const,
+                  title: tPerf.modePerformanceTitle,
+                  desc: tPerf.modePerformanceDesc,
+                  Icon: Lightning,
+                  recommended: false,
+                },
+              ]
+            ).map(({ id, title, desc, Icon, recommended }) => {
+              const isSelected = settings.performanceMode === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onChangePerformanceMode?.(id)}
+                  aria-pressed={isSelected}
+                  className={`p-3.5 rounded-lg border text-start transition-colors flex flex-col gap-2 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#0284c7]/12 dark:bg-[#1a9fff]/15 border-[#0284c7] dark:border-[#38bdf8] shadow-xs'
+                      : 'bg-slate-50 dark:bg-[#12171f] border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.18]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-2 font-semibold text-[13.5px] text-slate-900 dark:text-white">
+                      <Icon
+                        className={`w-4 h-4 shrink-0 ${
+                          isSelected
+                            ? 'text-[#0284c7] dark:text-[#38bdf8]'
+                            : 'text-slate-500 dark:text-[#8b9bb4]'
+                        }`}
+                      />
+                      <span>{title}</span>
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {recommended && !isSelected && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-200/80 dark:bg-white/[0.08] text-slate-700 dark:text-[#cbd5e1]">
+                          {tPerf.recommendedBadge}
+                        </span>
+                      )}
+                      {isSelected && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#0284c7] dark:bg-[#1a9fff] text-white">
+                          {tPerf.activeBadge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[11.5px] text-slate-600 dark:text-[#8b9bb4] leading-relaxed">
+                    {desc}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Collapsible Advanced Resource Controls */}
+          <div className="rounded-lg border border-slate-200 dark:border-white/[0.07] bg-slate-50/70 dark:bg-[#12171f]/80 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedPerf((prev) => !prev)}
+              aria-expanded={showAdvancedPerf}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-start hover:bg-slate-100/80 dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
+            >
+              <span className="inline-flex items-center gap-2.5 min-w-0">
+                <SlidersHorizontal className="w-4 h-4 text-[#0284c7] dark:text-[#66c0f4] shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-semibold text-slate-900 dark:text-white">
+                    {tPerf.advancedTitle}
+                  </span>
+                  <span className="block text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                    {tPerf.advancedDesc}
+                  </span>
+                </span>
+              </span>
+              {showAdvancedPerf ? (
+                <CaretUp className="w-4 h-4 text-slate-500 dark:text-[#8b9bb4] shrink-0" />
+              ) : (
+                <CaretDown className="w-4 h-4 text-slate-500 dark:text-[#8b9bb4] shrink-0" />
+              )}
+            </button>
+
+            {showAdvancedPerf && (
+              <div className="p-3.5 sm:p-4 pt-2 border-t border-slate-200 dark:border-white/[0.06] space-y-3">
+                {/* Pause on minimize */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1.5">
+                  <div className="space-y-0.5 min-w-0">
+                    <span
+                      id="perf-pause-minimize"
+                      className="block text-[12.5px] font-semibold text-slate-900 dark:text-white"
+                    >
+                      {tPerf.pauseOnMinimizeTitle}
+                    </span>
+                    <p className="text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                      {tPerf.pauseOnMinimizeDesc}
+                    </p>
+                  </div>
+                  <ToggleSwitch
+                    checked={settings.performanceAdvanced.pauseBackgroundWhenMinimized}
+                    labelId="perf-pause-minimize"
+                    onLabel={t.activeLabel}
+                    offLabel={t.inactiveLabel}
+                    onChange={(next) =>
+                      onUpdatePerformanceAdvanced?.({ pauseBackgroundWhenMinimized: next })
+                    }
+                  />
+                </div>
+
+                {/* Reduce visual effects */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1.5 border-t border-slate-200/70 dark:border-white/[0.05]">
+                  <div className="space-y-0.5 min-w-0">
+                    <span
+                      id="perf-reduce-effects"
+                      className="block text-[12.5px] font-semibold text-slate-900 dark:text-white"
+                    >
+                      {tPerf.reduceEffectsTitle}
+                    </span>
+                    <p className="text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                      {tPerf.reduceEffectsDesc}
+                    </p>
+                  </div>
+                  <ToggleSwitch
+                    checked={effectivePerf.reduceVisualEffects}
+                    disabled={settings.performanceMode === 'eco'}
+                    labelId="perf-reduce-effects"
+                    onLabel={t.activeLabel}
+                    offLabel={t.inactiveLabel}
+                    onChange={(next) =>
+                      onUpdatePerformanceAdvanced?.({ reduceVisualEffects: next })
+                    }
+                  />
+                </div>
+
+                {/* Adaptive Torrent Polling */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1.5 border-t border-slate-200/70 dark:border-white/[0.05]">
+                  <div className="space-y-0.5 min-w-0">
+                    <span
+                      id="perf-adaptive-torrent"
+                      className="block text-[12.5px] font-semibold text-slate-900 dark:text-white"
+                    >
+                      {tPerf.adaptiveTorrentTitle}
+                    </span>
+                    <p className="text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                      {tPerf.adaptiveTorrentDesc}
+                    </p>
+                  </div>
+                  <ToggleSwitch
+                    checked={settings.performanceAdvanced.adaptiveTorrentPolling}
+                    labelId="perf-adaptive-torrent"
+                    onLabel={t.activeLabel}
+                    offLabel={t.inactiveLabel}
+                    onChange={(next) =>
+                      onUpdatePerformanceAdvanced?.({ adaptiveTorrentPolling: next })
+                    }
+                  />
+                </div>
+
+                {/* Defer background startup checks */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1.5 border-t border-slate-200/70 dark:border-white/[0.05]">
+                  <div className="space-y-0.5 min-w-0">
+                    <span
+                      id="perf-defer-sync"
+                      className="block text-[12.5px] font-semibold text-slate-900 dark:text-white"
+                    >
+                      {tPerf.deferSyncTitle}
+                    </span>
+                    <p className="text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                      {tPerf.deferSyncDesc}
+                    </p>
+                  </div>
+                  <ToggleSwitch
+                    checked={effectivePerf.deferBackgroundChecks}
+                    disabled={settings.performanceMode === 'eco'}
+                    labelId="perf-defer-sync"
+                    onLabel={t.activeLabel}
+                    offLabel={t.inactiveLabel}
+                    onChange={(next) =>
+                      onUpdatePerformanceAdvanced?.({ deferBackgroundChecks: next })
+                    }
+                  />
+                </div>
+
+                {/* Hardware Monitor Sampling Interval */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1.5 border-t border-slate-200/70 dark:border-white/[0.05]">
+                  <div className="space-y-0.5 min-w-0">
+                    <span className="block text-[12.5px] font-semibold text-slate-900 dark:text-white">
+                      {tPerf.hwIntervalTitle}
+                    </span>
+                    <p className="text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                      {tPerf.hwIntervalDesc}
+                    </p>
+                  </div>
+                  <div dir="ltr" className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    {(['auto', 1000, 1500, 2000, 3000, 5000] as const).map((val) => {
+                      const active = settings.performanceAdvanced.hardwareMonitorIntervalMs === val;
+                      return (
+                        <button
+                          key={String(val)}
+                          type="button"
+                          onClick={() =>
+                            onUpdatePerformanceAdvanced?.({ hardwareMonitorIntervalMs: val })
+                          }
+                          className={`px-2.5 py-1 rounded text-[11px] font-mono-tabular font-semibold border transition-colors cursor-pointer ${
+                            active
+                              ? 'bg-[#0284c7] dark:bg-[#1a9fff] border-[#0284c7] dark:border-[#38bdf8] text-white'
+                              : 'bg-white dark:bg-[#0e131b] border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-[#cbd5e1] hover:border-slate-300 dark:hover:border-white/[0.22]'
+                          }`}
+                        >
+                          {val === 'auto' ? tPerf.hwIntervalAuto : `${val / 1000}s`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Download UI Throttle */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1.5 border-t border-slate-200/70 dark:border-white/[0.05]">
+                  <div className="space-y-0.5 min-w-0">
+                    <span className="block text-[12.5px] font-semibold text-slate-900 dark:text-white">
+                      {tPerf.dlThrottleTitle}
+                    </span>
+                    <p className="text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                      {tPerf.dlThrottleDesc}
+                    </p>
+                  </div>
+                  <div dir="ltr" className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    {(['auto', 200, 350, 750] as const).map((val) => {
+                      const active = settings.performanceAdvanced.downloadUiThrottleMs === val;
+                      return (
+                        <button
+                          key={String(val)}
+                          type="button"
+                          onClick={() =>
+                            onUpdatePerformanceAdvanced?.({ downloadUiThrottleMs: val })
+                          }
+                          className={`px-2.5 py-1 rounded text-[11px] font-mono-tabular font-semibold border transition-colors cursor-pointer ${
+                            active
+                              ? 'bg-[#0284c7] dark:bg-[#1a9fff] border-[#0284c7] dark:border-[#38bdf8] text-white'
+                              : 'bg-white dark:bg-[#0e131b] border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-[#cbd5e1] hover:border-slate-300 dark:hover:border-white/[0.22]'
+                          }`}
+                        >
+                          {val === 'auto' ? tPerf.dlThrottleAuto : `${val} ms`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* On-Demand Runtime Footprint Panel (No continuous background polling) */}
+          <div className="sa-ps5-subpanel p-3.5 sm:p-4 rounded-lg bg-slate-50 dark:bg-[#12171f] border border-slate-200 dark:border-white/[0.07] space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                <ChartLineUp className="w-4 h-4 text-[#0284c7] dark:text-[#66c0f4] shrink-0 mt-0.5" />
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-[13px] font-semibold text-slate-900 dark:text-white">
+                    {tPerf.auditTitle}
+                  </div>
+                  <p className="text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                    {tPerf.auditDesc}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isSamplingPerf}
+                onClick={() => void sampleRuntimeFootprint()}
+                className="inline-flex items-center gap-1.5 min-h-[34px] px-3 py-1 rounded-lg bg-white hover:bg-slate-100 dark:bg-[#1e2633] dark:hover:bg-[#273142] border border-slate-200 dark:border-white/[0.1] text-[11.5px] font-semibold text-slate-800 dark:text-white disabled:opacity-55 transition-colors cursor-pointer shrink-0"
+              >
+                <ArrowsClockwise
+                  className={`w-3.5 h-3.5 ${isSamplingPerf ? 'motion-safe:animate-spin' : ''}`}
+                />
+                <span>{tPerf.auditRefreshBtn}</span>
+              </button>
+            </div>
+
+            {desktopPerfMetrics ? (
+              <div className="space-y-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="p-2.5 rounded-md bg-white dark:bg-[#0e131b] border border-slate-200 dark:border-white/[0.06]">
+                    <div className="text-[10.5px] text-slate-500 dark:text-[#8b9bb4]">
+                      {tPerf.auditMainCpuLabel}
+                    </div>
+                    <div dir="ltr" className="text-[13px] font-bold font-mono-tabular text-slate-900 dark:text-white">
+                      {desktopPerfMetrics.mainCpuPercent.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-md bg-white dark:bg-[#0e131b] border border-slate-200 dark:border-white/[0.06]">
+                    <div className="text-[10.5px] text-slate-500 dark:text-[#8b9bb4]">
+                      {tPerf.auditMainHeapLabel}
+                    </div>
+                    <div dir="ltr" className="text-[13px] font-bold font-mono-tabular text-slate-900 dark:text-white">
+                      {desktopPerfMetrics.mainHeapUsedMB.toFixed(1)} MB
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-md bg-white dark:bg-[#0e131b] border border-slate-200 dark:border-white/[0.06]">
+                    <div className="text-[10.5px] text-slate-500 dark:text-[#8b9bb4]">
+                      {tPerf.auditMainRssLabel}
+                    </div>
+                    <div dir="ltr" className="text-[13px] font-bold font-mono-tabular text-slate-900 dark:text-white">
+                      {desktopPerfMetrics.mainProcessRssMB.toFixed(1)} MB
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-md bg-white dark:bg-[#0e131b] border border-slate-200 dark:border-white/[0.06]">
+                    <div className="text-[10.5px] text-slate-500 dark:text-[#8b9bb4]">
+                      {tPerf.auditTotalProcessesLabel}
+                    </div>
+                    <div dir="ltr" className="text-[13px] font-bold font-mono-tabular text-[#0284c7] dark:text-[#38bdf8]">
+                      {desktopPerfMetrics.totalAppRssMB.toFixed(1)} MB ({desktopPerfMetrics.processCount})
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-600 dark:text-[#9cb0c9]">
+                  <span>
+                    {tPerf.auditHwMonitorLabel}:{' '}
+                    <strong className="text-slate-900 dark:text-white">
+                      {desktopPerfMetrics.pollers.hardwareMonitorActive
+                        ? `${tPerf.auditStateActive} (${desktopPerfMetrics.pollers.hardwareIntervalMs ?? effectivePerf.hardwarePollIntervalMs}ms)`
+                        : desktopPerfMetrics.pollers.hardwarePausedByHide
+                        ? tPerf.auditStatePausedHidden
+                        : tPerf.auditStateOff}
+                    </strong>
+                  </span>
+                  <span>
+                    {tPerf.auditDownloadsLabel}:{' '}
+                    <strong dir="ltr" className="font-mono-tabular text-slate-900 dark:text-white">
+                      {desktopPerfMetrics.pollers.activeDownloadsCount}
+                    </strong>
+                  </span>
+                  <span>
+                    {tPerf.auditTorrentPollerLabel}:{' '}
+                    <strong className="text-slate-900 dark:text-white">
+                      {desktopPerfMetrics.pollers.torrentPollerActive
+                        ? `${tPerf.auditStateActive} (${desktopPerfMetrics.pollers.torrentPollIntervalMs ?? effectivePerf.torrentActivePollMs}ms)`
+                        : tPerf.auditStateIdle}
+                    </strong>
+                  </span>
+                  {typeof desktopPerfMetrics.rendererCpuPercent === 'number' && (
+                    <span>
+                      Renderer CPU:{' '}
+                      <strong dir="ltr" className="font-mono-tabular text-slate-900 dark:text-white">
+                        {desktopPerfMetrics.rendererCpuPercent.toFixed(1)}%
+                      </strong>
+                    </span>
+                  )}
+                  {typeof desktopPerfMetrics.gpuCpuPercent === 'number' && (
+                    <span>
+                      GPU CPU:{' '}
+                      <strong dir="ltr" className="font-mono-tabular text-slate-900 dark:text-white">
+                        {desktopPerfMetrics.gpuCpuPercent.toFixed(1)}%
+                      </strong>
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-slate-500 dark:text-[#8b9bb4]">
+                  {tPerf.auditGpuProcessNote}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5 text-[11.5px] text-slate-600 dark:text-[#8b9bb4]">
+                {webPerfSample && (
+                  <div className="flex flex-wrap items-center gap-4">
+                    <span>
+                      JS Heap:{' '}
+                      <strong dir="ltr" className="font-mono-tabular text-slate-900 dark:text-white">
+                        {webPerfSample.jsHeapUsedMB !== null ? `${webPerfSample.jsHeapUsedMB} MB` : 'N/A'}
+                      </strong>
+                    </span>
+                    <span>
+                      DOM Nodes:{' '}
+                      <strong dir="ltr" className="font-mono-tabular text-slate-900 dark:text-white">
+                        {webPerfSample.domNodes}
+                      </strong>
+                    </span>
+                    <span>
+                      Poll Interval:{' '}
+                      <strong dir="ltr" className="font-mono-tabular text-slate-900 dark:text-white">
+                        {effectivePerf.hardwarePollIntervalMs} ms
+                      </strong>
+                    </span>
+                  </div>
+                )}
+                <p className="text-[11px] text-slate-500 dark:text-[#8b9bb4]">
+                  {tPerf.auditWebNote}
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 6. Downloads & Storage */}
         <section className="sa-ps5-panel rounded-xl bg-white dark:bg-[#171d25] border border-slate-200 dark:border-white/[0.08] p-4 sm:p-5 space-y-3.5 shadow-sm dark:shadow-lg">
           <div className="flex items-center gap-2.5 pb-2.5 border-b border-slate-200 dark:border-white/[0.06]">
             <FolderOpen className="w-4 h-4 text-[#0284c7] dark:text-[#66c0f4] shrink-0" />

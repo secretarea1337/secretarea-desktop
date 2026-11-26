@@ -54,6 +54,10 @@ contextBridge.exposeInMainWorld('secretAreaDesktop', {
     exitApplication: () => ipcRenderer.invoke('app:exit-completely'),
     completeOnboarding: (payload = true) =>
       ipcRenderer.invoke('settings:complete-onboarding', payload),
+    setPerformanceSettings: (payload) =>
+      ipcRenderer.invoke('settings:set-performance', payload),
+    getPerformanceMetrics: () =>
+      ipcRenderer.invoke('app:get-performance-metrics'),
   },
   downloads: {
     getState: () => ipcRenderer.invoke('downloads:get-state'),
@@ -215,6 +219,26 @@ contextBridge.exposeInMainWorld('secretAreaDesktop', {
       ipcRenderer.on('cleaner:progress', listener);
       return () => {
         ipcRenderer.removeListener('cleaner:progress', listener);
+      };
+    },
+  },
+  openSourceTools: {
+    getState: () => ipcRenderer.invoke('oss-tools:get-state'),
+    checkUpdates: (payload) => ipcRenderer.invoke('oss-tools:check-updates', payload || {}),
+    installOrUpdate: (payload) => ipcRenderer.invoke('oss-tools:install-or-update', payload || {}),
+    cancel: (payload) => ipcRenderer.invoke('oss-tools:cancel', payload || {}),
+    rollback: (payload) => ipcRenderer.invoke('oss-tools:rollback', payload || {}),
+    openExternalLink: (payload) => ipcRenderer.invoke('oss-tools:open-link', payload || {}),
+    onStateChange: (callback) => {
+      if (typeof callback !== 'function') {
+        return () => {};
+      }
+      const listener = (_event, state) => {
+        callback(state);
+      };
+      ipcRenderer.on('oss-tools:status', listener);
+      return () => {
+        ipcRenderer.removeListener('oss-tools:status', listener);
       };
     },
   },

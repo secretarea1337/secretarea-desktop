@@ -14,6 +14,7 @@ import type {
   HardwareMonitorSnapshot,
   HardwareNetworkInterfaceMetrics,
   HardwareStorageDriveMetrics,
+  OpenSourceToolsManagerState,
 } from '../types';
 
 export interface DesktopHardwareMonitorBridge {
@@ -58,6 +59,16 @@ export interface DesktopPcCleanerBridge {
   clean: (payload: { categoryIds: string[]; confirmationToken: string }) => Promise<CleanerCleanResult | null>;
   cancel: () => Promise<{ ok: boolean }>;
   onProgress: (callback: (event: CleanerProgressEvent) => void) => () => void;
+}
+
+export interface DesktopOpenSourceToolsBridge {
+  getState: () => Promise<OpenSourceToolsManagerState | null>;
+  checkUpdates: (payload?: { toolId?: string; force?: boolean }) => Promise<{ ok: boolean; error?: string; state: OpenSourceToolsManagerState } | null>;
+  installOrUpdate: (payload: { toolId?: string; userConfirmed: boolean }) => Promise<{ ok: boolean; cancelled?: boolean; error?: string; state: OpenSourceToolsManagerState } | null>;
+  cancel: (payload?: { toolId?: string }) => Promise<{ ok: boolean }>;
+  rollback: (payload: { toolId?: string; userConfirmed: boolean }) => Promise<{ ok: boolean; error?: string; state: OpenSourceToolsManagerState } | null>;
+  openExternalLink: (payload: { toolId?: string; kind: 'repository' | 'website' | 'source' | 'license' | 'nuget' | 'releases' }) => Promise<{ ok: boolean; url?: string; error?: string }>;
+  onStateChange: (callback: (state: OpenSourceToolsManagerState) => void) => () => void;
 }
 
 export function getDesktopHardwareMonitorBridge(): DesktopHardwareMonitorBridge | null {
@@ -106,6 +117,18 @@ export function getDesktopPcCleanerBridge(): DesktopPcCleanerBridge | null {
     }
   ).secretAreaDesktop;
   return desktop?.pcCleaner || null;
+}
+
+export function getDesktopOpenSourceToolsBridge(): DesktopOpenSourceToolsBridge | null {
+  if (typeof window === 'undefined') return null;
+  const desktop = (
+    window as unknown as {
+      secretAreaDesktop?: {
+        openSourceTools?: DesktopOpenSourceToolsBridge;
+      };
+    }
+  ).secretAreaDesktop;
+  return desktop?.openSourceTools || null;
 }
 
 export async function collectBrowserDeepInventory(): Promise<DeepHardwareInventory> {
@@ -603,7 +626,7 @@ export function selectPrimaryGpu(
     } else if (
       /\brx\s*\d{3,4}/i.test(model) ||
       model.includes('radeon pro') ||
-      (mfg.includes('intel') && /\barc\b.*\b[ab]\d{3}/i.test(model))
+      (mfg.includes('intel') && /\barc(?:\((?:r|tm)\)|[®™])?\s*(?:pro\s*)?[ab]\d{2,3}/i.test(model))
     ) {
       score += 90;
     } else if (mfg.includes('amd') || model.includes('radeon')) {
@@ -612,7 +635,12 @@ export function selectPrimaryGpu(
         model.includes('radeon graphics') ||
         /\b[678]\d0m\b/.test(model);
       score += isIgpu ? 30 : 55;
-    } else if (mfg.includes('intel') || model.includes('uhd') || model.includes('iris')) {
+    } else if (
+      mfg.includes('intel') ||
+      model.includes('uhd') ||
+      model.includes('iris') ||
+      /\barc\b/i.test(model)
+    ) {
       score += 25;
     } else {
       score += 10;

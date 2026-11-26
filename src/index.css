@@ -1482,10 +1482,12 @@ html.theme-custom body {
 @keyframes sa-spin-hub-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4), 0 6px 18px rgba(0, 0, 0, 0.35);
+    transform: translateZ(0) scale(1);
+    opacity: 0.94;
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(56, 189, 248, 0), 0 8px 24px rgba(26, 159, 255, 0.45);
+    transform: translateZ(0) scale(1.045);
+    opacity: 1;
   }
 }
 
@@ -1510,6 +1512,7 @@ html.theme-custom body {
 }
 
 .sa-spin-hub-glow {
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.34), 0 6px 18px rgba(0, 0, 0, 0.35);
   animation: sa-spin-hub-glow 2.2s ease-in-out infinite;
 }
 
@@ -1573,3 +1576,29 @@ html.sa-window-inactive .sa-cursor-hourglass-flip {
   animation-play-state: paused !important;
 }
 
+/* ==========================================================================
+   Eco / Reduced Visual Effects Mode (GPU Backdrop-Blur & Ambient Layer Savings)
+   ========================================================================== */
+html.sa-reduce-effects .theme-ps5 .sa-app-shell::before,
+html.sa-reduce-effects .theme-ps5 .sa-app-shell::after,
+html.sa-reduce-effects .theme-xbox .sa-app-shell::before,
+html.sa-reduce-effects .theme-xbox .sa-app-shell::after,
+html.sa-reduce-effects .sa-spin-wheel-idle,
+html.sa-reduce-effects .sa-spin-bulb-even,
+html.sa-reduce-effects .sa-spin-bulb-odd,
+html.sa-reduce-effects .sa-spin-hub-glow {
+  animation: none !important;
+  will-change: auto !important;
+}
+
+html.sa-reduce-effects .theme-ps5 main > aside,
+html.sa-reduce-effects .theme-xbox main > aside,
+html.sa-reduce-effects [class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html.sa-perf-eco .sa-app-shell::before,
+html.sa-perf-eco .sa-app-shell::after {
+  will-change: auto !important;
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowClockwise,
   ArrowDown,
@@ -22,10 +22,12 @@ import {
   Sparkle,
   Thermometer,
   WifiHigh,
+  Wrench,
 } from '@phosphor-icons/react';
 import type {
   DataProvenance,
   DeepHardwareInventory,
+  EffectivePerformanceConfig,
   GameItem,
   HardwareDbEntry,
   HardwareDbState,
@@ -42,6 +44,7 @@ import { HealthDiagnosticsPanel } from './hardware/HealthDiagnosticsPanel';
 import { SystemInventoryPortsPanel } from './hardware/SystemInventoryPortsPanel';
 import { CompatibilityUpgradeAdvisorPanel } from './hardware/CompatibilityUpgradeAdvisorPanel';
 import { BenchmarksAndDatabasePanel } from './hardware/BenchmarksAndDatabasePanel';
+import { OpenSourceToolsPanel } from './hardware/OpenSourceToolsPanel';
 import {
   BUNDLED_HARDWARE_DATABASE,
   BUNDLED_HARDWARE_DB_UPDATED_AT,
@@ -81,6 +84,7 @@ interface HardwareMonitorViewProps {
   presentMonSetupState?: PresentMonSetupState;
   onOpenPresentMonManager?: () => void;
   catalogGames?: GameItem[];
+  effectivePerformance?: EffectivePerformanceConfig;
 }
 
 interface TelemetrySample {
@@ -139,7 +143,7 @@ function getTempTone(celsius: number | null): string {
   return 'text-emerald-600 dark:text-[#34d399]';
 }
 
-function RadialGauge({
+const RadialGauge = memo(function RadialGauge({
   value,
   label,
   accentClass,
@@ -196,7 +200,7 @@ function RadialGauge({
       </div>
     </div>
   );
-}
+});
 
 interface ChartSeriesConfig {
   key: string;
@@ -207,7 +211,7 @@ interface ChartSeriesConfig {
   formatValue: (v: number | null) => string;
 }
 
-function LiveTelemetryChart({
+const LiveTelemetryChart = memo(function LiveTelemetryChart({
   title,
   series,
   timestamps,
@@ -473,9 +477,9 @@ function LiveTelemetryChart({
       </div>
     </div>
   );
-}
+});
 
-function MetricRow({
+const MetricRow = memo(function MetricRow({
   label,
   value,
   valueClassName = 'text-slate-900 dark:text-white',
@@ -498,7 +502,7 @@ function MetricRow({
       </span>
     </div>
   );
-}
+});
 
 export function HardwareMonitorView({
   isDesktopApp,
@@ -506,6 +510,7 @@ export function HardwareMonitorView({
   presentMonSetupState,
   onOpenPresentMonManager,
   catalogGames = [],
+  effectivePerformance,
 }: HardwareMonitorViewProps) {
   const tr = getTranslations(language);
   const t = tr.hardware;
@@ -516,11 +521,14 @@ export function HardwareMonitorView({
   const hasDesktopTelemetry = Boolean(isDesktopApp && bridge);
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'health' | 'inventory' | 'advisors' | 'benchmarks' | 'gaming' | 'technologies' | 'cleaner'
+    'overview' | 'health' | 'inventory' | 'advisors' | 'benchmarks' | 'gaming' | 'technologies' | 'cleaner' | 'tools'
   >('overview');
   const [snapshot, setSnapshot] = useState<HardwareMonitorSnapshot>(EMPTY_HARDWARE_SNAPSHOT);
   const [isMonitoring, setIsMonitoring] = useState<boolean>(hasDesktopTelemetry);
-  const [intervalMs, setIntervalMs] = useState<number>(1500);
+  const [intervalMs, setIntervalMs] = useState<number>(
+    () => effectivePerformance?.hardwarePollIntervalMs ?? 1500
+  );
+  const hasManualIntervalRef = useRef<boolean>(false);
   const [isRefreshingOnce, setIsRefreshingOnce] = useState<boolean>(false);
   const [history, setHistory] = useState<TelemetrySample[]>([]);
   const lastSampleTsRef = useRef<number>(0);
@@ -542,6 +550,9 @@ export function HardwareMonitorView({
   });
   const [customDbEntries, setCustomDbEntries] = useState<HardwareDbEntry[]>([]);
 
+  const hasRequestedDeepRef = useRef<boolean>(false);
+  const hasRequestedDbRef = useRef<boolean>(false);
+
   const loadDeepInventory = useCallback(
     async (forceRefresh = false) => {
       setIsLoadingDeepInventory(true);
@@ -562,9 +573,22 @@ export function HardwareMonitorView({
     [hasDesktopTelemetry, intelBridge]
   );
 
+  // Lazy-load heavy 35-query deep inventory ONLY when entering deep diagnostics/inventory/advisor tabs
   useEffect(() => {
-    void loadDeepInventory(false);
-    if (hasDesktopTelemetry && intelBridge) {
+    const needsDeepInventory =
+      activeTab === 'health' || activeTab === 'inventory' || activeTab === 'advisors';
+    if (needsDeepInventory && !hasRequestedDeepRef.current) {
+      hasRequestedDeepRef.current = true;
+      void loadDeepInventory(false);
+    }
+  }, [activeTab, loadDeepInventory]);
+
+  // Lazy-load hardware DB metadata/entries only when entering tabs that inspect/update DB
+  useEffect(() => {
+    const needsDb =
+      activeTab === 'benchmarks' || activeTab === 'health' || activeTab === 'advisors';
+    if (needsDb && !hasRequestedDbRef.current && hasDesktopTelemetry && intelBridge) {
+      hasRequestedDbRef.current = true;
       void intelBridge.getDbState().then((st) => {
         if (st) setDbState(st);
       });
@@ -572,21 +596,14 @@ export function HardwareMonitorView({
         if (Array.isArray(entries)) setCustomDbEntries(entries);
       });
     }
-  }, [hasDesktopTelemetry, intelBridge, loadDeepInventory]);
+  }, [activeTab, hasDesktopTelemetry, intelBridge]);
 
   const mergedDbEntries = useMemo(
     () => mergeHardwareDatabases(customDbEntries),
     [customDbEntries]
   );
 
-  const [fallbackInventory, setFallbackInventory] = useState<DeepHardwareInventory | null>(null);
-  useEffect(() => {
-    if (!deepInventory) {
-      void collectBrowserDeepInventory().then(setFallbackInventory);
-    }
-  }, [deepInventory]);
-
-  const activeInventory = deepInventory || fallbackInventory;
+  const activeInventory = deepInventory;
 
   const assessment = useMemo(() => {
     if (!activeInventory) return null;
@@ -609,7 +626,7 @@ export function HardwareMonitorView({
       not_detected: t.provNotDetected,
       sensor_unavailable: t.provSensorUnavailable,
       unknown: t.provUnknown,
-      requires_admin: "Requires administrator privileges",
+      requires_admin: t.provRequiresAdmin,
     }),
     [t]
   );
@@ -655,6 +672,20 @@ export function HardwareMonitorView({
 
   const intervalMsRef = useRef<number>(intervalMs);
   intervalMsRef.current = intervalMs;
+  const pauseWhenHiddenRef = useRef<boolean>(
+    effectivePerformance?.pauseBackgroundWhenMinimized !== false
+  );
+  pauseWhenHiddenRef.current = effectivePerformance?.pauseBackgroundWhenMinimized !== false;
+
+  // Live-sync sampling interval from Performance Settings unless overridden locally in this view
+  useEffect(() => {
+    const nextPerfInterval = effectivePerformance?.hardwarePollIntervalMs;
+    if (!nextPerfInterval || hasManualIntervalRef.current) return;
+    setIntervalMs(nextPerfInterval);
+    if (bridge && isMonitoring) {
+      void bridge.setInterval(nextPerfInterval);
+    }
+  }, [effectivePerformance?.hardwarePollIntervalMs, bridge, isMonitoring]);
 
   // Subscribe and start polling ONLY while Hardware Monitor view is mounted and monitoring is active
   useEffect(() => {
@@ -665,9 +696,11 @@ export function HardwareMonitorView({
 
     let mounted = true;
     const unsubscribe = bridge.onUpdate((incoming) => {
-      if (mounted) {
-        appendSnapshot(incoming);
+      if (!mounted) return;
+      if (pauseWhenHiddenRef.current && typeof document !== 'undefined' && document.hidden) {
+        return;
       }
+      appendSnapshot(incoming);
     });
 
     if (isMonitoring) {
@@ -701,6 +734,7 @@ export function HardwareMonitorView({
 
   const handleChangeInterval = useCallback(
     (nextMs: number) => {
+      hasManualIntervalRef.current = true;
       setIntervalMs(nextMs);
       if (bridge) {
         void bridge.setInterval(nextMs);
@@ -803,7 +837,9 @@ export function HardwareMonitorView({
                     !hasDesktopTelemetry
                       ? 'bg-amber-500'
                       : isMonitoring
-                      ? 'bg-emerald-500 motion-safe:animate-pulse'
+                      ? effectivePerformance?.reduceVisualEffects
+                        ? 'bg-emerald-500'
+                        : 'bg-emerald-500 motion-safe:animate-pulse'
                       : 'bg-slate-400 dark:bg-slate-500'
                   }`}
                 />
@@ -938,6 +974,7 @@ export function HardwareMonitorView({
               { id: 'gaming', label: t.tabGaming, Icon: GameController },
               { id: 'technologies', label: t.tabTechnologies, Icon: GraphicsCard },
               { id: 'cleaner', label: t.tabCleaner, Icon: Sparkle },
+              { id: 'tools', label: t.tabOpenSourceTools, Icon: Wrench },
             ] as const
           ).map(({ id, label, Icon }) => {
             const active = activeTab === id;
@@ -958,6 +995,14 @@ export function HardwareMonitorView({
             );
           })}
         </nav>
+
+        {(activeTab === 'health' || activeTab === 'inventory' || activeTab === 'advisors') &&
+          !activeInventory && (
+            <div className="sa-ps5-panel rounded-xl bg-white dark:bg-[#171d25] border border-slate-200 dark:border-white/[0.08] p-8 flex items-center justify-center gap-3 text-[13px] font-medium text-slate-600 dark:text-[#9cb0c9]">
+              <ArrowClockwise className="w-4.5 h-4.5 motion-safe:animate-spin text-[#0284c7] dark:text-[#38bdf8]" />
+              <span>{t.intelRefreshDeepScan}...</span>
+            </div>
+          )}
 
         {activeTab === 'health' && activeInventory && assessment && (
           <HealthDiagnosticsPanel
@@ -1026,6 +1071,13 @@ export function HardwareMonitorView({
 
         {activeTab === 'cleaner' && (
           <PcCleanerPanel isDesktopApp={hasDesktopTelemetry} language={language} />
+        )}
+
+        {activeTab === 'tools' && (
+          <OpenSourceToolsPanel
+            isDesktopApp={hasDesktopTelemetry}
+            t={t as unknown as Record<string, string>}
+          />
         )}
 
         {activeTab === 'overview' && (

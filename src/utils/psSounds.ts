@@ -222,8 +222,25 @@ function triggerAmbientSparkle(
   harmonic.stop(now + 2.2);
 }
 
+let psVisibilityBound = false;
+function ensurePsVisibilityListener(): void {
+  if (psVisibilityBound || typeof document === 'undefined') return;
+  psVisibilityBound = true;
+  document.addEventListener('visibilitychange', () => {
+    if (!sharedAudioCtx) return;
+    if (document.hidden) {
+      if (sharedAudioCtx.state === 'running') {
+        void sharedAudioCtx.suspend().catch(() => {});
+      }
+    } else if (isAmbientPlaying && sharedAudioCtx.state === 'suspended') {
+      void sharedAudioCtx.resume().catch(() => {});
+    }
+  });
+}
+
 /** Evolving PS5 Cosmic Horizon ambient soundtrack while in Fullscreen PS5 mode */
 export function startPsAmbientSound(): void {
+  ensurePsVisibilityListener();
   const ctx = getAudioContext();
   if (!ctx || isAmbientPlaying) return;
 
@@ -275,6 +292,7 @@ export function startPsAmbientSound(): void {
 
     const playNextChord = () => {
       if (!isAmbientPlaying || !ambientMasterGain) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
       const chord = PS5_AMBIENT_PROGRESSION[chordIndex % PS5_AMBIENT_PROGRESSION.length];
       triggerAmbientChord(ctx, padFilter, wetGain, chord, chordDurationSec);
       chordIndex++;
@@ -282,6 +300,7 @@ export function startPsAmbientSound(): void {
 
     const playNextSparkle = () => {
       if (!isAmbientPlaying || !ambientMasterGain) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
       const activeChord =
         PS5_AMBIENT_PROGRESSION[Math.max(0, chordIndex - 1) % PS5_AMBIENT_PROGRESSION.length];
       // Leave gentle breathing room on every 5th step

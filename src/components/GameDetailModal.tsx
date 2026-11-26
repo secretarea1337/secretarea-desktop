@@ -50,12 +50,11 @@ import {
   X,
 } from '@phosphor-icons/react';
 import type { DownloadTask, GameItem, MirrorLink, SheetCatalogData } from '../types';
-import { isTruthyFlag, resolveStudiosForItem } from '../utils/parsers';
+import { isTruthyFlag, resolveSheetRefItem, resolveStudiosForItem } from '../utils/parsers';
 import { evaluateCanRunGame } from '../services/canRunIt';
 import type { SystemHardwareSpecs } from '../services/systemSpecs';
 import { CanRunItHeroBadge, CanRunItPanel } from './CanRunItPanel';
 import { GameCover } from './GameCover';
-import { resolveSheetRefItem } from './ExtrasView';
 import { HypervisorGuideModal } from './HypervisorGuideModal';
 import { getSectionVisualMeta, SectionSourceBadge } from './SectionBadge';
 import type { AppLanguage } from '../services/launcherSettings';

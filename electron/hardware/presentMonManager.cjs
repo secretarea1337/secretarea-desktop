@@ -1647,6 +1647,15 @@ function createPresentMonManager({
   }
 
   function initStartupCheck() {
+    if (effectivePlatform !== 'win32') {
+      patchState({
+        stage: 'ready',
+        actionNeeded: 'unsupported_os',
+        shouldPrompt: false,
+        statusMessage: 'PresentMon frame-time telemetry requires Windows.',
+      });
+      return;
+    }
     setTimeout(() => {
       void checkStatus({ isStartup: true, force: false });
     }, 2400);

@@ -27,6 +27,7 @@ parentPort.postMessage(ops);
 function createBenchmarkRunner({
   getMainWindow,
   getLatestSnapshot,
+  getFreshSnapshot,
   maxCpuTempC = MAX_SAFE_CPU_TEMP_C,
   maxGpuTempC = MAX_SAFE_GPU_TEMP_C,
   testTimeoutMs = 15000,
@@ -35,6 +36,9 @@ function createBenchmarkRunner({
   let activeRun = false;
   const activeWorkers = new Set();
   const activeIntervals = new Set();
+  const activeSockets = new Set();
+  let lastRefreshedSnap = null;
+  let lastRefreshAttemptAt = 0;
 
   function emitProgress(progress) {
     const win = typeof getMainWindow === 'function' ? getMainWindow() : null;
@@ -48,6 +52,14 @@ function createBenchmarkRunner({
       clearInterval(iv);
       activeIntervals.delete(iv);
     }
+    for (const sock of Array.from(activeSockets)) {
+      try {
+        sock.destroy();
+      } catch {
+        // ignore socket destroy error
+      }
+      activeSockets.delete(sock);
+    }
     for (const w of Array.from(activeWorkers)) {
       try {
         void w.terminate().catch(() => {});
@@ -58,8 +70,31 @@ function createBenchmarkRunner({
     }
   }
 
+  async function refreshThermalSnapshotIfStale() {
+    if (typeof getFreshSnapshot !== 'function') return;
+    const latest = typeof getLatestSnapshot === 'function' ? getLatestSnapshot() : null;
+    const now = Date.now();
+    if (latest && typeof latest.timestamp === 'number' && now - latest.timestamp < 1500) {
+      return;
+    }
+    if (now - lastRefreshAttemptAt < 750) return;
+    lastRefreshAttemptAt = now;
+    try {
+      const fresh = await getFreshSnapshot();
+      if (fresh) {
+        lastRefreshedSnap = fresh;
+      }
+    } catch {
+      // keep existing thermal reading safely
+    }
+  }
+
   function checkThermalSafety() {
-    const snap = typeof getLatestSnapshot === 'function' ? getLatestSnapshot() : null;
+    const latest = typeof getLatestSnapshot === 'function' ? getLatestSnapshot() : null;
+    const snap =
+      latest && (!lastRefreshedSnap || (latest.timestamp || 0) >= (lastRefreshedSnap.timestamp || 0))
+        ? latest
+        : lastRefreshedSnap;
     const cpuT = snap?.cpu?.temperatureCelsius ?? null;
     const gpuTemps = Array.isArray(snap?.gpus)
       ? snap.gpus
@@ -168,6 +203,7 @@ function createBenchmarkRunner({
         terminateAllActiveWorkers();
         return;
       }
+      void refreshThermalSnapshotIfStale();
       const s = checkThermalSafety();
       if (s.temp !== null) peakTemp = Math.max(peakTemp || 0, s.temp);
       if (!s.safe) {
@@ -422,21 +458,33 @@ function createBenchmarkRunner({
         };
       }
       const ms = await new Promise((resolve) => {
+        if (isCancelled) {
+          resolve(null);
+          return;
+        }
         const t0 = process.hrtime.bigint();
+        let settled = false;
         const sock = net.createConnection({ host: '1.1.1.1', port: 443, timeout: 2500 }, () => {
+          if (settled) return;
+          settled = true;
           const dt = Number(process.hrtime.bigint() - t0) / 1e6;
+          activeSockets.delete(sock);
           sock.destroy();
           resolve(dt);
         });
-        sock.on('timeout', () => {
+        activeSockets.add(sock);
+        const fail = () => {
+          if (settled) return;
+          settled = true;
+          activeSockets.delete(sock);
           sock.destroy();
           resolve(null);
-        });
-        sock.on('error', () => {
-          sock.destroy();
-          resolve(null);
-        });
+        };
+        sock.on('timeout', fail);
+        sock.on('error', fail);
+        sock.on('close', fail);
       });
+      if (isCancelled) return { cancelled: true, durationMs: Date.now() - start };
       if (ms !== null) samples.push(ms);
     }
     if (samples.length === 0) {
@@ -490,6 +538,7 @@ function createBenchmarkRunner({
       for (let i = 0; i < requested.length; i++) {
         const id = requested[i];
         if (isCancelled) break;
+        await refreshThermalSnapshotIfStale();
         const safetyPre = checkThermalSafety();
         if (!safetyPre.safe) {
           emitProgress({

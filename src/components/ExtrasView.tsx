@@ -15,7 +15,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import type { GameItem, SheetCatalogData, SheetTabKey } from '../types';
-import { sanitizeUrl } from '../utils/parsers';
+import { resolveSheetRefItem, sanitizeUrl } from '../utils/parsers';
 import { GameCover } from './GameCover';
 import type { AppLanguage } from '../services/launcherSettings';
 import { getTranslations } from '../i18n/translations';
@@ -26,26 +26,6 @@ interface ExtrasViewProps {
   initialTab?: SheetTabKey;
   language?: AppLanguage;
   onSelectItem: (item: GameItem) => void;
-}
-
-export function resolveSheetRefItem(
-  refToken: string,
-  catalog: SheetCatalogData
-): GameItem | null {
-  const token = refToken.trim().toLowerCase();
-  if (!token) return null;
-  const match = token.match(/^([ghsa])(\d+)$/);
-  if (!match) return null;
-  const [, prefix, numId] = match;
-  const tabMap: Record<string, SheetTabKey> = {
-    g: 'game',
-    h: 'hypervisor',
-    s: 'steamtools',
-    a: 'architect',
-  };
-  const targetTab = tabMap[prefix];
-  if (!targetTab) return null;
-  return catalog[targetTab]?.find((x) => x.id === numId) || null;
 }
 
 const RANDOM_TEXT_COLORS = [

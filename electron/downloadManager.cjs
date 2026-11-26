@@ -291,10 +291,23 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
   let torrentWebApiVersion = null;
   let torrentError = null;
   let torrentPollTimer = null;
+  let currentTorrentPollMs = 1500;
+  let pausedTorrentPollingByHide = false;
   let qbitCookie = '';
   let lastEmitAt = 0;
   let pendingEmitTimer = null;
+  let pendingDiskPersistTimer = null;
+  let persistInFlight = false;
+  let persistDirty = false;
+  let windowHiddenSuppressedPending = false;
   let isShuttingDown = false;
+  let perfConfig = {
+    throttleMs: 350,
+    torrentActivePollMs: 1500,
+    torrentIdlePollMs: 12000,
+    adaptiveTorrentPolling: true,
+    pauseOnMinimize: true,
+  };
 
   function getStateFilePath() {
     return path.join(app.getPath('userData'), 'downloads-state.json');
@@ -611,14 +624,66 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
     }
   }
 
-  function persistTasksToDisk() {
+  function isWindowHiddenOrMinimized() {
+    try {
+      const win = getMainWindow ? getMainWindow() : null;
+      if (!win || (typeof win.isDestroyed === 'function' && win.isDestroyed())) return true;
+      const minimized = typeof win.isMinimized === 'function' && win.isMinimized();
+      const hidden = typeof win.isVisible === 'function' && !win.isVisible();
+      return Boolean(minimized || hidden);
+    } catch {
+      return false;
+    }
+  }
+
+  function persistTasksToDisk(immediate = false) {
+    if (immediate) {
+      if (pendingDiskPersistTimer) {
+        clearTimeout(pendingDiskPersistTimer);
+        pendingDiskPersistTimer = null;
+      }
+      persistDirty = false;
+      try {
+        const filePath = getStateFilePath();
+        ensureDirExists(path.dirname(filePath));
+        fs.writeFileSync(filePath, JSON.stringify(tasks.slice(0, 200), null, 2), 'utf8');
+      } catch {
+        // ignore write errors
+      }
+      return;
+    }
+    schedulePersistTasksToDisk();
+  }
+
+  async function flushAsyncTasksPersist() {
+    if (persistInFlight) {
+      persistDirty = true;
+      return;
+    }
+    persistInFlight = true;
     try {
       const filePath = getStateFilePath();
       ensureDirExists(path.dirname(filePath));
-      fs.writeFileSync(filePath, JSON.stringify(tasks.slice(0, 200), null, 2), 'utf8');
+      const payload = JSON.stringify(tasks.slice(0, 200), null, 2);
+      await fs.promises.writeFile(filePath, payload, 'utf8');
     } catch {
       // ignore write errors
+    } finally {
+      persistInFlight = false;
+      if (persistDirty && !isShuttingDown) {
+        persistDirty = false;
+        void flushAsyncTasksPersist();
+      }
     }
+  }
+
+  function schedulePersistTasksToDisk() {
+    if (isShuttingDown) return;
+    if (pendingDiskPersistTimer) return;
+    pendingDiskPersistTimer = setTimeout(() => {
+      pendingDiskPersistTimer = null;
+      void flushAsyncTasksPersist();
+    }, 2500);
   }
 
   function getSnapshot() {
@@ -635,23 +700,40 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
     };
   }
 
-  function emitSnapshot(force = false) {
+  function emitSnapshot(force = false, immediateDisk = force) {
+    if (immediateDisk) {
+      persistTasksToDisk(true);
+    } else {
+      schedulePersistTasksToDisk();
+    }
+
     const mainWindow = getMainWindow();
     if (!mainWindow || mainWindow.isDestroyed()) return;
 
+    if (!force && perfConfig.pauseOnMinimize && isWindowHiddenOrMinimized()) {
+      windowHiddenSuppressedPending = true;
+      return;
+    }
+
+    const throttleWindow = Math.max(120, Math.min(2000, Number(perfConfig.throttleMs) || 350));
     const now = Date.now();
-    if (!force && now - lastEmitAt < 220) {
+    if (!force && now - lastEmitAt < throttleWindow) {
       if (!pendingEmitTimer) {
         pendingEmitTimer = setTimeout(() => {
           pendingEmitTimer = null;
-          emitSnapshot(true);
-        }, 230);
+          emitSnapshot(true, false);
+        }, throttleWindow + 15);
       }
       return;
     }
 
+    if (force && pendingEmitTimer) {
+      clearTimeout(pendingEmitTimer);
+      pendingEmitTimer = null;
+    }
+
     lastEmitAt = now;
-    persistTasksToDisk();
+    windowHiddenSuppressedPending = false;
     mainWindow.webContents.send('downloads:updated', getSnapshot());
   }
 
@@ -663,7 +745,7 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       ...patch,
       updatedAt: Date.now(),
     };
-    emitSnapshot(forceEmit);
+    emitSnapshot(forceEmit, forceEmit);
     return tasks[idx];
   }
 
@@ -1024,7 +1106,8 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
 
           const now = Date.now();
           const elapsedMs = now - windowStart;
-          if (elapsedMs >= 450) {
+          const patchIntervalMs = Math.max(150, Math.min(2000, Number(perfConfig.throttleMs) || 350));
+          if (elapsedMs >= patchIntervalMs) {
             const instantSpeed = (windowBytes * 1000) / elapsedMs;
             smoothedSpeed =
               smoothedSpeed > 0 ? smoothedSpeed * 0.6 + instantSpeed * 0.4 : instantSpeed;
@@ -1206,7 +1289,8 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
           windowBytes += chunk.length;
           const now = Date.now();
           const elapsedMs = now - windowStart;
-          if (elapsedMs >= 450) {
+          const patchIntervalMs = Math.max(150, Math.min(2000, Number(perfConfig.throttleMs) || 350));
+          if (elapsedMs >= patchIntervalMs) {
             const instant = (windowBytes * 1000) / elapsedMs;
             smoothedSpeed = smoothedSpeed > 0 ? smoothedSpeed * 0.6 + instant * 0.4 : instant;
             windowBytes = 0;
@@ -1385,22 +1469,27 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       let lastBytes = item.getReceivedBytes();
       let lastTick = Date.now();
       let smoothedSpeed = 0;
+      let lastBrowserStatus = 'downloading';
 
       item.on('updated', (_ev, state) => {
-        const received = item.getReceivedBytes();
-        const total = item.getTotalBytes();
+        const isPaused = item.isPaused();
+        const nextStatus = state === 'interrupted' ? 'paused' : isPaused ? 'paused' : 'downloading';
         const now = Date.now();
         const elapsedMs = Math.max(1, now - lastTick);
 
-        if (elapsedMs >= 350) {
-          const delta = Math.max(0, received - lastBytes);
-          const instant = (delta * 1000) / elapsedMs;
-          smoothedSpeed = smoothedSpeed > 0 ? smoothedSpeed * 0.6 + instant * 0.4 : instant;
-          lastBytes = received;
-          lastTick = now;
+        if (elapsedMs < 350 && nextStatus === lastBrowserStatus) {
+          return;
         }
 
-        const isPaused = item.isPaused();
+        const received = item.getReceivedBytes();
+        const total = item.getTotalBytes();
+        const delta = Math.max(0, received - lastBytes);
+        const instant = (delta * 1000) / elapsedMs;
+        smoothedSpeed = smoothedSpeed > 0 ? smoothedSpeed * 0.6 + instant * 0.4 : instant;
+        lastBytes = received;
+        lastTick = now;
+        lastBrowserStatus = nextStatus;
+
         const remaining = total > received ? total - received : 0;
         const etaSeconds =
           !isPaused && total > 0 && smoothedSpeed > 512
@@ -1409,15 +1498,19 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
         const progress =
           total > 0 ? Math.min(99.9, Number(((received / total) * 100).toFixed(1))) : 0;
 
-        patchTask(taskId, {
-          status: state === 'interrupted' ? 'paused' : isPaused ? 'paused' : 'downloading',
-          downloadedBytes: received,
-          totalBytes: total,
-          speedBytesPerSec: isPaused ? 0 : Math.round(smoothedSpeed),
-          etaSeconds,
-          progress,
-          canPauseResume: item.canResume() || !isPaused,
-        });
+        patchTask(
+          taskId,
+          {
+            status: nextStatus,
+            downloadedBytes: received,
+            totalBytes: total,
+            speedBytesPerSec: isPaused ? 0 : Math.round(smoothedSpeed),
+            etaSeconds,
+            progress,
+            canPauseResume: item.canResume() || !isPaused,
+          },
+          nextStatus !== 'downloading'
+        );
       });
 
       item.once('done', (_ev, state) => {
@@ -2023,28 +2116,55 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
           if (prev.status === 'cancelled') continue;
           const keepActiveSpeed =
             rt.status === 'downloading' || rt.status === 'resolving' || rt.status === 'queued';
+          const nextFileName = rt.name || prev.fileName;
+          const nextSpeed = keepActiveSpeed ? rt.speedBytesPerSec : 0;
+          const nextEta =
+            rt.status === 'downloading' ? rt.etaSeconds : rt.status === 'completed' ? 0 : null;
+          const nextSavePath = rt.savePath || prev.savePath;
+          const nextError = rt.status === 'failed' ? `qBittorrent status: ${rt.stateRaw}` : null;
+
+          const hasDiff =
+            prev.fileName !== nextFileName ||
+            prev.torrentHash !== rt.hash ||
+            prev.status !== rt.status ||
+            prev.progress !== rt.progress ||
+            prev.downloadedBytes !== rt.downloadedBytes ||
+            prev.totalBytes !== rt.totalBytes ||
+            prev.speedBytesPerSec !== nextSpeed ||
+            (prev.uploadSpeedBytesPerSec || 0) !== rt.uploadSpeedBytesPerSec ||
+            prev.etaSeconds !== nextEta ||
+            (prev.torrentPeers ?? null) !== rt.peers ||
+            (prev.torrentSeeds ?? null) !== rt.seeds ||
+            (prev.torrentRatio ?? null) !== rt.ratio ||
+            prev.torrentStateRaw !== rt.stateRaw ||
+            prev.savePath !== nextSavePath ||
+            (prev.error || null) !== nextError;
+
+          if (!hasDiff) {
+            continue;
+          }
+
           const next = {
             ...prev,
-            fileName: rt.name || prev.fileName,
+            fileName: nextFileName,
             torrentHash: rt.hash,
             status: rt.status,
             progress: rt.progress,
             downloadedBytes: rt.downloadedBytes,
             totalBytes: rt.totalBytes,
-            speedBytesPerSec: keepActiveSpeed ? rt.speedBytesPerSec : 0,
+            speedBytesPerSec: nextSpeed,
             uploadSpeedBytesPerSec: rt.uploadSpeedBytesPerSec,
-            etaSeconds:
-              rt.status === 'downloading' ? rt.etaSeconds : rt.status === 'completed' ? 0 : null,
+            etaSeconds: nextEta,
             torrentPeers: rt.peers,
             torrentPeersTotal: rt.peersTotal,
             torrentSeeds: rt.seeds,
             torrentSeedsTotal: rt.seedsTotal,
             torrentRatio: rt.ratio,
             torrentStateRaw: rt.stateRaw,
-            savePath: rt.savePath || prev.savePath,
+            savePath: nextSavePath,
             canPauseResume: true,
             completedAt: rt.status === 'completed' ? prev.completedAt || Date.now() : null,
-            error: rt.status === 'failed' ? `qBittorrent status: ${rt.stateRaw}` : null,
+            error: nextError,
             updatedAt: Date.now(),
           };
           tasks[existingIdx] = next;
@@ -2053,8 +2173,9 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       }
 
       if (changed) {
-        emitSnapshot(false);
+        emitSnapshot(false, false);
       }
+      rescheduleTorrentPollerIfNeeded();
     } catch (err) {
       const diagnosed = diagnoseQbitError(err, torrentConfig);
       const wasConnected = torrentConnected;
@@ -2062,27 +2183,152 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       torrentConnected = false;
       torrentError = diagnosed.message;
       if (wasConnected || prevErr !== torrentError) {
-        emitSnapshot(true);
+        emitSnapshot(true, false);
       }
+      rescheduleTorrentPollerIfNeeded();
     }
   }
 
-  function syncTorrentPoller() {
+  function hasActiveTorrentTasks() {
+    return tasks.some(
+      (t) =>
+        t.source === 'qbittorrent' &&
+        (t.status === 'downloading' || t.status === 'resolving' || t.status === 'queued')
+    );
+  }
+
+  function getDesiredTorrentPollMs() {
+    if (!torrentConnected && torrentError) {
+      return Math.max(8000, perfConfig.torrentIdlePollMs || 12000);
+    }
+    if (perfConfig.adaptiveTorrentPolling && !hasActiveTorrentTasks()) {
+      return Math.max(4000, Number(perfConfig.torrentIdlePollMs) || 12000);
+    }
+    return Math.max(1000, Number(perfConfig.torrentActivePollMs || torrentConfig.pollIntervalMs) || 1500);
+  }
+
+  function rescheduleTorrentPollerIfNeeded() {
+    if (!torrentConfig.enabled || isShuttingDown) return;
+    if (perfConfig.pauseOnMinimize && isWindowHiddenOrMinimized()) return;
+    const nextMs = getDesiredTorrentPollMs();
+    if (torrentPollTimer && currentTorrentPollMs === nextMs) return;
     if (torrentPollTimer) {
       clearInterval(torrentPollTimer);
       torrentPollTimer = null;
     }
-    if (!torrentConfig.enabled) {
+    currentTorrentPollMs = nextMs;
+    torrentPollTimer = setInterval(() => {
+      void pollTorrentWebUiOnce();
+    }, currentTorrentPollMs);
+  }
+
+  function syncTorrentPoller(triggerImmediate = true) {
+    if (torrentPollTimer) {
+      clearInterval(torrentPollTimer);
+      torrentPollTimer = null;
+    }
+    pausedTorrentPollingByHide = false;
+    if (!torrentConfig.enabled || isShuttingDown) {
       torrentConnected = false;
       torrentVersion = null;
       torrentWebApiVersion = null;
       torrentError = null;
       return;
     }
-    void pollTorrentWebUiOnce();
+    if (perfConfig.pauseOnMinimize && isWindowHiddenOrMinimized()) {
+      pausedTorrentPollingByHide = true;
+      return;
+    }
+    currentTorrentPollMs = getDesiredTorrentPollMs();
+    if (triggerImmediate) {
+      void pollTorrentWebUiOnce();
+    }
     torrentPollTimer = setInterval(() => {
       void pollTorrentWebUiOnce();
-    }, torrentConfig.pollIntervalMs || 1500);
+    }, currentTorrentPollMs);
+  }
+
+  function setPerformanceConfig(nextCfg = {}) {
+    if (!nextCfg || typeof nextCfg !== 'object') return perfConfig;
+    const prevAdaptive = perfConfig.adaptiveTorrentPolling;
+    const prevActiveMs = perfConfig.torrentActivePollMs;
+    const prevIdleMs = perfConfig.torrentIdlePollMs;
+    const prevPause = perfConfig.pauseOnMinimize;
+
+    perfConfig = {
+      throttleMs:
+        Number.isFinite(Number(nextCfg.throttleMs))
+          ? Math.max(120, Math.min(2000, Math.round(Number(nextCfg.throttleMs))))
+          : perfConfig.throttleMs,
+      torrentActivePollMs:
+        Number.isFinite(Number(nextCfg.torrentActivePollMs))
+          ? Math.max(1000, Math.min(10000, Math.round(Number(nextCfg.torrentActivePollMs))))
+          : perfConfig.torrentActivePollMs,
+      torrentIdlePollMs:
+        Number.isFinite(Number(nextCfg.torrentIdlePollMs))
+          ? Math.max(3000, Math.min(60000, Math.round(Number(nextCfg.torrentIdlePollMs))))
+          : perfConfig.torrentIdlePollMs,
+      adaptiveTorrentPolling:
+        typeof nextCfg.adaptiveTorrentPolling === 'boolean'
+          ? nextCfg.adaptiveTorrentPolling
+          : perfConfig.adaptiveTorrentPolling,
+      pauseOnMinimize:
+        typeof nextCfg.pauseOnMinimize === 'boolean'
+          ? nextCfg.pauseOnMinimize
+          : perfConfig.pauseOnMinimize,
+    };
+
+    if (
+      torrentConfig.enabled &&
+      (prevAdaptive !== perfConfig.adaptiveTorrentPolling ||
+        prevActiveMs !== perfConfig.torrentActivePollMs ||
+        prevIdleMs !== perfConfig.torrentIdlePollMs ||
+        prevPause !== perfConfig.pauseOnMinimize)
+    ) {
+      rescheduleTorrentPollerIfNeeded();
+    }
+    if (pendingEmitTimer) {
+      clearTimeout(pendingEmitTimer);
+      pendingEmitTimer = null;
+      emitSnapshot(true, false);
+    }
+    return { ...perfConfig };
+  }
+
+  function onWindowHidden() {
+    if (!perfConfig.pauseOnMinimize) return;
+    if (torrentPollTimer) {
+      clearInterval(torrentPollTimer);
+      torrentPollTimer = null;
+      pausedTorrentPollingByHide = true;
+    }
+  }
+
+  function onWindowShown() {
+    if (pausedTorrentPollingByHide && torrentConfig.enabled && !isShuttingDown) {
+      pausedTorrentPollingByHide = false;
+      syncTorrentPoller(true);
+    }
+    if (windowHiddenSuppressedPending) {
+      windowHiddenSuppressedPending = false;
+      emitSnapshot(true, false);
+    }
+  }
+
+  function getRuntimeStats() {
+    return {
+      taskCount: tasks.length,
+      activeHttpCount: activeHttpControllers.size,
+      activeMegaCount: activeMegaStreams.size,
+      activeElectronCount: activeElectronItems.size,
+      torrentEnabled: Boolean(torrentConfig.enabled),
+      torrentConnected: Boolean(torrentConnected),
+      torrentPollerActive: Boolean(torrentPollTimer),
+      torrentPollIntervalMs: torrentPollTimer ? currentTorrentPollMs : null,
+      pausedTorrentPollingByHide,
+      throttleMs: perfConfig.throttleMs,
+      adaptiveTorrentPolling: perfConfig.adaptiveTorrentPolling,
+    };
   }
 
   async function launchQbitTask(taskId, torrentFileBuffer = null, originalFilename = '') {
@@ -2846,6 +3092,14 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       clearInterval(torrentPollTimer);
       torrentPollTimer = null;
     }
+    if (pendingEmitTimer) {
+      clearTimeout(pendingEmitTimer);
+      pendingEmitTimer = null;
+    }
+    if (pendingDiskPersistTimer) {
+      clearTimeout(pendingDiskPersistTimer);
+      pendingDiskPersistTimer = null;
+    }
     for (const controller of activeHttpControllers.values()) {
       controller.abort('paused');
     }
@@ -2859,7 +3113,7 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
       }
     }
     activeMegaStreams.clear();
-    persistTasksToDisk();
+    persistTasksToDisk(true);
   }
 
   return {
@@ -2868,6 +3122,10 @@ function createDownloadManager({ getMainWindow, readSettings, writeSettings }) {
     registerIpc,
     getSnapshot,
     testTorrentConnection,
+    setPerformanceConfig,
+    onWindowHidden,
+    onWindowShown,
+    getRuntimeStats,
   };
 }
 

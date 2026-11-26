@@ -48,7 +48,7 @@ export function ExpandablePanel({
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
-          className="flex items-center gap-2.5 text-left min-w-0 flex-1 cursor-pointer group"
+          className="flex items-center gap-2.5 text-start min-w-0 flex-1 cursor-pointer group"
         >
           {icon && (
             <span className="w-8 h-8 rounded-lg bg-sky-500/10 dark:bg-[#38bdf8]/12 border border-sky-500/20 dark:border-[#38bdf8]/25 flex items-center justify-center shrink-0 text-[#0284c7] dark:text-[#38bdf8]">
@@ -99,7 +99,7 @@ export function KeyValueRow({
       <span className="text-[12px] text-slate-500 dark:text-[#8b9bb4] shrink-0">{label}</span>
       <span
         dir={ltr ? 'ltr' : undefined}
-        className={`text-[12.5px] font-medium text-right break-all ${
+        className={`text-[12.5px] font-medium text-end break-all ${
           highlightClass || 'text-slate-800 dark:text-[#e2eaf4]'
         } ${ltr ? 'font-mono-tabular' : ''}`}
       >

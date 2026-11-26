@@ -22,24 +22,7 @@ interface CustomCursorOverlayProps {
   activeTheme?: AppThemeMode;
 }
 
-const ALL_CURSOR_KINDS: CustomCursorKind[] = [
-  'default',
-  'pointer',
-  'text',
-  'wait',
-  'progress',
-  'move',
-  'ns-resize',
-  'ew-resize',
-  'nesw-resize',
-  'nwse-resize',
-  'zoom-in',
-  'zoom-out',
-  'not-allowed',
-  'help',
-];
-
-const BURST_POOL_SIZE = 6;
+const BURST_POOL_SIZE = 3;
 
 const TEXT_CONTROL_SELECTOR =
   'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), textarea, [contenteditable="true"]';
@@ -198,6 +181,9 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
     help: null,
   });
 
+  const [mountedKinds, setMountedKinds] = useState<CustomCursorKind[]>(['default', 'pointer']);
+  const mountedKindsSetRef = useRef<Set<CustomCursorKind>>(new Set(['default', 'pointer']));
+
   const burstSlotsRef = useRef<BurstSlotNodes[]>(
     Array.from({ length: BURST_POOL_SIZE }, () => ({
       root: null,
@@ -270,6 +256,11 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
       const prevKind = kindRef.current;
       if (nextKind === prevKind) return;
       kindRef.current = nextKind;
+
+      if (!mountedKindsSetRef.current.has(nextKind)) {
+        mountedKindsSetRef.current.add(nextKind);
+        setMountedKinds((prev) => (prev.includes(nextKind) ? prev : [...prev, nextKind]));
+      }
 
       const prevShape = shapeRefs.current[prevKind];
       const nextShape = shapeRefs.current[nextKind];
@@ -594,15 +585,15 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
             style={{ transform: 'scale(1)' }}
             className="relative w-8 h-8 transition-transform duration-120 ease-[cubic-bezier(0.16,1,0.3,1)] origin-top-left"
           >
-            {ALL_CURSOR_KINDS.map((kind) => (
+            {mountedKinds.map((kind) => (
               <div
                 key={kind}
                 ref={(el) => {
                   shapeRefs.current[kind] = el;
                 }}
                 style={{
-                  opacity: kind === 'default' ? 1 : 0,
-                  visibility: kind === 'default' ? 'visible' : 'hidden',
+                  opacity: kind === kindRef.current ? 1 : 0,
+                  visibility: kind === kindRef.current ? 'visible' : 'hidden',
                 }}
                 className="absolute left-0 top-0"
               >

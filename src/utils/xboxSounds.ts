@@ -203,8 +203,25 @@ function triggerXboxShimmer(
   osc.stop(now + 1.85);
 }
 
+let xboxVisibilityBound = false;
+function ensureXboxVisibilityListener(): void {
+  if (xboxVisibilityBound || typeof document === 'undefined') return;
+  xboxVisibilityBound = true;
+  document.addEventListener('visibilitychange', () => {
+    if (!xboxAudioCtx) return;
+    if (document.hidden) {
+      if (xboxAudioCtx.state === 'running') {
+        void xboxAudioCtx.suspend().catch(() => {});
+      }
+    } else if (isXboxAmbientPlaying && xboxAudioCtx.state === 'suspended') {
+      void xboxAudioCtx.resume().catch(() => {});
+    }
+  });
+}
+
 /** Warm Xbox Nexus emerald ambient dashboard drone */
 export function startXboxAmbientSound(): void {
+  ensureXboxVisibilityListener();
   const ctx = getXboxAudioContext();
   if (!ctx || isXboxAmbientPlaying) return;
 
@@ -255,6 +272,7 @@ export function startXboxAmbientSound(): void {
 
     const playNextChord = () => {
       if (!isXboxAmbientPlaying || !xboxMasterGain) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
       const chord = XBOX_AMBIENT_PROGRESSION[chordIndex % XBOX_AMBIENT_PROGRESSION.length];
       triggerXboxPadChord(ctx, padFilter, wetGain, chord, chordDurationSec);
       chordIndex++;
@@ -262,6 +280,7 @@ export function startXboxAmbientSound(): void {
 
     const playNextShimmer = () => {
       if (!isXboxAmbientPlaying || !xboxMasterGain) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
       const activeChord =
         XBOX_AMBIENT_PROGRESSION[Math.max(0, chordIndex - 1) % XBOX_AMBIENT_PROGRESSION.length];
       if (step % 4 !== 3) {

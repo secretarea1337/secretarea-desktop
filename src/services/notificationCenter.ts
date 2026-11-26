@@ -40,6 +40,7 @@ export interface CatalogNotificationItem {
   timestamp: number;
   dateLabel?: string;
   isLiveDiff: boolean;
+  targetRef?: { tab: SheetTabKey; id: string };
   targetItem?: GameItem | null;
   upcomingSubCategory?: string;
 }
@@ -203,6 +204,32 @@ function writeBaseline(record: BaselineRecord): void {
   }
 }
 
+function stripNotificationForPersistence(ev: CatalogNotificationItem): CatalogNotificationItem {
+  const resolvedRef =
+    ev.targetRef ||
+    (ev.targetItem?.tab && ev.targetItem?.id
+      ? { tab: ev.targetItem.tab, id: ev.targetItem.id }
+      : undefined);
+
+  const lean: CatalogNotificationItem = {
+    id: ev.id,
+    importance: ev.importance,
+    tab: ev.tab,
+    kind: ev.kind,
+    title: ev.title,
+    subtitle: ev.subtitle,
+    timestamp: ev.timestamp,
+    isLiveDiff: ev.isLiveDiff,
+  };
+  if (ev.versionLabel) lean.versionLabel = ev.versionLabel;
+  if (ev.sizeLabel) lean.sizeLabel = ev.sizeLabel;
+  if (ev.coverImage) lean.coverImage = ev.coverImage;
+  if (ev.dateLabel) lean.dateLabel = ev.dateLabel;
+  if (ev.upcomingSubCategory) lean.upcomingSubCategory = ev.upcomingSubCategory;
+  if (resolvedRef) lean.targetRef = resolvedRef;
+  return lean;
+}
+
 export function loadPersistedLiveNotificationEvents(): CatalogNotificationItem[] {
   try {
     const raw = localStorage.getItem(LIVE_EVENTS_STORAGE_KEY);
@@ -214,12 +241,10 @@ export function loadPersistedLiveNotificationEvents(): CatalogNotificationItem[]
   }
 }
 
-function savePersistedLiveNotificationEvents(events: CatalogNotificationItem[]): void {
+export function savePersistedLiveNotificationEvents(events: CatalogNotificationItem[]): void {
   try {
-    localStorage.setItem(
-      LIVE_EVENTS_STORAGE_KEY,
-      JSON.stringify(events.slice(0, MAX_LIVE_EVENTS))
-    );
+    const compact = events.slice(0, MAX_LIVE_EVENTS).map(stripNotificationForPersistence);
+    localStorage.setItem(LIVE_EVENTS_STORAGE_KEY, JSON.stringify(compact));
   } catch {
     // ignore
   }
@@ -441,6 +466,10 @@ export function buildNotificationFeed(
   const attachTarget = (ev: CatalogNotificationItem): CatalogNotificationItem => {
     if (ev.targetItem) return ev;
     if (ev.tab === 'upcominglist') return ev;
+    if (ev.targetRef?.tab && ev.targetRef?.id && catalog[ev.targetRef.tab]) {
+      const foundByRef = catalog[ev.targetRef.tab].find((x) => x.id === ev.targetRef!.id);
+      if (foundByRef) return { ...ev, targetItem: foundByRef };
+    }
     const rawId = ev.id.split(':').slice(2).join(':');
     const [tabPart, idPart] = rawId.split(':');
     if (tabPart && idPart && catalog[tabPart as SheetTabKey]) {
