@@ -203,7 +203,7 @@ export async function fetchCatalogFromGas(gasUrl: string): Promise<SheetCatalogD
 
 const CATALOG_DB_NAME = 'secretarea_offline_db';
 const CATALOG_STORE_NAME = 'catalog_cache';
-const CATALOG_CACHE_KEY = 'latest_catalog';
+const CATALOG_CACHE_KEY = 'latest_live_catalog_v2';
 
 function openCatalogDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {

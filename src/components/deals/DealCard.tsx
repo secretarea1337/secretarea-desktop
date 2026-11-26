@@ -225,7 +225,7 @@ export const DealCard = memo(function DealCard({
         </div>
 
         {/* Price Row + Quick Actions */}
-        <div className="pt-2 border-t border-slate-200/80 dark:border-white/[0.07] flex flex-wrap xs:flex-nowrap items-center justify-between gap-2 min-w-0">
+        <div className="pt-2 border-t border-slate-200/80 dark:border-white/[0.07] flex flex-wrap items-center justify-between gap-2 min-w-0">
           <div dir="ltr" className="flex items-baseline gap-1.5 min-w-0">
             <span
               className={`font-mono-tabular text-[14.5px] sm:text-[15px] font-bold whitespace-nowrap ${
@@ -255,10 +255,10 @@ export const DealCard = memo(function DealCard({
                 }}
                 title={labels.alertsFollowBtn || 'Follow Price'}
                 aria-label={labels.alertsFollowBtn || 'Follow Price'}
-                className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                className={`h-8 w-8 inline-flex items-center justify-center rounded-lg border transition-all duration-150 cursor-pointer active:scale-[0.96] ${
                   isFollowed
-                    ? 'bg-amber-500 text-white border-amber-500'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-[#cbd6e4]'
+                    ? 'bg-amber-500 text-white border-amber-400/60 shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.12] border-slate-200/90 dark:border-white/[0.09] text-slate-700 dark:text-[#cbd6e4]'
                 }`}
               >
                 {isFollowed ? (
@@ -281,10 +281,10 @@ export const DealCard = memo(function DealCard({
               }}
               title={onToggleCompare ? labels.compareAddBtn || labels.compareOffersBtn : labels.compareOffersBtn}
               aria-label={onToggleCompare ? labels.compareAddBtn || labels.compareOffersBtn : labels.compareOffersBtn}
-              className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+              className={`h-8 w-8 inline-flex items-center justify-center rounded-lg border transition-all duration-150 cursor-pointer active:scale-[0.96] ${
                 isCompared
-                  ? 'bg-sky-500 text-white border-sky-500'
-                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-[#cbd6e4]'
+                  ? 'bg-sky-500 text-white border-sky-400/60 shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.12] border-slate-200/90 dark:border-white/[0.09] text-slate-700 dark:text-[#cbd6e4]'
               }`}
             >
               <Scales className="w-3.5 h-3.5" />
@@ -293,14 +293,16 @@ export const DealCard = memo(function DealCard({
             <button
               type="button"
               onClick={handleViewDeal}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold text-white border transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.97] ${
                 isXbox
-                  ? 'bg-[#107C10] hover:bg-[#159315]'
-                  : 'bg-[#0284c7] hover:bg-[#0369a1] dark:bg-[#1a9fff] dark:hover:bg-[#38adff]'
+                  ? 'bg-gradient-to-b from-[#169616] to-[#107C10] hover:from-[#1aad1a] hover:to-[#138c13] border-[#6ee755]/30 shadow-xs'
+                  : isPs5
+                  ? 'bg-gradient-to-b from-[#1486e8] to-[#0070d1] hover:from-[#2696f5] hover:to-[#0d7ee0] border-[#7cc4ff]/30 shadow-xs'
+                  : 'bg-gradient-to-b from-[#0ea5e9] to-[#0284c7] hover:from-[#38bdf8] hover:to-[#0ea5e9] border-sky-300/25 shadow-xs'
               }`}
             >
               <span>{labels.viewDealBtn}</span>
-              <ArrowSquareOut className="w-3.5 h-3.5 shrink-0" />
+              <ArrowSquareOut weight="bold" className="w-3.5 h-3.5 shrink-0" />
             </button>
           </div>
         </div>

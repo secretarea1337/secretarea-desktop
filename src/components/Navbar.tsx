@@ -32,9 +32,10 @@ function MiniSpinWheelIcon({ sizeClass = 'w-8 h-8' }: { sizeClass?: string }) {
       {/* Top golden pointer triangle */}
       <svg
         viewBox="0 0 12 10"
-        className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2.5 h-2 z-10 drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]"
+        className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2.5 h-2 z-10"
         aria-hidden="true"
       >
+        <path d="M1.5 2H10.5L6 9L1.5 2Z" fill="rgba(0,0,0,0.4)" />
         <path d="M1.5 1.5H10.5L6 8.5L1.5 1.5Z" fill="#fbbf0d" stroke="#f59e0b" strokeWidth="1.2" />
       </svg>
 

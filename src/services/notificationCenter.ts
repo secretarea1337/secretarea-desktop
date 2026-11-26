@@ -45,17 +45,27 @@ export interface CatalogNotificationItem {
   upcomingSubCategory?: string;
 }
 
-const BASELINE_STORAGE_KEY = 'secretarea_notif_baseline_v1';
-const LIVE_EVENTS_STORAGE_KEY = 'secretarea_notif_live_events_v1';
+const BASELINE_STORAGE_KEY = 'secretarea_notif_baseline_v2';
+const LIVE_EVENTS_STORAGE_KEY = 'secretarea_notif_live_events_v2';
+const LEGACY_BASELINE_STORAGE_KEY = 'secretarea_notif_baseline_v1';
+const LEGACY_LIVE_EVENTS_STORAGE_KEY = 'secretarea_notif_live_events_v1';
 const READ_IDS_STORAGE_KEY = 'secretarea_notif_read_ids_v1';
 const LAST_SYNC_STORAGE_KEY = 'secretarea_notif_last_sync_v1';
-const MAX_LIVE_EVENTS = 80;
-const MAX_SNAPSHOT_PER_IMPORTANT_TAB = 6;
-const MAX_SNAPSHOT_NEWS_PER_TAB = 10;
+export const MAX_NOTIFICATION_FEED_ITEMS = 3;
+const MAX_LIVE_EVENTS = 12;
 
 interface BaselineRecord {
   signatures: Record<string, string>;
   initializedAt: number;
+}
+
+function clearLegacyNotificationCacheV1(): void {
+  try {
+    localStorage.removeItem(LEGACY_BASELINE_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_LIVE_EVENTS_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 function resolvePopularRefToken(refToken: string, catalog: SheetCatalogData): GameItem | null {
@@ -82,8 +92,6 @@ function buildImportantRowSignature(item: GameItem): string {
     item.name.trim(),
     item.version.trim(),
     item.repackSize.trim(),
-    String(item.mirrors.length),
-    item.dateAdded.trim(),
   ].join('::');
 }
 
@@ -186,6 +194,7 @@ function extractCurrentBaselineSignatures(catalog: SheetCatalogData): {
 }
 
 function readBaseline(): BaselineRecord | null {
+  clearLegacyNotificationCacheV1();
   try {
     const raw = localStorage.getItem(BASELINE_STORAGE_KEY);
     if (!raw) return null;
@@ -231,6 +240,7 @@ function stripNotificationForPersistence(ev: CatalogNotificationItem): CatalogNo
 }
 
 export function loadPersistedLiveNotificationEvents(): CatalogNotificationItem[] {
+  clearLegacyNotificationCacheV1();
   try {
     const raw = localStorage.getItem(LIVE_EVENTS_STORAGE_KEY);
     if (!raw) return [];
@@ -291,12 +301,18 @@ export function setLastNotificationSyncAt(ts: number): void {
 
 /**
  * Compares newly synced Google Sheet catalog data against stored baseline signatures
- * and appends real live additions & updates for Important tabs + News tabs.
+ * and appends real live additions & updates. Never runs against bundled fallback data.
  */
 export function reconcileCatalogNotifications(
   nextCatalog: SheetCatalogData,
   options: { isLiveSync?: boolean } = {}
 ): { newEvents: CatalogNotificationItem[]; allEvents: CatalogNotificationItem[] } {
+  const existingEvents = loadPersistedLiveNotificationEvents();
+
+  if (!options.isLiveSync) {
+    return { newEvents: [], allEvents: existingEvents };
+  }
+
   const {
     signatures: currentSigs,
     importantItemsByKey,
@@ -306,20 +322,17 @@ export function reconcileCatalogNotifications(
   } = extractCurrentBaselineSignatures(nextCatalog);
 
   const existingBaseline = readBaseline();
-  const existingEvents = loadPersistedLiveNotificationEvents();
+  const now = Date.now();
 
   if (!existingBaseline) {
     writeBaseline({
       signatures: currentSigs,
-      initializedAt: Date.now(),
+      initializedAt: now,
     });
-    if (options.isLiveSync) {
-      setLastNotificationSyncAt(Date.now());
-    }
+    setLastNotificationSyncAt(now);
     return { newEvents: [], allEvents: existingEvents };
   }
 
-  const now = Date.now();
   const discovered: CatalogNotificationItem[] = [];
   const prevSigs = existingBaseline.signatures || {};
 
@@ -334,11 +347,13 @@ export function reconcileCatalogNotifications(
         tab: item.tab as ImportantNotificationTab,
         kind: 'new_addition',
         title: item.name,
-        subtitle: item.category || item.repackBy || item.tab,
+        subtitle: [item.repackBy || item.category, item.repackSize || item.originalSize]
+          .filter(Boolean)
+          .join(' · '),
         versionLabel: item.version || undefined,
         sizeLabel: item.repackSize || item.originalSize || undefined,
         coverImage: item.coverImage || undefined,
-        timestamp: Math.max(now, item.dateTimestamp || 0),
+        timestamp: item.dateTimestamp > 0 ? item.dateTimestamp : now,
         dateLabel: item.dateAdded || undefined,
         isLiveDiff: true,
         targetItem: item,
@@ -350,11 +365,11 @@ export function reconcileCatalogNotifications(
         tab: item.tab as ImportantNotificationTab,
         kind: 'version_update',
         title: item.name,
-        subtitle: item.version
-          ? `${item.version}${item.repackSize ? ` · ${item.repackSize}` : ''}`
-          : item.category || item.tab,
+        subtitle: [item.repackBy || item.category, item.repackSize || item.originalSize]
+          .filter(Boolean)
+          .join(' · '),
         versionLabel: item.version || undefined,
-        sizeLabel: item.repackSize || undefined,
+        sizeLabel: item.repackSize || item.originalSize || undefined,
         coverImage: item.coverImage || undefined,
         timestamp: now,
         dateLabel: item.dateAdded || undefined,
@@ -377,7 +392,7 @@ export function reconcileCatalogNotifications(
         title: item.name,
         subtitle: [platform, price ? `$${price}` : ''].filter(Boolean).join(' · ') || 'Upcoming',
         coverImage: item.coverImage || undefined,
-        timestamp: Math.max(now, item.dateTimestamp || 0),
+        timestamp: item.dateTimestamp > 0 ? item.dateTimestamp : now,
         dateLabel: item.dateAdded || undefined,
         isLiveDiff: true,
         targetItem: item,
@@ -417,7 +432,7 @@ export function reconcileCatalogNotifications(
         versionLabel: resolved.version || undefined,
         sizeLabel: resolved.repackSize || undefined,
         coverImage: resolved.coverImage || undefined,
-        timestamp: now,
+        timestamp: resolved.dateTimestamp > 0 ? resolved.dateTimestamp : now,
         isLiveDiff: true,
         targetItem: resolved,
       });
@@ -428,16 +443,18 @@ export function reconcileCatalogNotifications(
     signatures: currentSigs,
     initializedAt: existingBaseline.initializedAt || now,
   });
-
-  if (options.isLiveSync) {
-    setLastNotificationSyncAt(now);
-  }
+  setLastNotificationSyncAt(now);
 
   if (discovered.length === 0) {
     return { newEvents: [], allEvents: existingEvents };
   }
 
-  // Deduplicate live events while keeping newest timestamp first
+  const getSortOrder = (ev: CatalogNotificationItem): number =>
+    ev.kind === 'version_update'
+      ? ev.timestamp
+      : ev.targetItem?.dateTimestamp || ev.timestamp;
+
+  // Deduplicate live events while keeping truly newest items first
   const mergedMap = new Map<string, CatalogNotificationItem>();
   for (const ev of [...discovered, ...existingEvents]) {
     if (!mergedMap.has(ev.id)) {
@@ -445,7 +462,12 @@ export function reconcileCatalogNotifications(
     }
   }
   const merged = Array.from(mergedMap.values())
-    .sort((a, b) => b.timestamp - a.timestamp)
+    .sort(
+      (a, b) =>
+        getSortOrder(b) - getSortOrder(a) ||
+        b.timestamp - a.timestamp ||
+        Number(b.targetItem?.id || 0) - Number(a.targetItem?.id || 0)
+    )
     .slice(0, MAX_LIVE_EVENTS);
 
   savePersistedLiveNotificationEvents(merged);
@@ -453,92 +475,124 @@ export function reconcileCatalogNotifications(
 }
 
 /**
- * Combines live Google Sheets diff notifications with current sheet highlights
- * across the 6 Important Tabs and 3 Just News Tabs so the Notification Center
- * always displays fresh, actionable content cleanly without duplicates.
+ * Returns strictly the 3 newest live catalog updates or newly added games/releases
+ * from the active catalog + verified live diffs.
  */
 export function buildNotificationFeed(
   catalog: SheetCatalogData,
   liveEvents: CatalogNotificationItem[]
 ): CatalogNotificationItem[] {
-  const byIdentity = new Map<string, CatalogNotificationItem>();
+  const byTitle = new Map<string, CatalogNotificationItem>();
+  const hasCatalogData = IMPORTANT_NOTIFICATION_TABS.some((tab) => (catalog[tab]?.length || 0) > 0);
 
-  const attachTarget = (ev: CatalogNotificationItem): CatalogNotificationItem => {
-    if (ev.targetItem) return ev;
-    if (ev.tab === 'upcominglist') return ev;
+  const attachTarget = (ev: CatalogNotificationItem): { item: CatalogNotificationItem; matched: boolean } => {
+    if (ev.tab === 'upcominglist') return { item: ev, matched: true };
+
+    let resolved: GameItem | undefined;
     if (ev.targetRef?.tab && ev.targetRef?.id && catalog[ev.targetRef.tab]) {
-      const foundByRef = catalog[ev.targetRef.tab].find((x) => x.id === ev.targetRef!.id);
-      if (foundByRef) return { ...ev, targetItem: foundByRef };
+      resolved = catalog[ev.targetRef.tab].find((x) => x.id === ev.targetRef!.id);
     }
-    const rawId = ev.id.split(':').slice(2).join(':');
-    const [tabPart, idPart] = rawId.split(':');
-    if (tabPart && idPart && catalog[tabPart as SheetTabKey]) {
-      const found = catalog[tabPart as SheetTabKey].find((x) => x.id === idPart);
-      if (found) return { ...ev, targetItem: found };
+    if (!resolved) {
+      const rawId = ev.id.split(':').slice(2).join(':');
+      const [tabPart, idPart] = rawId.split(':');
+      if (tabPart && idPart && catalog[tabPart as SheetTabKey]) {
+        resolved = catalog[tabPart as SheetTabKey].find((x) => x.id === idPart);
+      }
     }
-    return ev;
+    if (!resolved && ev.targetItem?.tab && ev.targetItem?.id && catalog[ev.targetItem.tab]) {
+      resolved = catalog[ev.targetItem.tab].find((x) => x.id === ev.targetItem!.id);
+    }
+
+    if (resolved) {
+      return {
+        matched: true,
+        item: {
+          ...ev,
+          title: resolved.name,
+          subtitle: [resolved.repackBy || resolved.category, resolved.repackSize || resolved.originalSize]
+            .filter(Boolean)
+            .join(' · '),
+          versionLabel: resolved.version || ev.versionLabel,
+          sizeLabel: resolved.repackSize || resolved.originalSize || ev.sizeLabel,
+          coverImage: resolved.coverImage || ev.coverImage,
+          dateLabel: resolved.dateAdded || ev.dateLabel,
+          targetItem: resolved,
+        },
+      };
+    }
+
+    return {
+      item: ev,
+      matched: !hasCatalogData || Boolean(ev.targetItem),
+    };
   };
 
+  const upsertCandidate = (candidate: CatalogNotificationItem) => {
+    const dedupKey = candidate.title.trim().toLowerCase();
+    if (!dedupKey) return;
+    const existing = byTitle.get(dedupKey);
+    if (!existing) {
+      byTitle.set(dedupKey, candidate);
+      return;
+    }
+    const existingTs =
+      existing.kind === 'version_update'
+        ? existing.timestamp
+        : existing.targetItem?.dateTimestamp || existing.timestamp;
+    const candidateTs =
+      candidate.kind === 'version_update'
+        ? candidate.timestamp
+        : candidate.targetItem?.dateTimestamp || candidate.timestamp;
+    if (
+      candidateTs > existingTs ||
+      (candidateTs === existingTs && candidate.isLiveDiff && !existing.isLiveDiff)
+    ) {
+      byTitle.set(dedupKey, candidate);
+    }
+  };
+
+  // 1. Collect verified live events matching current catalog
   for (const rawEv of liveEvents) {
-    const ev = attachTarget(rawEv);
-    const dedupKey = `${ev.importance}:${ev.tab}:${ev.title.toLowerCase()}`;
-    if (!byIdentity.has(dedupKey)) {
-      byIdentity.set(dedupKey, ev);
+    if (
+      rawEv.kind !== 'new_addition' &&
+      rawEv.kind !== 'version_update' &&
+      rawEv.importance !== 'important'
+    ) {
+      continue;
     }
+    const { item, matched } = attachTarget(rawEv);
+    if (!matched) continue;
+    upsertCandidate(item);
   }
 
-  // Fill recent Important Tab releases (game, hypervisor, steamtools, ps5, architect, extra)
+  // 2. Collect top newest items directly from core Google Sheet tabs
+  const candidates: { tab: ImportantNotificationTab; item: GameItem }[] = [];
   for (const tab of IMPORTANT_NOTIFICATION_TABS) {
-    const items = [...(catalog[tab] || [])]
-      .sort(
-        (a, b) =>
-          Number(b.isNew) - Number(a.isNew) ||
-          b.dateTimestamp - a.dateTimestamp ||
-          Number(b.isPinned) - Number(a.isPinned) ||
-          Number(b.id) - Number(a.id)
-      )
-      .slice(0, MAX_SNAPSHOT_PER_IMPORTANT_TAB);
-
-    for (const item of items) {
-      const dedupKey = `important:${tab}:${item.name.toLowerCase()}`;
-      if (byIdentity.has(dedupKey)) continue;
-      byIdentity.set(dedupKey, {
-        id: `snap:${tab}:${item.id}`,
-        importance: 'important',
-        tab,
-        kind: item.isNew ? 'new_addition' : 'latest_release',
-        title: item.name,
-        subtitle: [item.repackBy || item.category, item.repackSize || item.originalSize]
-          .filter(Boolean)
-          .join(' · '),
-        versionLabel: item.version || undefined,
-        sizeLabel: item.repackSize || item.originalSize || undefined,
-        coverImage: item.coverImage || undefined,
-        timestamp: item.dateTimestamp || 0,
-        dateLabel: item.dateAdded || undefined,
-        isLiveDiff: false,
-        targetItem: item,
-      });
+    for (const item of catalog[tab] || []) {
+      if (!item?.name) continue;
+      candidates.push({ tab, item });
     }
   }
 
-  // Fill Just News Tab #1: upcoming
-  const upcomingSorted = [...(catalog.upcoming || [])]
-    .sort((a, b) => b.dateTimestamp - a.dateTimestamp)
-    .slice(0, MAX_SNAPSHOT_NEWS_PER_TAB);
+  candidates.sort(
+    (a, b) =>
+      b.item.dateTimestamp - a.item.dateTimestamp ||
+      Number(b.item.isNew) - Number(a.item.isNew) ||
+      Number(b.item.id) - Number(a.item.id)
+  );
 
-  for (const item of upcomingSorted) {
-    const dedupKey = `news:upcoming:${item.name.toLowerCase()}`;
-    if (byIdentity.has(dedupKey)) continue;
-    const platform = (item.rawFields.platform || '').trim();
-    const price = (item.rawFields.price || '').trim();
-    byIdentity.set(dedupKey, {
-      id: `snap:upcoming:${item.id}`,
-      importance: 'news',
-      tab: 'upcoming',
-      kind: 'upcoming_announcement',
+  for (const { tab, item } of candidates.slice(0, 12)) {
+    upsertCandidate({
+      id: `snap:${tab}:${item.id}`,
+      importance: 'important',
+      tab,
+      kind: item.isNew ? 'new_addition' : 'latest_release',
       title: item.name,
-      subtitle: [platform, price ? `$${price}` : ''].filter(Boolean).join(' · '),
+      subtitle: [item.repackBy || item.category, item.repackSize || item.originalSize]
+        .filter(Boolean)
+        .join(' · '),
+      versionLabel: item.version || undefined,
+      sizeLabel: item.repackSize || item.originalSize || undefined,
       coverImage: item.coverImage || undefined,
       timestamp: item.dateTimestamp || 0,
       dateLabel: item.dateAdded || undefined,
@@ -547,101 +601,31 @@ export function buildNotificationFeed(
     });
   }
 
-  // Fill Just News Tab #2: upcominglist (capped cleanly across columns)
-  const queueEntries = buildUpcomingListEntries(catalog.upcominglist || []).slice(
-    0,
-    MAX_SNAPSHOT_NEWS_PER_TAB
-  );
-  queueEntries.forEach((entry, idx) => {
-    const dedupKey = `news:upcominglist:${entry.title.toLowerCase()}`;
-    if (byIdentity.has(dedupKey)) return;
-    byIdentity.set(dedupKey, {
-      id: `snap:upcominglist:${entry.subCategory}:${idx}`,
-      importance: 'news',
-      tab: 'upcominglist',
-      kind: 'upcoming_queue',
-      title: entry.title,
-      subtitle: entry.subCategory,
-      timestamp: 0,
-      isLiveDiff: false,
-      upcomingSubCategory: entry.subCategory,
-    });
-  });
+  const getRankTimestamp = (ev: CatalogNotificationItem): number =>
+    ev.kind === 'version_update'
+      ? ev.timestamp
+      : ev.targetItem?.dateTimestamp || ev.timestamp;
 
-  // Fill Just News Tab #3: popularrepacks (resolved via Game ID)
-  const popularSeen = new Set<string>();
-  for (const row of catalog.popularrepacks || []) {
-    const tokens = (row.rawFields['Game ID'] || '')
-      .split(/[,\s|]+/)
-      .map((t) => t.trim())
-      .filter(Boolean);
-    for (const tok of tokens) {
-      if (popularSeen.size >= MAX_SNAPSHOT_NEWS_PER_TAB) break;
-      const resolved = resolvePopularRefToken(tok, catalog);
-      if (!resolved) continue;
-      const key = `${resolved.tab}:${resolved.id}`;
-      if (popularSeen.has(key)) continue;
-      popularSeen.add(key);
-
-      const dedupKey = `news:popularrepacks:${resolved.name.toLowerCase()}`;
-      if (byIdentity.has(dedupKey)) continue;
-      byIdentity.set(dedupKey, {
-        id: `snap:popularrepacks:${key}`,
-        importance: 'news',
-        tab: 'popularrepacks',
-        kind: 'popular_repack',
-        title: resolved.name,
-        subtitle: [resolved.repackBy || resolved.category, resolved.repackSize]
-          .filter(Boolean)
-          .join(' · '),
-        versionLabel: resolved.version || undefined,
-        sizeLabel: resolved.repackSize || undefined,
-        coverImage: resolved.coverImage || undefined,
-        timestamp: resolved.dateTimestamp || 0,
-        dateLabel: resolved.dateAdded || undefined,
-        isLiveDiff: false,
-        targetItem: resolved,
-      });
-    }
-  }
-
-  return Array.from(byIdentity.values()).sort((a, b) => {
-    if (a.isLiveDiff !== b.isLiveDiff) return a.isLiveDiff ? -1 : 1;
-    return b.timestamp - a.timestamp;
-  });
+  return Array.from(byTitle.values())
+    .sort((a, b) => {
+      const rankDiff = getRankTimestamp(b) - getRankTimestamp(a);
+      if (rankDiff !== 0) return rankDiff;
+      if (a.isLiveDiff !== b.isLiveDiff) return a.isLiveDiff ? -1 : 1;
+      return Number(b.targetItem?.id || 0) - Number(a.targetItem?.id || 0);
+    })
+    .slice(0, MAX_NOTIFICATION_FEED_ITEMS);
 }
 
 /**
- * Seeds read IDs on first run so only the freshest highlights appear unread,
- * preventing an overwhelming initial badge count on first launch.
+ * Seeds read IDs on first run so only the latest 3 items are tracked cleanly.
  */
-export function ensureInitialUnreadSeeding(feed: CatalogNotificationItem[]): Set<string> {
+export function ensureInitialUnreadSeeding(_feed: CatalogNotificationItem[]): Set<string> {
   try {
     const raw = localStorage.getItem(READ_IDS_STORAGE_KEY);
     if (raw !== null) {
       return loadReadNotificationIds();
     }
     const readSet = new Set<string>();
-    const unreadImportantLimit = 4;
-    const unreadNewsLimit = 3;
-    let impCount = 0;
-    let newsCount = 0;
-
-    for (const item of feed) {
-      if (item.importance === 'important') {
-        if (impCount < unreadImportantLimit) {
-          impCount += 1;
-        } else {
-          readSet.add(item.id);
-        }
-      } else {
-        if (newsCount < unreadNewsLimit) {
-          newsCount += 1;
-        } else {
-          readSet.add(item.id);
-        }
-      }
-    }
     saveReadNotificationIds(readSet);
     return readSet;
   } catch {

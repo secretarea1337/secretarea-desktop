@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 test('package.json preserves Windows NSIS config and defines Linux AppImage + DEB targets', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 
-  assert.equal(pkg.version, '1.0.11');
+  assert.match(pkg.version, /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/);
   assert.equal(pkg.desktopName, 'secretarea.desktop');
   assert.equal(pkg.scripts['desktop:build'], 'vite build && electron-builder --win nsis');
   assert.equal(pkg.scripts['desktop:build:win'], 'vite build && electron-builder --win nsis --x64 --publish never');

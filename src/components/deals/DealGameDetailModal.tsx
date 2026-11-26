@@ -381,7 +381,15 @@ export function DealGameDetailModal({
           </div>
 
           {/* Modal Sub-Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <div
+            className={`inline-flex flex-wrap items-center gap-1 p-1 rounded-xl border ${
+              isXbox
+                ? 'bg-[#061609]/85 border-[#52e042]/22'
+                : isPs5
+                ? 'bg-[#04112b]/85 border-white/[0.12]'
+                : 'bg-slate-100/90 dark:bg-[#0e141c] border-slate-200/80 dark:border-white/[0.08]'
+            }`}
+          >
             {modalTabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -389,16 +397,19 @@ export function DealGameDetailModal({
                 <button
                   key={tab.id}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap cursor-pointer transition-colors ${
+                  className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold whitespace-nowrap cursor-pointer transition-all duration-150 active:scale-[0.98] ${
                     active
                       ? isXbox
-                        ? 'bg-[#107C10] text-white'
-                        : 'bg-[#0284c7] dark:bg-[#1a9fff] text-white'
-                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-slate-700 dark:text-[#b8c7dc]'
+                        ? 'bg-[#107C10] text-white shadow-xs'
+                        : isPs5
+                        ? 'bg-[#0070d1] text-white shadow-xs'
+                        : 'bg-white dark:bg-[#1b2533] text-slate-900 dark:text-white shadow-xs ring-1 ring-slate-200/80 dark:ring-white/[0.1]'
+                      : 'text-slate-600 dark:text-[#8fa3bd] hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.05]'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <Icon weight={active ? 'fill' : 'regular'} className="w-3.5 h-3.5 shrink-0" />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -738,7 +749,7 @@ export function DealGameDetailModal({
                         : '—'}
                     </div>
                     <div className="text-[11.5px] text-slate-600 dark:text-[#9cb0c9]">
-                      {dossier.criticCards.metacriticUserScore.requiresKey
+                      {dossier.criticCards.metacriticUserScore.requiresKey && onOpenApiKeysModal
                         ? labels.keyRequiredBadge
                         : dossier.criticCards.metacriticUserScore.sourceName}
                     </div>
@@ -766,7 +777,7 @@ export function DealGameDetailModal({
                     </div>
                     <div className="text-[11.5px] text-slate-600 dark:text-[#9cb0c9]">
                       {dossier.criticCards.openCriticScore.tier ||
-                        (dossier.criticCards.openCriticScore.requiresKey
+                        (dossier.criticCards.openCriticScore.requiresKey && onOpenApiKeysModal
                           ? labels.keyRequiredBadge
                           : dossier.criticCards.openCriticScore.sourceName)}
                     </div>

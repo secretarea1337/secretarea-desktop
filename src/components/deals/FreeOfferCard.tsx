@@ -173,16 +173,16 @@ export function FreeOfferCard({
           <button
             type="button"
             onClick={handleOpenOffer}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold text-white border transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.97] ${
               isXbox
-                ? 'bg-[#107C10] hover:bg-[#159315]'
+                ? 'bg-gradient-to-b from-[#169616] to-[#107C10] hover:from-[#1aad1a] hover:to-[#138c13] border-[#6ee755]/30 shadow-xs'
                 : isPermanent
-                ? 'bg-[#0284c7] hover:bg-[#0369a1] dark:bg-[#1a9fff] dark:hover:bg-[#38adff]'
-                : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500'
+                ? 'bg-gradient-to-b from-[#0ea5e9] to-[#0284c7] hover:from-[#38bdf8] hover:to-[#0ea5e9] border-sky-300/25 shadow-xs'
+                : 'bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 border-emerald-300/25 shadow-xs'
             }`}
           >
             <span>{ctaLabel}</span>
-            <ArrowSquareOut className="w-3.5 h-3.5 shrink-0" />
+            <ArrowSquareOut weight="bold" className="w-3.5 h-3.5 shrink-0" />
           </button>
         </div>
       </div>

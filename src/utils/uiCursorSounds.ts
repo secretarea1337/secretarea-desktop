@@ -4,6 +4,7 @@
 let cursorAudioCtx: AudioContext | null = null;
 let cursorMasterVolume = 0.7;
 let lastCursorHoverTime = 0;
+let lastWheelTickTime = 0;
 
 export type CursorSoundVariant = 'primary' | 'soft' | 'back' | 'disabled';
 
@@ -191,6 +192,10 @@ export function playCursorHoverSound(): void {
 /** Crisp peg tick as spin wheel spokes pass the top flapper */
 export function playWheelTickSound(): void {
   if (cursorMasterVolume <= 0.001) return;
+  const perfNow = performance.now();
+  if (perfNow - lastWheelTickTime < 42) return;
+  lastWheelTickTime = perfNow;
+
   const ctx = getCursorAudioContext();
   if (!ctx) return;
 

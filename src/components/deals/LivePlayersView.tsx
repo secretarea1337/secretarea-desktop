@@ -162,7 +162,15 @@ export function LivePlayersView({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          className={`inline-flex flex-wrap items-center gap-1 p-1 rounded-xl border ${
+            isXbox
+              ? 'bg-[#061609]/85 border-[#52e042]/22'
+              : isPs5
+              ? 'bg-[#04112b]/85 border-white/[0.12]'
+              : 'bg-slate-100/90 dark:bg-[#0e141c] border-slate-200/80 dark:border-white/[0.08]'
+          }`}
+        >
           {(
             [
               { id: 'top100', label: labels.liveTabTop100, icon: Users },
@@ -179,19 +187,17 @@ export function LivePlayersView({
                 type="button"
                 aria-pressed={active}
                 onClick={() => setSubTab(tab.id)}
-                className={`inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-xl text-[12.5px] font-semibold transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12.5px] font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer active:scale-[0.98] ${
                   active
                     ? isXbox
-                      ? 'bg-[#107C10] text-white'
-                      : 'bg-[#0284c7] dark:bg-[#1a9fff] text-white'
-                    : isXbox
-                    ? 'bg-[#0c2110]/70 hover:bg-[#14351b] text-[#c4ecc0]'
-                    : isPs5
-                    ? 'bg-white/[0.06] hover:bg-white/[0.12] text-[#cbd8eb]'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-slate-700 dark:text-[#cbd6e4]'
+                      ? 'bg-[#107C10] text-white shadow-xs'
+                      : isPs5
+                      ? 'bg-[#0070d1] text-white shadow-xs'
+                      : 'bg-white dark:bg-[#1b2533] text-slate-900 dark:text-white shadow-xs ring-1 ring-slate-200/80 dark:ring-white/[0.1]'
+                    : 'text-slate-600 dark:text-[#8fa3bd] hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.05]'
                 }`}
               >
-                <Icon className="w-4 h-4 shrink-0" />
+                <Icon weight={active ? 'fill' : 'regular'} className="w-4 h-4 shrink-0" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -325,17 +331,17 @@ export function LivePlayersView({
             <table className="w-full text-start border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-white/[0.08] bg-slate-50/90 dark:bg-[#10161e] text-[11.5px] font-semibold text-slate-500 dark:text-[#8b9bb4]">
-                  <th className="py-3 px-3.5 text-start w-14">{labels.liveColRank}</th>
-                  <th className="py-3 px-3 text-start">{labels.liveColGame}</th>
-                  <th className="py-3 px-3 text-end whitespace-nowrap">{labels.liveColPlayers}</th>
+                  <th className="py-3 px-2.5 sm:px-3.5 text-start w-10 sm:w-14">{labels.liveColRank}</th>
+                  <th className="py-3 px-2.5 sm:px-3 text-start">{labels.liveColGame}</th>
+                  <th className="py-3 px-2 sm:px-3 text-end whitespace-nowrap">{labels.liveColPlayers}</th>
                   <th className="py-3 px-3 text-end whitespace-nowrap hidden md:table-cell">{labels.liveColPeak24h}</th>
-                  <th className="py-3 px-3 text-end whitespace-nowrap">{labels.liveColChange24h}</th>
+                  <th className="py-3 px-2 sm:px-3 text-end whitespace-nowrap">{labels.liveColChange24h}</th>
                   <th className="py-3 px-3 text-center whitespace-nowrap hidden sm:table-cell">{labels.liveColTrend7d}</th>
                   <th className="py-3 px-3 text-end whitespace-nowrap hidden lg:table-cell">{labels.liveColPrice}</th>
-                  <th className="py-3 px-3.5 text-end whitespace-nowrap">{labels.liveColActions}</th>
+                  <th className="py-3 px-2.5 sm:px-3.5 text-end whitespace-nowrap">{labels.liveColActions}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/75 dark:divide-white/[0.06] text-[13px]">
+              <tbody className="divide-y divide-slate-200/75 dark:divide-white/[0.06] text-[12.5px] sm:text-[13px]">
                 {activeRows.map((entry, idx) => {
                   const pctChange =
                     typeof entry.dayChangeFraction === 'number'
@@ -364,22 +370,22 @@ export function LivePlayersView({
                       onClick={() => onOpenGameByLiveEntry(entry)}
                       className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
                     >
-                      <td dir="ltr" className="py-2.5 px-3.5 font-mono-tabular font-bold text-slate-500 dark:text-[#8b9bb4]">
+                      <td dir="ltr" className="py-2.5 px-2.5 sm:px-3.5 font-mono-tabular font-bold text-slate-500 dark:text-[#8b9bb4]">
                         #{entry.rank > 0 ? entry.rank : idx + 1}
                       </td>
-                      <td className="py-2.5 px-3 min-w-[200px]">
-                        <div className="flex items-center gap-3 min-w-0">
+                      <td className="py-2.5 px-2.5 sm:px-3 min-w-[140px] sm:min-w-[200px]">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                           {entry.headerImage && (
                             <img
                               src={entry.headerImage}
                               alt={entry.title}
                               loading="lazy"
                               referrerPolicy="no-referrer"
-                              className="w-16 h-9 rounded object-cover shrink-0 bg-slate-200 dark:bg-[#0e141b]"
+                              className="w-11 h-6 sm:w-16 sm:h-9 rounded object-cover shrink-0 bg-slate-200 dark:bg-[#0e141b]"
                             />
                           )}
                           <div className="min-w-0">
-                            <div className="font-semibold text-slate-900 dark:text-white truncate max-w-[260px]">
+                            <div className="font-semibold text-slate-900 dark:text-white truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[260px]">
                               {entry.title}
                             </div>
                             <div className="text-[11px] font-mono-tabular text-slate-500 dark:text-[#8b9bb4] flex items-center gap-1.5">
@@ -393,7 +399,7 @@ export function LivePlayersView({
                           </div>
                         </div>
                       </td>
-                      <td dir="ltr" className="py-2.5 px-3 text-end font-mono-tabular font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                      <td dir="ltr" className="py-2.5 px-2 sm:px-3 text-end font-mono-tabular font-bold text-slate-900 dark:text-white whitespace-nowrap">
                         {entry.currentPlayers.toLocaleString(locale)}
                       </td>
                       <td dir="ltr" className="py-2.5 px-3 text-end font-mono-tabular text-slate-600 dark:text-[#9cb0c9] whitespace-nowrap hidden md:table-cell">

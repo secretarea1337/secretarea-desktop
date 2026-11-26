@@ -1493,12 +1493,13 @@ html.theme-custom body {
 
 .sa-spin-wheel-idle {
   transform-origin: center;
-  will-change: transform;
-  animation: sa-spin-wheel-idle 7.5s linear infinite;
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.group:hover .sa-spin-wheel-idle {
-  animation-duration: 1.8s;
+.group:hover .sa-spin-wheel-idle,
+.group:focus-visible .sa-spin-wheel-idle {
+  will-change: transform;
+  animation: sa-spin-wheel-idle 1.8s linear infinite;
 }
 
 .sa-spin-bulb-even {
@@ -1539,7 +1540,7 @@ html.theme-custom body {
    Scroll Containment & Inactive Window / Paused Cursor Animation Throttling
    ========================================================================== */
 .sa-cursor-overlay {
-  contain: strict;
+  contain: layout style;
 }
 
 .sa-contain-card {
@@ -1586,7 +1587,10 @@ html.sa-reduce-effects .theme-xbox .sa-app-shell::after,
 html.sa-reduce-effects .sa-spin-wheel-idle,
 html.sa-reduce-effects .sa-spin-bulb-even,
 html.sa-reduce-effects .sa-spin-bulb-odd,
-html.sa-reduce-effects .sa-spin-hub-glow {
+html.sa-reduce-effects .sa-spin-hub-glow,
+html.sa-reduce-effects .sa-cursor-dashed-orbit,
+html.sa-reduce-effects .sa-cursor-spinner-rotate,
+html.sa-reduce-effects .sa-cursor-hourglass-flip {
   animation: none !important;
   will-change: auto !important;
 }

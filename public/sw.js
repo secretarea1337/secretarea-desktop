@@ -1,4 +1,4 @@
-const CACHE_NAME = 'secretarea-offline-v2';
+const CACHE_NAME = 'secretarea-offline-v3';
 const IMAGE_CACHE_NAME = 'secretarea-images-v1';
 
 const PRECACHE_URLS = ['./', './index.html', './img/logo01.png'];
@@ -38,10 +38,16 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Never intercept Google Apps Script API requests
+  // Never intercept Google Apps Script API requests or Vite dev module URLs
   if (
     url.hostname.includes('script.google.com') ||
-    url.hostname.includes('script.googleusercontent.com')
+    url.hostname.includes('script.googleusercontent.com') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/node_modules/') ||
+    url.pathname.startsWith('/@vite/') ||
+    url.pathname.startsWith('/@react-refresh') ||
+    url.pathname.startsWith('/@fs/') ||
+    url.pathname.startsWith('/@id/')
   ) {
     return;
   }

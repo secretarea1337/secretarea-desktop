@@ -610,7 +610,19 @@ function registerUpdaterIpc() {
     writeDesktopLauncherSettings({
       onboardingCompleted: completed,
       lastOnboardedVersion: completed ? version : null,
+      lastSeenVersion: completed ? version : null,
     });
+    return getDesktopSettingsPayload();
+  });
+
+  ipcMain.handle('settings:mark-version-seen', (event, rawVersion) => {
+    if (!isTrustedSender(event)) return null;
+    const candidate =
+      typeof rawVersion === 'string' && rawVersion.trim()
+        ? rawVersion.trim()
+        : readPackageVersion();
+    const version = /^[0-9A-Za-z._-]{1,32}$/.test(candidate) ? candidate : readPackageVersion();
+    writeDesktopLauncherSettings({ lastSeenVersion: version });
     return getDesktopSettingsPayload();
   });
 
@@ -1045,6 +1057,10 @@ function getDesktopSettingsPayload() {
     lastOnboardedVersion:
       typeof persisted.lastOnboardedVersion === 'string' && persisted.lastOnboardedVersion.trim()
         ? persisted.lastOnboardedVersion.trim()
+        : null,
+    lastSeenVersion:
+      typeof persisted.lastSeenVersion === 'string' && persisted.lastSeenVersion.trim()
+        ? persisted.lastSeenVersion.trim()
         : null,
     appVersion: readPackageVersion(),
     isPackaged: app.isPackaged,

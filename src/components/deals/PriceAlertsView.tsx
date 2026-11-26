@@ -215,7 +215,7 @@ export function PriceAlertsView({
               return (
                 <div
                   key={rule.id}
-                  className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/70 dark:bg-[#10161e] p-3 flex items-center justify-between gap-3"
+                  className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/70 dark:bg-[#10161e] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {rule.thumbUrl && (
@@ -239,8 +239,8 @@ export function PriceAlertsView({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex flex-col items-end gap-0.5">
+                  <div className="flex items-end sm:items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/70 dark:border-white/[0.06]">
+                    <div className="flex flex-col items-start sm:items-end gap-0.5 flex-1 sm:flex-initial">
                       <label className="text-[10px] text-slate-400">
                         {labels.alertsTargetPriceLabel} ({selectedCurrency})
                       </label>
@@ -261,13 +261,13 @@ export function PriceAlertsView({
                           const usd = convertFilterAmountToUsd(raw, selectedCurrency, fxSnapshot);
                           onUpdateTargetUsd(rule.id, usd ?? null);
                         }}
-                        className="w-24 min-h-[30px] px-2 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-[#161e29] text-[12px] font-mono-tabular text-end"
+                        className="w-full sm:w-28 min-h-[34px] px-2.5 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-[#161e29] text-[12px] font-mono-tabular sm:text-end"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => onUnfollow(rule.id)}
-                      className="p-2 rounded-lg hover:bg-rose-500/15 text-slate-400 hover:text-rose-500 cursor-pointer"
+                      className="p-2 rounded-lg hover:bg-rose-500/15 text-slate-400 hover:text-rose-500 cursor-pointer shrink-0"
                     >
                       <Trash className="w-4 h-4" />
                     </button>

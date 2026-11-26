@@ -146,6 +146,9 @@ interface BurstSlotNodes {
   outerCircle: SVGCircleElement | null;
   innerCircle: SVGCircleElement | null;
   raysGroup: SVGGElement | null;
+  outerAnim: Animation | null;
+  innerAnim: Animation | null;
+  raysAnim: Animation | null;
 }
 
 export const CustomCursorOverlay = memo(function CustomCursorOverlay({
@@ -190,6 +193,9 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
       outerCircle: null,
       innerCircle: null,
       raysGroup: null,
+      outerAnim: null,
+      innerAnim: null,
+      raysAnim: null,
     }))
   );
   const burstPoolIndexRef = useRef(0);
@@ -327,11 +333,35 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
       }
     };
 
+    const cancelSlotAnimations = (slot: BurstSlotNodes) => {
+      try {
+        slot.outerAnim?.cancel();
+      } catch {
+        // ignore
+      }
+      try {
+        slot.innerAnim?.cancel();
+      } catch {
+        // ignore
+      }
+      try {
+        slot.raysAnim?.cancel();
+      } catch {
+        // ignore
+      }
+      slot.outerAnim = null;
+      slot.innerAnim = null;
+      slot.raysAnim = null;
+    };
+
     const triggerClickBurst = (x: number, y: number, kind: CustomCursorKind) => {
+      if (document.documentElement.classList.contains('sa-reduce-effects')) return;
       const slotIdx = burstPoolIndexRef.current % BURST_POOL_SIZE;
       burstPoolIndexRef.current += 1;
       const slot = burstSlotsRef.current[slotIdx];
       if (!slot || !slot.root) return;
+
+      cancelSlotAnimations(slot);
 
       const isBlocked = kind === 'not-allowed';
       const burstColor = isBlocked ? '#f87171' : ringBlueRef.current;
@@ -340,23 +370,23 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
 
       if (slot.outerCircle) {
         slot.outerCircle.setAttribute('stroke', burstColor);
-        slot.outerCircle.animate(
+        slot.outerAnim = slot.outerCircle.animate(
           [
             { opacity: 0.92, transform: 'scale(0.35)' },
             { opacity: 0, transform: 'scale(2.15)' },
           ],
-          { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+          { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'none' }
         );
       }
 
       if (slot.innerCircle) {
         slot.innerCircle.setAttribute('stroke', burstColor);
-        slot.innerCircle.animate(
+        slot.innerAnim = slot.innerCircle.animate(
           [
             { opacity: 0.95, transform: 'scale(0.45)' },
             { opacity: 0, transform: 'scale(1.65)' },
           ],
-          { duration: 340, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+          { duration: 340, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'none' }
         );
       }
 
@@ -366,13 +396,13 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
         } else {
           slot.raysGroup.style.display = '';
           slot.raysGroup.setAttribute('stroke', burstColor);
-          slot.raysGroup.animate(
+          slot.raysAnim = slot.raysGroup.animate(
             [
               { opacity: 0.95, transform: 'scale(0.55)' },
               { opacity: 0.85, transform: 'scale(1.18)', offset: 0.55 },
               { opacity: 0, transform: 'scale(1.45)' },
             ],
-            { duration: 320, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+            { duration: 320, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'none' }
           );
         }
       }
@@ -457,6 +487,9 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
         window.cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      for (let i = 0; i < burstSlotsRef.current.length; i++) {
+        cancelSlotAnimations(burstSlotsRef.current[i]);
+      }
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointerup', handlePointerUp);
@@ -475,7 +508,7 @@ export const CustomCursorOverlay = memo(function CustomCursorOverlay({
     <div
       ref={overlayRef}
       aria-hidden="true"
-      className="sa-cursor-overlay sa-cursor-paused fixed inset-0 pointer-events-none z-[99999] overflow-hidden select-none"
+      className="sa-cursor-overlay sa-cursor-paused fixed left-0 top-0 w-0 h-0 pointer-events-none z-[99999] overflow-visible select-none"
     >
       {/* Pre-allocated Click Ripple & Radial Burst Pool (zero React re-renders) */}
       {Array.from({ length: BURST_POOL_SIZE }).map((_, idx) => (

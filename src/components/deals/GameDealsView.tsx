@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   ArrowsClockwise,
   Bell,
+  CaretDown,
   CaretLeft,
   CaretRight,
   Clock,
@@ -10,7 +11,6 @@ import {
   Flame,
   Funnel,
   Gift,
-  Key,
   MagnifyingGlass,
   Percent,
   Scales,
@@ -71,7 +71,6 @@ import {
 } from '../../deals/types';
 import { getTranslations } from '../../i18n/translations';
 import type { AppLanguage, AppThemeMode } from '../../services/launcherSettings';
-import { ApiCredentialsModal } from './ApiCredentialsModal';
 import { CurrencySwitcher } from './CurrencySwitcher';
 import { DealCard } from './DealCard';
 import { DealGameDetailModal } from './DealGameDetailModal';
@@ -189,7 +188,6 @@ export function GameDealsView({
   const [selectedDossierTarget, setSelectedDossierTarget] = useState<DossierTargetInput | null>(
     null
   );
-  const [isApiKeysOpen, setIsApiKeysOpen] = useState(false);
   const [isRefreshingManual, setIsRefreshingManual] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
@@ -632,8 +630,8 @@ export function GameDealsView({
     <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 py-4 sm:py-6 space-y-5 sm:space-y-6">
         {/* Top Hub Header */}
-        <header className={`sa-ps5-panel rounded-2xl border p-4 sm:p-6 space-y-4 ${panelSurfaceClass}`}>
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <header className={`sa-ps5-panel rounded-2xl border p-3.5 sm:p-6 space-y-3.5 sm:space-y-4 ${panelSurfaceClass}`}>
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5 sm:gap-4">
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span
@@ -647,7 +645,7 @@ export function GameDealsView({
                 >
                   <Percent weight="bold" className="w-5 h-5" />
                 </span>
-                <h1 className="font-display text-lg sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white [text-wrap:balance] truncate">
+                <h1 className="font-display text-lg sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white [text-wrap:balance] leading-tight">
                   {td.pageTitle}
                 </h1>
               </div>
@@ -657,7 +655,7 @@ export function GameDealsView({
             </div>
 
             {/* Right Controls */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full xl:w-auto shrink-0">
               <CurrencySwitcher
                 selectedCurrency={selectedCurrency}
                 region={region}
@@ -679,30 +677,18 @@ export function GameDealsView({
 
               <button
                 type="button"
-                onClick={() => setIsApiKeysOpen(true)}
-                className={`sa-ps5-subpanel inline-flex items-center justify-center gap-1.5 min-h-[38px] px-3 py-1.5 rounded-xl border text-[12.5px] font-semibold whitespace-nowrap shrink-0 cursor-pointer transition-colors ${
-                  isXbox
-                    ? 'bg-[#0c2110]/85 border-[#52e042]/24 text-white hover:border-[#6ee755]/60'
-                    : isPs5
-                    ? 'bg-[#081a3d]/75 border-white/[0.14] text-white hover:border-[#7cc4ff]/60'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border-slate-200 dark:border-white/[0.1] text-slate-800 dark:text-white'
-                }`}
-              >
-                <Key className="w-3.5 h-3.5 shrink-0" />
-                <span>{td.apiKeysBtn}</span>
-              </button>
-
-              <button
-                type="button"
                 disabled={isRefreshingManual}
                 onClick={() => void handleManualRefresh()}
-                className={`inline-flex items-center justify-center gap-1.5 min-h-[38px] px-3.5 py-1.5 rounded-xl text-[12.5px] font-semibold text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-55 ${
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-xl text-[12.5px] font-semibold text-white border transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-55 active:scale-[0.98] ${
                   isXbox
-                    ? 'bg-[#107C10] hover:bg-[#159315]'
-                    : 'bg-[#0284c7] hover:bg-[#0369a1] dark:bg-[#1a9fff] dark:hover:bg-[#38adff]'
+                    ? 'bg-gradient-to-b from-[#169616] to-[#107C10] hover:from-[#1aad1a] hover:to-[#138c13] border-[#6ee755]/35 shadow-sm shadow-[#107C10]/25'
+                    : isPs5
+                    ? 'bg-gradient-to-b from-[#1486e8] to-[#0070d1] hover:from-[#2696f5] hover:to-[#0d7ee0] border-[#7cc4ff]/35 shadow-sm shadow-[#0070d1]/30'
+                    : 'bg-gradient-to-b from-[#0ea5e9] to-[#0284c7] hover:from-[#38bdf8] hover:to-[#0ea5e9] border-sky-300/30 shadow-sm shadow-sky-500/20'
                 }`}
               >
                 <ArrowsClockwise
+                  weight="bold"
                   className={`w-3.5 h-3.5 shrink-0 ${isRefreshingManual ? 'animate-spin' : ''}`}
                 />
                 <span>{isRefreshingManual ? td.refreshingBtn : td.refreshBtn}</span>
@@ -710,9 +696,12 @@ export function GameDealsView({
             </div>
           </div>
 
-          {/* Sub-Navigation Tabs + Quiet Last-Updated Time */}
-          <div className="pt-3 border-t border-slate-200 dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 sm:pb-0">
+          {/* Sub-Navigation Tab Rail + Quiet Last-Updated Time */}
+          <div className="pt-3 border-t border-slate-200 dark:border-white/[0.08] flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+            <nav
+              aria-label={td.pageTitle}
+              className="flex flex-wrap items-center gap-1 min-w-0 flex-1"
+            >
               {navTabs.map((tab) => {
                 const Icon = tab.icon;
                 const active = activeTab === tab.id;
@@ -722,27 +711,34 @@ export function GameDealsView({
                     type="button"
                     aria-pressed={active}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex items-center gap-1.5 min-h-[38px] px-3 sm:px-3.5 py-1.5 rounded-xl text-[12.5px] sm:text-[13px] font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12.5px] font-semibold border transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.98] ${
                       active
                         ? isXbox
-                          ? 'bg-[#107C10] text-white'
-                          : 'bg-[#0284c7] dark:bg-[#1a9fff] text-white'
+                          ? 'bg-[#107C10]/25 text-[#7cf25c] border-[#52e042]/45 shadow-xs'
+                          : isPs5
+                          ? 'bg-[#0070d1]/30 text-white border-[#7cc4ff]/45 shadow-xs'
+                          : 'bg-sky-500/12 dark:bg-[#1a9fff]/15 text-[#0284c7] dark:text-[#5cc8ff] border-sky-500/35 dark:border-[#38bdf8]/40 shadow-xs'
                         : isXbox
-                        ? 'bg-[#0c2110]/70 hover:bg-[#14351b] text-[#c4ecc0]'
+                        ? 'border-transparent text-[#9ec49b] hover:text-white hover:bg-[#14351b]/65'
                         : isPs5
-                        ? 'bg-white/[0.06] hover:bg-white/[0.12] text-[#cbd8eb]'
-                        : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-slate-700 dark:text-[#b8c7dc]'
+                        ? 'border-transparent text-[#9eb8dc] hover:text-white hover:bg-white/[0.07]'
+                        : 'border-transparent text-slate-600 dark:text-[#8fa3bd] hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-white/[0.05]'
                     }`}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon
+                      weight={active ? 'fill' : 'regular'}
+                      className="w-4 h-4 shrink-0"
+                    />
                     <span>{tab.label}</span>
                     {tab.badge !== undefined && (
                       <span
                         dir="ltr"
-                        className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-mono-tabular font-bold ${
+                        className={`px-1.5 py-0.5 rounded-md text-[10.5px] font-mono-tabular font-bold leading-none ${
                           active
-                            ? 'bg-white/25 text-white'
-                            : 'bg-sky-500 text-white'
+                            ? isXbox
+                              ? 'bg-[#52e042]/25 text-[#9eff8a]'
+                              : 'bg-sky-500/20 text-[#0284c7] dark:text-[#7dd3fc]'
+                            : 'bg-slate-200 dark:bg-white/[0.1] text-slate-700 dark:text-[#cbd6e4]'
                         }`}
                       >
                         {tab.badge}
@@ -751,7 +747,7 @@ export function GameDealsView({
                   </button>
                 );
               })}
-            </div>
+            </nav>
 
             {formattedLastUpdated && (
               <span className="inline-flex items-center gap-1.5 text-[11.5px] font-mono-tabular text-slate-500 dark:text-[#8b9bb4] whitespace-nowrap shrink-0">
@@ -766,9 +762,9 @@ export function GameDealsView({
 
         {/* ===================== TAB 1: OVERVIEW & WHAT'S HOT TODAY ===================== */}
         {activeTab === 'overview' && (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Intelligence KPI Summary Strip */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => setActiveTab('live-players')}
@@ -844,7 +840,15 @@ export function GameDealsView({
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div
+                    className={`inline-flex flex-wrap items-center gap-1 p-1 rounded-xl border ${
+                      isXbox
+                        ? 'bg-[#061609]/85 border-[#52e042]/22'
+                        : isPs5
+                        ? 'bg-[#04112b]/85 border-white/[0.12]'
+                        : 'bg-slate-100/90 dark:bg-[#0e141c] border-slate-200/80 dark:border-white/[0.08]'
+                    }`}
+                  >
                     {(
                       [
                         { id: 'most-played', label: td.hotMostPlayed },
@@ -856,13 +860,16 @@ export function GameDealsView({
                       <button
                         key={m.id}
                         type="button"
+                        aria-pressed={hotMode === m.id}
                         onClick={() => setHotMode(m.id)}
-                        className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer transition-colors ${
+                        className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer transition-all duration-150 whitespace-nowrap active:scale-[0.98] ${
                           hotMode === m.id
                             ? isXbox
-                              ? 'bg-[#107C10] text-white'
-                              : 'bg-[#0284c7] dark:bg-[#1a9fff] text-white'
-                            : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-700 dark:text-[#cbd6e4]'
+                              ? 'bg-[#107C10] text-white shadow-xs'
+                              : isPs5
+                              ? 'bg-[#0070d1] text-white shadow-xs'
+                              : 'bg-white dark:bg-[#1b2533] text-slate-900 dark:text-white shadow-xs ring-1 ring-slate-200/80 dark:ring-white/[0.1]'
+                            : 'text-slate-600 dark:text-[#8fa3bd] hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.05]'
                         }`}
                       >
                         {m.label}
@@ -1203,14 +1210,14 @@ export function GameDealsView({
           <div className="space-y-5">
             <div className={`sa-ps5-panel rounded-2xl border p-3.5 sm:p-4 space-y-3 ${panelSurfaceClass}`}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
-                <div className="sm:col-span-2 lg:col-span-1 xl:col-span-2 relative flex items-center">
+                <div className="sm:col-span-2 lg:col-span-1 xl:col-span-2 relative flex items-center min-w-0">
                   <MagnifyingGlass className="w-4 h-4 text-slate-400 absolute start-3 pointer-events-none" />
                   <input
                     type="text"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     placeholder={td.searchPlaceholder}
-                    className="w-full min-h-[38px] ps-9 pe-8 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[13px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0284c7] dark:focus:ring-[#38bdf8]"
+                    className="w-full min-w-0 min-h-[38px] ps-9 pe-8 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[13px] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0284c7] dark:focus:ring-[#38bdf8]"
                   />
                   {searchInput && (
                     <button
@@ -1224,24 +1231,30 @@ export function GameDealsView({
                   )}
                 </div>
 
-                <select
-                  value={selectedStoreId}
-                  onChange={(e) => {
-                    setSelectedStoreId(e.target.value);
-                    setPageNumber(0);
-                  }}
-                  aria-label={td.storeFilterAll}
-                  className="min-h-[38px] px-3 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[12.5px] font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
-                >
-                  <option value="all">{td.storeFilterAll}</option>
-                  {allStores.map((store) => (
-                    <option key={store.storeId} value={store.storeId}>
-                      {store.storeName}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative min-w-0">
+                  <select
+                    value={selectedStoreId}
+                    onChange={(e) => {
+                      setSelectedStoreId(e.target.value);
+                      setPageNumber(0);
+                    }}
+                    aria-label={td.storeFilterAll}
+                    className="appearance-none w-full min-w-0 h-[38px] ps-3 pe-8 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-slate-50 hover:bg-white dark:bg-[#10161e] dark:hover:bg-[#151e29] text-[12.5px] font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7] cursor-pointer transition-colors"
+                  >
+                    <option value="all">{td.storeFilterAll}</option>
+                    {allStores.map((store) => (
+                      <option key={store.storeId} value={store.storeId}>
+                        {store.storeName}
+                      </option>
+                    ))}
+                  </select>
+                  <CaretDown
+                    weight="bold"
+                    className="w-3.5 h-3.5 text-slate-400 absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  />
+                </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <input
                     type="number"
                     min="0"
@@ -1253,7 +1266,7 @@ export function GameDealsView({
                     }}
                     placeholder={`${td.minPriceLabel} (${selectedCurrency})`}
                     aria-label={`${td.minPriceLabel} (${selectedCurrency})`}
-                    className="w-1/2 min-h-[38px] px-2.5 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[12.5px] font-mono-tabular text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
+                    className="w-1/2 min-w-0 h-[38px] px-2.5 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[12.5px] font-mono-tabular text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
                   />
                   <input
                     type="number"
@@ -1266,45 +1279,57 @@ export function GameDealsView({
                     }}
                     placeholder={`${td.maxPriceLabel} (${selectedCurrency})`}
                     aria-label={`${td.maxPriceLabel} (${selectedCurrency})`}
-                    className="w-1/2 min-h-[38px] px-2.5 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[12.5px] font-mono-tabular text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
+                    className="w-1/2 min-w-0 h-[38px] px-2.5 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[12.5px] font-mono-tabular text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
                   />
                 </div>
 
-                <select
-                  value={minDiscount}
-                  onChange={(e) => {
-                    setMinDiscount(Number(e.target.value));
-                    setPageNumber(0);
-                  }}
-                  aria-label={td.minDiscountLabel}
-                  className="min-h-[38px] px-3 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[12.5px] font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
-                >
-                  <option value={0}>
-                    {td.minDiscountLabel}: {td.discountAny}
-                  </option>
-                  <option value={25}>25%+</option>
-                  <option value={50}>50%+</option>
-                  <option value={75}>75%+</option>
-                  <option value={90}>90%+</option>
-                </select>
+                <div className="relative min-w-0">
+                  <select
+                    value={minDiscount}
+                    onChange={(e) => {
+                      setMinDiscount(Number(e.target.value));
+                      setPageNumber(0);
+                    }}
+                    aria-label={td.minDiscountLabel}
+                    className="appearance-none w-full min-w-0 h-[38px] ps-3 pe-8 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-slate-50 hover:bg-white dark:bg-[#10161e] dark:hover:bg-[#151e29] text-[12.5px] font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7] cursor-pointer transition-colors"
+                  >
+                    <option value={0}>
+                      {td.minDiscountLabel}: {td.discountAny}
+                    </option>
+                    <option value={25}>25%+</option>
+                    <option value={50}>50%+</option>
+                    <option value={75}>75%+</option>
+                    <option value={90}>90%+</option>
+                  </select>
+                  <CaretDown
+                    weight="bold"
+                    className="w-3.5 h-3.5 text-slate-400 absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  />
+                </div>
 
-                <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value as DealsSortOption);
-                    setPageNumber(0);
-                  }}
-                  aria-label={td.sortLabel}
-                  className="min-h-[38px] px-3 rounded-lg border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#10161e] text-[12.5px] font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]"
-                >
-                  <option value="deal-rating">{td.sortDealRating}</option>
-                  <option value="savings">{td.sortSavings}</option>
-                  <option value="price-asc">{td.sortPriceAsc}</option>
-                  <option value="price-desc">{td.sortPriceDesc}</option>
-                  <option value="recent">{td.sortRecent}</option>
-                  <option value="metacritic">{td.sortMetacritic}</option>
-                  <option value="title">{td.sortTitle}</option>
-                </select>
+                <div className="relative min-w-0">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value as DealsSortOption);
+                      setPageNumber(0);
+                    }}
+                    aria-label={td.sortLabel}
+                    className="appearance-none w-full min-w-0 h-[38px] ps-3 pe-8 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-slate-50 hover:bg-white dark:bg-[#10161e] dark:hover:bg-[#151e29] text-[12.5px] font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0284c7] cursor-pointer transition-colors"
+                  >
+                    <option value="deal-rating">{td.sortDealRating}</option>
+                    <option value="savings">{td.sortSavings}</option>
+                    <option value="price-asc">{td.sortPriceAsc}</option>
+                    <option value="price-desc">{td.sortPriceDesc}</option>
+                    <option value="recent">{td.sortRecent}</option>
+                    <option value="metacritic">{td.sortMetacritic}</option>
+                    <option value="title">{td.sortTitle}</option>
+                  </select>
+                  <CaretDown
+                    weight="bold"
+                    className="w-3.5 h-3.5 text-slate-400 absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  />
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-slate-500 dark:text-[#8b9bb4]">
@@ -1395,7 +1420,7 @@ export function GameDealsView({
                     type="button"
                     disabled={pageNumber <= 0}
                     onClick={() => setPageNumber((p) => Math.max(0, p - 1))}
-                    className={`sa-ps5-subpanel inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 rounded-lg border disabled:opacity-40 text-[12.5px] font-semibold cursor-pointer ${panelSurfaceClass}`}
+                    className={`sa-ps5-subpanel inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border disabled:opacity-40 text-[12.5px] font-semibold cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/[0.2] active:scale-[0.98] ${panelSurfaceClass}`}
                   >
                     <CaretLeft weight="bold" className="w-3.5 h-3.5 rtl:rotate-180" />
                     <span>{td.prevPageBtn}</span>
@@ -1409,7 +1434,7 @@ export function GameDealsView({
                     type="button"
                     disabled={!dealsPage.hasNextPage}
                     onClick={() => setPageNumber((p) => p + 1)}
-                    className={`sa-ps5-subpanel inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 rounded-lg border disabled:opacity-40 text-[12.5px] font-semibold cursor-pointer ${panelSurfaceClass}`}
+                    className={`sa-ps5-subpanel inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border disabled:opacity-40 text-[12.5px] font-semibold cursor-pointer transition-all hover:border-slate-300 dark:hover:border-white/[0.2] active:scale-[0.98] ${panelSurfaceClass}`}
                   >
                     <span>{td.nextPageBtn}</span>
                     <CaretRight weight="bold" className="w-3.5 h-3.5 rtl:rotate-180" />
@@ -1482,7 +1507,15 @@ export function GameDealsView({
           <div className="space-y-5">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
+                <div
+                  className={`inline-flex flex-wrap items-center gap-1 p-1 rounded-xl border ${
+                    isXbox
+                      ? 'bg-[#061609]/85 border-[#52e042]/22'
+                      : isPs5
+                      ? 'bg-[#04112b]/85 border-white/[0.12]'
+                      : 'bg-slate-100/90 dark:bg-[#0e141c] border-slate-200/80 dark:border-white/[0.08]'
+                  }`}
+                >
                   {(
                     [
                       {
@@ -1509,23 +1542,31 @@ export function GameDealsView({
                         type="button"
                         aria-pressed={active}
                         onClick={() => setFreeCategory(cat.id)}
-                        className={`sa-ps5-subpanel inline-flex items-center gap-2 min-h-[38px] px-3.5 py-1.5 rounded-xl text-[12.5px] sm:text-[13px] font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+                        className={`inline-flex items-center gap-2 h-8 px-3 rounded-lg text-[12.5px] font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer active:scale-[0.98] ${
                           active
-                            ? 'bg-emerald-600 text-white border border-emerald-500'
-                            : `${panelSurfaceClass} text-slate-700 dark:text-[#cbd6e4]`
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-slate-600 dark:text-[#8fa3bd] hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.05]'
                         }`}
                       >
                         <span>{cat.label}</span>
-                        <span className="font-mono-tabular text-[11.5px] opacity-85">
-                          ({cat.count})
+                        <span className="font-mono-tabular text-[11px] opacity-80">
+                          {cat.count}
                         </span>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* Store & DLC Filter Pills */}
-                <div className="flex flex-wrap items-center gap-1.5">
+                {/* Store & DLC Segmented Filter */}
+                <div
+                  className={`inline-flex flex-wrap items-center gap-1 p-1 rounded-xl border ${
+                    isXbox
+                      ? 'bg-[#061609]/85 border-[#52e042]/22'
+                      : isPs5
+                      ? 'bg-[#04112b]/85 border-white/[0.12]'
+                      : 'bg-slate-100/90 dark:bg-[#0e141c] border-slate-200/80 dark:border-white/[0.08]'
+                  }`}
+                >
                   {(
                     [
                       { id: 'all', label: td.freeFilterAll },
@@ -1538,11 +1579,16 @@ export function GameDealsView({
                     <button
                       key={sf.id}
                       type="button"
+                      aria-pressed={freeStoreFilter === sf.id}
                       onClick={() => setFreeStoreFilter(sf.id)}
-                      className={`px-2.5 py-1 rounded-lg text-[12px] font-semibold cursor-pointer ${
+                      className={`h-8 px-2.5 rounded-lg text-[12px] font-semibold cursor-pointer transition-all duration-150 whitespace-nowrap active:scale-[0.98] ${
                         freeStoreFilter === sf.id
-                          ? 'bg-sky-500 text-white'
-                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-600 dark:text-[#9cb0c9]'
+                          ? isXbox
+                            ? 'bg-[#107C10] text-white shadow-xs'
+                            : isPs5
+                            ? 'bg-[#0070d1] text-white shadow-xs'
+                            : 'bg-white dark:bg-[#1b2533] text-slate-900 dark:text-white shadow-xs ring-1 ring-slate-200/80 dark:ring-white/[0.1]'
+                          : 'text-slate-600 dark:text-[#8fa3bd] hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/[0.05]'
                       }`}
                     >
                       {sf.label}
@@ -1828,29 +1874,6 @@ export function GameDealsView({
         onOpenExternal={onOpenExternal}
         onToggleCompare={handleToggleCompareDossier}
         onToggleAlert={handleToggleAlertDossier}
-        onOpenApiKeysModal={() => setIsApiKeysOpen(true)}
-      />
-
-      {/* API Credentials Modal (Electron safeStorage) */}
-      <ApiCredentialsModal
-        isOpen={isApiKeysOpen}
-        activeTheme={activeTheme}
-        labels={{
-          apiKeysTitle: td.apiKeysTitle,
-          apiKeysSubtitle: td.apiKeysSubtitle,
-          apiKeysFreeLabel: td.apiKeysFreeLabel,
-          apiKeysOptionalLabel: td.apiKeysOptionalLabel,
-          apiKeysSaveBtn: td.apiKeysSaveBtn,
-          apiKeysClearBtn: td.apiKeysClearBtn,
-          apiKeysConfiguredBadge: td.apiKeysConfiguredBadge,
-          apiKeysNotSetBadge: td.apiKeysNotSetBadge,
-          apiKeysSafeStorageNote: td.apiKeysSafeStorageNote,
-          detailCloseBtn: td.detailCloseBtn,
-        }}
-        onClose={() => setIsApiKeysOpen(false)}
-        onCredentialsChanged={() => {
-          clearDealsMemoryCache();
-        }}
       />
     </div>
   );

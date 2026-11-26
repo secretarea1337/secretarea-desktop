@@ -92,6 +92,7 @@ export interface DesktopSettingsStatePayload {
   closeBehavior?: 'minimize-to-tray' | 'exit';
   onboardingCompleted?: boolean;
   lastOnboardedVersion?: string | null;
+  lastSeenVersion?: string | null;
   appVersion?: string;
   isPackaged: boolean;
   platform: string;
@@ -110,6 +111,7 @@ interface SecretAreaSettingsBridge {
   completeOnboarding?: (
     payload?: boolean | { completed?: boolean; version?: string }
   ) => Promise<DesktopSettingsStatePayload | null>;
+  markVersionSeen?: (version?: string) => Promise<DesktopSettingsStatePayload | null>;
   setPerformanceSettings?: (
     payload: EffectivePerformanceConfig
   ) => Promise<{ ok: boolean; effective: EffectivePerformanceConfig } | null>;

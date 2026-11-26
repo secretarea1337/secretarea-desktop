@@ -41,6 +41,7 @@ import {
 import { TopUtilityBar } from './components/TopUtilityBar';
 import { Navbar } from './components/Navbar';
 import { StoreView } from './components/StoreView';
+import { NotificationCenterDrawer } from './components/NotificationCenterDrawer';
 import type { OnboardingThemeChoice } from './components/FirstLaunchOnboarding';
 
 const LibrarySidebar = lazy(() =>
@@ -82,11 +83,6 @@ const DesktopUpdaterModal = lazy(() =>
 const UpdateHistoryModal = lazy(() =>
   import('./components/UpdateHistoryModal').then((m) => ({ default: m.UpdateHistoryModal }))
 );
-const NotificationCenterDrawer = lazy(() =>
-  import('./components/NotificationCenterDrawer').then((m) => ({
-    default: m.NotificationCenterDrawer,
-  }))
-);
 const SpinWheelModal = lazy(() =>
   import('./components/SpinWheelModal').then((m) => ({ default: m.SpinWheelModal }))
 );
@@ -103,6 +99,11 @@ const PresentMonSetupModal = lazy(() =>
 const FirstLaunchOnboarding = lazy(() =>
   import('./components/FirstLaunchOnboarding').then((m) => ({
     default: m.FirstLaunchOnboarding,
+  }))
+);
+const HypervisorGuideModal = lazy(() =>
+  import('./components/HypervisorGuideModal').then((m) => ({
+    default: m.HypervisorGuideModal,
   }))
 );
 import {
@@ -138,14 +139,20 @@ import {
   applyDocumentPerformanceSettings,
   applyDocumentThemeSettings,
   buildPerformancePayloadForDesktop,
+  compareAppVersions,
   DEFAULT_CUSTOM_THEME,
   DEFAULT_LAUNCHER_SETTINGS,
   getActiveConsoleTheme,
   getAppVersionString,
   getEffectivePerformanceConfig,
+  getLastSeenAppVersion,
   isLocalOnboardingCompleted,
   loadLauncherSettings,
+  normalizeCustomTheme,
+  normalizePerformanceAdvanced,
+  normalizePerformanceMode,
   saveLauncherSettings,
+  setLastSeenAppVersion,
   setLocalOnboardingCompleted,
   type AppLanguage,
   type CustomThemeConfig,
@@ -253,6 +260,10 @@ function loadDefaultCatalogSnapshot(): Promise<SheetCatalogData> {
 export default function App() {
   const [catalog, setCatalog] = useState<SheetCatalogData>(EMPTY_SHEET_CATALOG);
   const [isCatalogHydrating, setIsCatalogHydrating] = useState(true);
+  const [catalogDataSource, setCatalogDataSource] = useState<
+    'loading' | 'fallback' | 'cached_live' | 'live'
+  >('loading');
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
   const catalogRef = useRef<SheetCatalogData>(catalog);
   catalogRef.current = catalog;
   const [gasUrl] = useState<string>(() => getSavedGasUrl());
@@ -317,7 +328,15 @@ export default function App() {
   const hasAutoPromptedPresentMonRef = useRef(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [isUpdateHistoryOpen, setIsUpdateHistoryOpen] = useState(false);
+  const [isJustUpdatedOpen, setIsJustUpdatedOpen] = useState(false);
+  const [justUpdatedFromVersion, setJustUpdatedFromVersion] = useState<string | null>(null);
+  const hasCheckedPostUpdateNoticeRef = useRef(false);
   const [isSpinWheelOpen, setIsSpinWheelOpen] = useState(false);
+  const [isHypervisorGuideOpen, setIsHypervisorGuideOpen] = useState(false);
+  const [settingsFocusToolRequest, setSettingsFocusToolRequest] = useState<{
+    toolId: string;
+    nonce: number;
+  } | null>(null);
   const [celebrateWinKey, setCelebrateWinKey] = useState(0);
   const [liveNotificationEvents, setLiveNotificationEvents] = useState<CatalogNotificationItem[]>(
     () => loadPersistedLiveNotificationEvents()
@@ -391,6 +410,26 @@ export default function App() {
         if (desktopCompleted || isLocalOnboardingCompleted()) {
           setLocalOnboardingCompleted(true);
           setOnboardingPhase('completed');
+
+          if (!hasCheckedPostUpdateNoticeRef.current) {
+            hasCheckedPostUpdateNoticeRef.current = true;
+            const previousSeen =
+              desktopSettings.lastSeenVersion ||
+              desktopSettings.lastOnboardedVersion ||
+              getLastSeenAppVersion();
+            if (!previousSeen || compareAppVersions(currentVer, previousSeen) > 0) {
+              setJustUpdatedFromVersion(previousSeen || null);
+              setIsJustUpdatedOpen(true);
+              setIsUpdateHistoryOpen(true);
+              setLastSeenAppVersion(currentVer);
+              void settingsBridge.markVersionSeen?.(currentVer);
+            } else {
+              setLastSeenAppVersion(currentVer);
+              if (!desktopSettings.lastSeenVersion) {
+                void settingsBridge.markVersionSeen?.(currentVer);
+              }
+            }
+          }
         } else {
           setOnboardingPhase('active');
         }
@@ -1134,6 +1173,89 @@ export default function App() {
     notify(getTranslations(defaults.language).settings.resetToast, 'info');
   }, [notify, settingsBridge]);
 
+  const handleImportLauncherSettings = useCallback(
+    async (raw: Partial<LauncherSettings>) => {
+      const nextLang: AppLanguage =
+        raw.language === 'fr' ||
+        raw.language === 'es' ||
+        raw.language === 'ar' ||
+        raw.language === 'en'
+          ? raw.language
+          : launcherSettings.language;
+      const nextPerfMode = normalizePerformanceMode(raw.performanceMode);
+      const nextPerfAdv = normalizePerformanceAdvanced(raw.performanceAdvanced, nextPerfMode);
+      const nextCustomTheme = normalizeCustomTheme(raw.customTheme);
+      const nextAlwaysXbox = Boolean(raw.alwaysXboxTheme);
+      const nextAlwaysPs5 = nextAlwaysXbox ? false : Boolean(raw.alwaysPs5Theme);
+      const nextLightMode =
+        nextAlwaysXbox || nextAlwaysPs5
+          ? false
+          : nextCustomTheme.enabled
+          ? nextCustomTheme.surfaceStyle === 'daylight'
+          : Boolean(raw.lightMode);
+      const nextSoundVol =
+        typeof raw.soundVolume === 'number' && Number.isFinite(raw.soundVolume)
+          ? Math.min(100, Math.max(0, Math.round(raw.soundVolume)))
+          : launcherSettings.soundVolume;
+
+      const merged: LauncherSettings = {
+        language: nextLang,
+        startWithComputer:
+          typeof raw.startWithComputer === 'boolean'
+            ? raw.startWithComputer
+            : launcherSettings.startWithComputer,
+        closeBehavior:
+          raw.closeBehavior === 'minimize-to-tray' || raw.closeBehavior === 'exit'
+            ? raw.closeBehavior
+            : launcherSettings.closeBehavior,
+        enableCanRunIt:
+          typeof raw.enableCanRunIt === 'boolean'
+            ? raw.enableCanRunIt
+            : launcherSettings.enableCanRunIt,
+        compactNavbar:
+          typeof raw.compactNavbar === 'boolean'
+            ? raw.compactNavbar
+            : launcherSettings.compactNavbar,
+        lightMode: nextLightMode,
+        alwaysPs5Theme: nextAlwaysPs5,
+        alwaysXboxTheme: nextAlwaysXbox,
+        ambientMusicEnabled:
+          typeof raw.ambientMusicEnabled === 'boolean'
+            ? raw.ambientMusicEnabled
+            : launcherSettings.ambientMusicEnabled,
+        uiClickSoundsEnabled:
+          typeof raw.uiClickSoundsEnabled === 'boolean'
+            ? raw.uiClickSoundsEnabled
+            : launcherSettings.uiClickSoundsEnabled,
+        customCursorEnabled:
+          typeof raw.customCursorEnabled === 'boolean'
+            ? raw.customCursorEnabled
+            : launcherSettings.customCursorEnabled,
+        soundVolume: nextSoundVol,
+        customTheme:
+          nextAlwaysXbox || nextAlwaysPs5
+            ? { ...nextCustomTheme, enabled: false }
+            : nextCustomTheme,
+        performanceMode: nextPerfMode,
+        performanceAdvanced: nextPerfAdv,
+      };
+
+      setLauncherSettings(merged);
+      if (settingsBridge) {
+        try {
+          await settingsBridge.setStartWithComputer(merged.startWithComputer);
+          await settingsBridge.setCloseBehavior?.(merged.closeBehavior);
+          await settingsBridge.setPerformanceSettings?.(
+            buildPerformancePayloadForDesktop(merged)
+          );
+        } catch {
+          // Ignore non-fatal desktop bridge sync failure cleanly
+        }
+      }
+    },
+    [launcherSettings, settingsBridge]
+  );
+
   const handleStartDownloadPayload = useCallback(
     async (payload: StartDownloadPayload) => {
       if (downloadsBridge) {
@@ -1321,12 +1443,7 @@ export default function App() {
 
   const handleOpenTorrentSettings = useCallback(() => {
     setActiveSection('settings');
-    window.setTimeout(() => {
-      document.getElementById('torrent-integration-settings')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 80);
+    setSettingsFocusToolRequest({ toolId: 'qbittorrent', nonce: Date.now() });
   }, []);
 
   const handleOpenQbitSetupWizard = useCallback(() => {
@@ -1477,6 +1594,8 @@ export default function App() {
   const handleCompleteOnboarding = useCallback(
     (destination: 'store' | 'settings') => {
       setLocalOnboardingCompleted(true);
+      setLastSeenAppVersion(resolvedAppVersion);
+      hasCheckedPostUpdateNoticeRef.current = true;
       hasAutoPromptedQbitRef.current = true;
       setOnboardingPhase('completed');
       setActiveSection(destination);
@@ -1535,15 +1654,22 @@ export default function App() {
 
       if (anyChanged) {
         setCatalog(merged);
+        if (isLiveSync) {
+          window.setTimeout(() => {
+            void saveCachedCatalog(merged);
+          }, 0);
+        }
+      } else if (isLiveSync) {
         window.setTimeout(() => {
           void saveCachedCatalog(merged);
         }, 0);
       }
 
       let newNotificationsCount = 0;
-      if (isLiveSync || anyChanged) {
+      if (isLiveSync) {
+        setCatalogDataSource('live');
         const reconciled = reconcileCatalogNotifications(anyChanged ? merged : prev, {
-          isLiveSync,
+          isLiveSync: true,
         });
         newNotificationsCount = reconciled.newEvents.length;
         if (reconciled.newEvents.length > 0) {
@@ -1576,6 +1702,7 @@ export default function App() {
 
       lastRefreshAttemptAtRef.current = now;
       isBackgroundRefreshingRef.current = true;
+      setIsSyncingCatalog(true);
       try {
         const latest = await fetchCatalogFromGas(clean);
         hasCompletedLiveSyncRef.current = true;
@@ -1592,26 +1719,29 @@ export default function App() {
         return { synced: false, newNotificationsCount: 0 };
       } finally {
         isBackgroundRefreshingRef.current = false;
+        setIsSyncingCatalog(false);
       }
     },
     [applyCatalogDiffSilently]
   );
 
-  // Hydrate catalog from IndexedDB immediately; lazy-load bundled fallback snapshot only if cache is empty
+  // Hydrate catalog from verified live IndexedDB cache immediately; lazy-load bundled fallback snapshot only if cache is empty
   useEffect(() => {
     let cancelled = false;
     void loadCachedCatalog()
       .then(async (cached) => {
         if (cancelled) return;
         if (cached && cached.game?.length > 0 && !hasCompletedLiveSyncRef.current) {
-          applyCatalogDiffSilently(cached);
+          setCatalogDataSource((prev) => (prev === 'live' ? prev : 'cached_live'));
+          applyCatalogDiffSilently(cached, false);
           void precacheCatalogImages(cached, precacheOptionsRef.current);
           return;
         }
         if (!hasCompletedLiveSyncRef.current || catalogRef.current.game.length === 0) {
           const fallback = await loadDefaultCatalogSnapshot();
           if (cancelled || (hasCompletedLiveSyncRef.current && catalogRef.current.game.length > 0)) return;
-          applyCatalogDiffSilently(fallback);
+          setCatalogDataSource((prev) => (prev === 'loading' ? 'fallback' : prev));
+          applyCatalogDiffSilently(fallback, false);
           void precacheCatalogImages(fallback, precacheOptionsRef.current);
         }
       })
@@ -1665,10 +1795,10 @@ export default function App() {
     };
   }, [gasUrl, refreshCatalogSilently]);
 
-  // Quietly check for catalog updates in the background (scaled cleanly by Performance Mode)
+  // Quietly fetch live Google Sheet catalog updates shortly after launch & on schedule
   useEffect(() => {
     if (!gasUrl || !isOnline) return;
-    const initialDelay = effectivePerformance.deferBackgroundChecks ? 4200 : 1200;
+    const initialDelay = effectivePerformance.mode === 'eco' ? 600 : 250;
     const pollMs = effectivePerformance.mode === 'eco' ? 420000 : 180000;
 
     const initialTimer = window.setTimeout(() => {
@@ -1708,11 +1838,17 @@ export default function App() {
     effectivePerformance.pauseBackgroundWhenMinimized,
   ]);
 
-  // Automatically sync catalog & check desktop updates in the background when Notification Center opens
+  // Sync catalog quietly after drawer paint completes so Notification Center opens instantly with real Google Sheet data
   useEffect(() => {
-    if (isNotificationCenterOpen && gasUrl && isOnline) {
-      void refreshCatalogSilently(gasUrl);
-    }
+    if (!isNotificationCenterOpen || !gasUrl || !isOnline) return;
+    const forceInitialLiveSync = !hasCompletedLiveSyncRef.current;
+    const timerId = window.setTimeout(
+      () => {
+        void refreshCatalogSilently(gasUrl, forceInitialLiveSync);
+      },
+      forceInitialLiveSync ? 60 : 220
+    );
+    return () => window.clearTimeout(timerId);
   }, [isNotificationCenterOpen, gasUrl, isOnline, refreshCatalogSilently]);
 
   useEffect(() => {
@@ -1988,6 +2124,8 @@ export default function App() {
   }, []);
 
   const handleOpenUpdateHistoryModal = useCallback(() => {
+    setIsJustUpdatedOpen(false);
+    setJustUpdatedFromVersion(null);
     setIsUpdateHistoryOpen(true);
   }, []);
 
@@ -2032,26 +2170,40 @@ export default function App() {
     [downloadSnapshot.tasks]
   );
 
+  const isLiveNotificationDataReady =
+    catalogDataSource === 'live' || catalogDataSource === 'cached_live';
+
   const notificationFeed = useMemo(
     () => buildNotificationFeed(catalog, liveNotificationEvents),
     [catalog, liveNotificationEvents]
   );
 
   useEffect(() => {
-    if (!hasSeededReadIdsRef.current && notificationFeed.length > 0) {
+    if (
+      !hasSeededReadIdsRef.current &&
+      isLiveNotificationDataReady &&
+      notificationFeed.length > 0
+    ) {
       hasSeededReadIdsRef.current = true;
       setReadNotificationIds(ensureInitialUnreadSeeding(notificationFeed));
     }
-  }, [notificationFeed]);
+  }, [isLiveNotificationDataReady, notificationFeed]);
 
   const unreadNotificationsCount = useMemo(
     () =>
-      notificationFeed.reduce(
-        (acc, item) => acc + (readNotificationIds.has(item.id) ? 0 : 1),
-        0
-      ),
-    [notificationFeed, readNotificationIds]
+      isLiveNotificationDataReady
+        ? notificationFeed.reduce(
+            (acc, item) => acc + (readNotificationIds.has(item.id) ? 0 : 1),
+            0
+          )
+        : 0,
+    [isLiveNotificationDataReady, notificationFeed, readNotificationIds]
   );
+
+  const handleManualNotificationSync = useCallback(() => {
+    if (!gasUrl || !isOnline) return;
+    void refreshCatalogSilently(gasUrl, true);
+  }, [gasUrl, isOnline, refreshCatalogSilently]);
 
   const handleMarkNotificationRead = useCallback((id: string) => {
     setReadNotificationIds((prev) => {
@@ -2344,6 +2496,20 @@ export default function App() {
               effectivePerformance={effectivePerformance}
               onChangePerformanceMode={handleChangePerformanceMode}
               onUpdatePerformanceAdvanced={handleUpdatePerformanceAdvanced}
+              systemSpecs={systemSpecs}
+              isRefreshingSpecs={isRefreshingSpecs}
+              onRefreshSpecs={handleRefreshSystemSpecs}
+              onSaveCustomSpecs={handleSaveCustomSystemSpecs}
+              onResetCustomSpecs={handleResetSystemSpecs}
+              desktopUpdateState={desktopUpdateState}
+              onOpenUpdater={() => setIsUpdaterModalOpen(true)}
+              onCheckForUpdates={handleCheckForUpdates}
+              onOpenSpinWheel={handleOpenSpinWheel}
+              onOpenHypervisorGuide={() => setIsHypervisorGuideOpen(true)}
+              onNavigateSection={setActiveSection}
+              onImportSettings={handleImportLauncherSettings}
+              onNotify={notify}
+              focusToolRequest={settingsFocusToolRequest}
             />
           )}
         </Suspense>
@@ -2412,21 +2578,6 @@ export default function App() {
           />
         )}
 
-        {isNotificationCenterOpen && (
-          <NotificationCenterDrawer
-            isOpen={isNotificationCenterOpen}
-            activeTheme={activeTheme}
-            language={launcherSettings.language}
-            feed={notificationFeed}
-            readIds={readNotificationIds}
-            onClose={() => setIsNotificationCenterOpen(false)}
-            onMarkRead={handleMarkNotificationRead}
-            onMarkAllRead={handleMarkAllNotificationsRead}
-            onOpenGame={(item) => handleOpenGame(item, 'overview')}
-            onOpenNewsSection={() => setActiveSection('extras')}
-          />
-        )}
-
         {isUpdateHistoryOpen && (
           <UpdateHistoryModal
             isOpen={isUpdateHistoryOpen}
@@ -2434,13 +2585,19 @@ export default function App() {
             language={launcherSettings.language}
             currentVersion={desktopUpdateState?.currentVersion || resolvedAppVersion}
             isDevMode={!isPackagedBuild || import.meta.env.DEV}
+            isJustUpdated={isJustUpdatedOpen}
+            justUpdatedFromVersion={justUpdatedFromVersion}
             availableUpdateVersion={desktopUpdateState?.availableVersion || null}
             updaterBridge={updaterBridge}
-            onClose={() => setIsUpdateHistoryOpen(false)}
+            onClose={() => {
+              setIsUpdateHistoryOpen(false);
+              setIsJustUpdatedOpen(false);
+            }}
             onCheckForUpdates={
               updaterBridge
                 ? () => {
                     setIsUpdateHistoryOpen(false);
+                    setIsJustUpdatedOpen(false);
                     setIsUpdaterModalOpen(true);
                     handleCheckForUpdates();
                   }
@@ -2499,7 +2656,32 @@ export default function App() {
             onOpenOfficialReleases={handleOpenOfficialPresentMonReleases}
           />
         )}
+
+        {isHypervisorGuideOpen && (
+          <HypervisorGuideModal
+            isOpen={isHypervisorGuideOpen}
+            onClose={() => setIsHypervisorGuideOpen(false)}
+          />
+        )}
       </Suspense>
+
+      {isNotificationCenterOpen && (
+        <NotificationCenterDrawer
+          isOpen={isNotificationCenterOpen}
+          activeTheme={activeTheme}
+          language={launcherSettings.language}
+          feed={notificationFeed}
+          readIds={readNotificationIds}
+          isLiveDataReady={isLiveNotificationDataReady}
+          isSyncing={isSyncingCatalog}
+          onSyncNow={gasUrl ? handleManualNotificationSync : undefined}
+          onClose={() => setIsNotificationCenterOpen(false)}
+          onMarkRead={handleMarkNotificationRead}
+          onMarkAllRead={handleMarkAllNotificationsRead}
+          onOpenGame={(item) => handleOpenGame(item, 'overview')}
+          onOpenNewsSection={() => setActiveSection('extras')}
+        />
+      )}
 
       {/* Persistent Offline Mode / Auto-hiding Online Mode Badge */}
       {connectivityBadge !== 'hidden' && (

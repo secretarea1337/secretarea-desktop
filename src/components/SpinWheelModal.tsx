@@ -145,15 +145,15 @@ export function SpinWheelModal({
   const [wheelSlices, setWheelSlices] = useState<GameItem[]>([]);
 
   // Direct DOM refs eliminate 60fps React re-renders so the desktop app stays silky fast
-  const wheelGroupRef = useRef<SVGGElement | null>(null);
+  const wheelGroupRef = useRef<HTMLDivElement | null>(null);
   const pointerRef = useRef<HTMLDivElement | null>(null);
   const tickerTextRef = useRef<HTMLSpanElement | null>(null);
 
   const angleRef = useRef(0);
+  const pointerAngleRef = useRef(0);
   const phaseRef = useRef<WheelPhase>('spinning');
   const enableSoundsRef = useRef(enableSounds);
   const rafRef = useRef<number | null>(null);
-  const pointerResetTimerRef = useRef<number | null>(null);
   const lastSpokeIdxRef = useRef(0);
   const recentKeysRef = useRef<string[]>([]);
 
@@ -195,27 +195,10 @@ export function SpinWheelModal({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    if (pointerResetTimerRef.current !== null) {
-      window.clearTimeout(pointerResetTimerRef.current);
-      pointerResetTimerRef.current = null;
+    pointerAngleRef.current = 0;
+    if (pointerRef.current) {
+      pointerRef.current.style.transform = 'rotate(0deg) translateZ(0)';
     }
-  }, []);
-
-  const triggerPointerFlick = useCallback((strength = 1) => {
-    const el = pointerRef.current;
-    if (!el) return;
-    el.style.transition = 'transform 40ms ease-out';
-    el.style.transform = `rotate(${-18 * strength}deg)`;
-    if (pointerResetTimerRef.current !== null) {
-      window.clearTimeout(pointerResetTimerRef.current);
-    }
-    pointerResetTimerRef.current = window.setTimeout(() => {
-      if (pointerRef.current) {
-        pointerRef.current.style.transition =
-          'transform 130ms cubic-bezier(0.22, 1, 0.36, 1)';
-        pointerRef.current.style.transform = 'rotate(0deg)';
-      }
-    }, 85);
   }, []);
 
   const startSpin = useCallback(() => {
@@ -251,17 +234,20 @@ export function SpinWheelModal({
     // 5 full revolutions + exact alignment onto winning slice
     const targetAngle = startAngle + 5 * 360 + deltaToDesired;
     const startTime = performance.now();
+    let prevFrameTime = startTime;
     lastSpokeIdxRef.current = Math.floor((startAngle + SLICE_ANGLE / 2) / SLICE_ANGLE);
 
     const animateSpin = (now: number) => {
       const elapsed = now - startTime;
+      const dt = Math.min(64, Math.max(1, now - prevFrameTime));
+      prevFrameTime = now;
       const tNorm = Math.min(elapsed / SPIN_DURATION_MS, 1);
       const eased = 1 - Math.pow(1 - tNorm, 4.1);
       const currentAngle = startAngle + (targetAngle - startAngle) * eased;
 
       angleRef.current = currentAngle;
       if (wheelGroupRef.current) {
-        wheelGroupRef.current.style.transform = `rotate(${currentAngle.toFixed(2)}deg)`;
+        wheelGroupRef.current.style.transform = `rotate(${currentAngle.toFixed(2)}deg) translateZ(0)`;
       }
 
       const activeIdx = getSliceIndexAtPointer(currentAngle);
@@ -276,15 +262,26 @@ export function SpinWheelModal({
         if (enableSoundsRef.current) {
           playWheelTickSound();
         }
-        triggerPointerFlick(tNorm < 0.72 ? 1.1 : 0.7);
+        pointerAngleRef.current = tNorm < 0.72 ? -19 : -12;
+      } else if (pointerAngleRef.current < -0.1) {
+        pointerAngleRef.current *= Math.pow(0.84, dt / 16.67);
+        if (pointerAngleRef.current > -0.2) pointerAngleRef.current = 0;
+      }
+
+      if (pointerRef.current) {
+        pointerRef.current.style.transform = `rotate(${pointerAngleRef.current.toFixed(1)}deg) translateZ(0)`;
       }
 
       if (tNorm < 1) {
         rafRef.current = requestAnimationFrame(animateSpin);
       } else {
         angleRef.current = targetAngle;
+        pointerAngleRef.current = 0;
         if (wheelGroupRef.current) {
-          wheelGroupRef.current.style.transform = `rotate(${targetAngle.toFixed(2)}deg)`;
+          wheelGroupRef.current.style.transform = `rotate(${targetAngle.toFixed(2)}deg) translateZ(0)`;
+        }
+        if (pointerRef.current) {
+          pointerRef.current.style.transform = 'rotate(0deg) translateZ(0)';
         }
         if (tickerTextRef.current) {
           tickerTextRef.current.textContent = chosenWinner.name;
@@ -307,7 +304,7 @@ export function SpinWheelModal({
     };
 
     rafRef.current = requestAnimationFrame(animateSpin);
-  }, [popularPool, stopAnimations, triggerPointerFlick]);
+  }, [popularPool, stopAnimations]);
 
   // Auto-start spinning the moment the modal opens
   useEffect(() => {
@@ -391,14 +388,18 @@ export function SpinWheelModal({
         <div className="flex flex-col items-center gap-4">
           {/* Spin Wheel Visual */}
           <div className="relative w-full max-w-[280px] sm:max-w-[310px] aspect-square flex items-center justify-center select-none">
-            {/* Top Golden Pointer Triangle */}
+            {/* Top Golden Pointer Triangle (baked shadow — no expensive CSS drop-shadow blur) */}
             <div
               ref={pointerRef}
               aria-hidden="true"
-              style={{ transformOrigin: '50% 22%' }}
-              className="absolute top-0 left-1/2 -translate-x-1/2 z-20 drop-shadow-[0_3px_6px_rgba(0,0,0,0.45)] pointer-events-none"
+              style={{ transformOrigin: '50% 22%', willChange: 'transform', transform: 'rotate(0deg) translateZ(0)' }}
+              className="absolute top-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
             >
-              <svg width="36" height="38" viewBox="0 0 42 44" fill="none">
+              <svg width="36" height="38" viewBox="0 0 42 46" fill="none">
+                <path
+                  d="M7 8.5C7 6.3 8.8 4.5 11 4.5H31C33.2 4.5 35 6.3 35 8.5C35 11 33.8 13.9 31.8 17.6L23.9 32.3C22.6 34.7 19.4 34.7 18.1 32.3L10.2 17.6C8.2 13.9 7 11 7 8.5Z"
+                  fill="rgba(0,0,0,0.34)"
+                />
                 <path
                   d="M7 6C7 3.8 8.8 2 11 2H31C33.2 2 35 3.8 35 6C35 8.5 33.8 11.4 31.8 15.1L23.9 29.8C22.6 32.2 19.4 32.2 18.1 29.8L10.2 15.1C8.2 11.4 7 8.5 7 6Z"
                   fill="#fbbf0d"
@@ -409,25 +410,31 @@ export function SpinWheelModal({
               </svg>
             </div>
 
+            {/* Static Outer Wheel Frame & Marquee Bulbs */}
             <svg
               viewBox="0 0 400 400"
-              className="w-full h-full drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+              className="w-full h-full rounded-full shadow-[0_14px_28px_rgba(0,0,0,0.38)]"
               aria-hidden="true"
             >
               <circle cx="200" cy="200" r="190" fill="#1e2d3d" stroke="#334155" strokeWidth="3" />
               <circle cx="200" cy="200" r="161" fill="#0f172a" />
-
               {MARQUEE_BULBS.map((b) => (
                 <circle key={b.idx} cx={b.x} cy={b.y} r="4.8" fill="#ffffff" />
               ))}
+            </svg>
 
-              <g
-                ref={wheelGroupRef}
-                style={{
-                  transformOrigin: '200px 200px',
-                  willChange: 'transform',
-                }}
-              >
+            {/* Isolated GPU-Composited Rotating Wheel Layer (rasterized once into bitmap) */}
+            <div
+              ref={wheelGroupRef}
+              style={{
+                willChange: 'transform',
+                transform: 'rotate(0deg) translateZ(0)',
+                backfaceVisibility: 'hidden',
+              }}
+              className="absolute inset-0 pointer-events-none"
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 400 400" className="w-full h-full">
                 {SLICE_COLORS.map((color, idx) => {
                   const startDeg = idx * SLICE_ANGLE - SLICE_ANGLE / 2;
                   const endDeg = idx * SLICE_ANGLE + SLICE_ANGLE / 2;
@@ -477,10 +484,14 @@ export function SpinWheelModal({
                     </g>
                   );
                 })}
-              </g>
+              </svg>
+            </div>
 
-              <circle cx="200" cy="200" r="54" fill="#1e2d3d" />
-            </svg>
+            {/* Static Center Hub Backing Ring */}
+            <div
+              aria-hidden="true"
+              className="absolute w-[27%] aspect-square rounded-full bg-[#1e2d3d] pointer-events-none"
+            />
 
             {/* Center SPIN Badge */}
             <button

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CaretDown, Check, CurrencyDollar, Globe } from '@phosphor-icons/react';
+import { CaretDown, Check, Globe } from '@phosphor-icons/react';
 import {
   DEALS_CURRENCY_OPTIONS,
   DEALS_REGION_OPTIONS,
@@ -39,22 +39,22 @@ export function CurrencySwitcher({
   onSelectCurrency,
   onSelectRegion,
 }: CurrencySwitcherProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<'currency' | 'region' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isXbox = activeTheme === 'xbox';
   const isPs5 = activeTheme === 'ps5';
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!openMenu) return;
     const handlePointerDown = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
+        setOpenMenu(null);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsOpen(false);
+        setOpenMenu(null);
       }
     };
     document.addEventListener('mousedown', handlePointerDown);
@@ -63,14 +63,11 @@ export function CurrencySwitcher({
       document.removeEventListener('mousedown', handlePointerDown);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [openMenu]);
 
   const activeMeta = getCurrencyMeta(selectedCurrency);
-  const quickPickCodes: DealsCurrencyCode[] = ['USD', 'EUR', 'MAD', 'GBP'];
-  const visibleQuickPicks = quickPickCodes.includes(selectedCurrency)
-    ? quickPickCodes
-    : [...quickPickCodes.slice(0, 3), selectedCurrency];
-
+  const activeRegion =
+    DEALS_REGION_OPTIONS.find((opt) => opt.code === region) || DEALS_REGION_OPTIONS[0];
   const activeRate = getRateForCurrency('USD', selectedCurrency, fxSnapshot);
 
   const formatRatePreview = (code: DealsCurrencyCode): string => {
@@ -80,140 +77,120 @@ export function CurrencySwitcher({
     return code === 'JPY' ? r.toFixed(1) : r.toFixed(2);
   };
 
-  return (
-    <div
-      ref={containerRef}
-      className="relative flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto"
-    >
-      {/* Unified Currency Quick-Bar + Popover Trigger */}
-      <div className="flex items-center justify-between sm:justify-start gap-1.5 min-w-0">
-        {/* Desktop/Tablet Quick Segmented Currency Switcher */}
-        <div
-          role="group"
-          aria-label={labels.currencyLabel}
-          className={`sa-ps5-pill-group hidden md:inline-flex items-center p-1 rounded-xl border ${
-            isXbox
-              ? 'bg-[#061609]/85 border-[#52e042]/25'
-              : isPs5
-              ? 'bg-[#07183b]/80 border-white/[0.12]'
-              : 'bg-slate-100 dark:bg-[#10161e] border-slate-200 dark:border-white/[0.08]'
-          }`}
-        >
-          {visibleQuickPicks.map((code) => {
-            const meta = getCurrencyMeta(code);
-            const active = selectedCurrency === code;
-            return (
-              <button
-                key={code}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onSelectCurrency(code)}
-                className={`inline-flex items-center gap-1.5 min-h-[30px] px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                  active
-                    ? isXbox
-                      ? 'bg-[#107C10] text-white shadow-sm'
-                      : 'bg-[#0284c7] dark:bg-[#1a9fff] text-white shadow-sm'
-                    : 'text-slate-600 dark:text-[#9cb0c9] hover:text-slate-900 dark:hover:text-white hover:bg-white/70 dark:hover:bg-white/[0.06]'
-                }`}
-              >
-                <span className="font-mono-tabular text-[11px] opacity-85">{meta.symbol}</span>
-                <span className="font-mono-tabular">{code}</span>
-              </button>
-            );
-          })}
-        </div>
+  const controlSurfaceClass = (isActive: boolean) =>
+    isXbox
+      ? `bg-[#09200d]/90 border ${
+          isActive
+            ? 'border-[#7cf25c] ring-2 ring-[#52e042]/20'
+            : 'border-[#52e042]/28 hover:border-[#7cf25c]/70 hover:bg-[#0d2a12]'
+        } text-white`
+      : isPs5
+      ? `bg-[#081a3d]/85 border ${
+          isActive
+            ? 'border-[#7cc4ff] ring-2 ring-[#7cc4ff]/20'
+            : 'border-white/[0.15] hover:border-[#7cc4ff]/65 hover:bg-[#0b2350]/90'
+        } text-white`
+      : `bg-white hover:bg-slate-50 dark:bg-[#111923] dark:hover:bg-[#172230] border ${
+          isActive
+            ? 'border-[#0284c7] dark:border-[#38bdf8] ring-2 ring-sky-500/15'
+            : 'border-slate-200/90 hover:border-slate-300 dark:border-white/[0.1] dark:hover:border-white/[0.22]'
+        } text-slate-800 dark:text-[#e6eef8] shadow-xs`;
 
-        {/* Interactive Currency Selector Button (Primary on <md, "+ More" on >=md) */}
+  const popoverSurfaceClass = isXbox
+    ? 'bg-[#07180a]/98 border-[#52e042]/35 text-white'
+    : isPs5
+    ? 'bg-[#071636]/98 border-white/[0.16] text-white'
+    : 'bg-white dark:bg-[#131b24] border-slate-200 dark:border-white/[0.12] text-slate-900 dark:text-white';
+
+  return (
+    <div ref={containerRef} className="relative w-full sm:w-auto">
+      {/* Unified Modern Currency + Region Triggers */}
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 min-w-0">
+        {/* Currency Dropdown Trigger */}
         <button
           type="button"
-          onClick={() => setIsOpen((v) => !v)}
-          aria-expanded={isOpen}
+          onClick={() => setOpenMenu((m) => (m === 'currency' ? null : 'currency'))}
+          aria-expanded={openMenu === 'currency'}
           aria-haspopup="dialog"
           aria-label={labels.currencyLabel}
-          className={`sa-ps5-subpanel flex-1 sm:flex-initial inline-flex items-center justify-between sm:justify-center gap-2 min-h-[38px] px-3 py-1.5 rounded-xl border text-[12.5px] font-semibold transition-colors whitespace-nowrap cursor-pointer ${
-            isXbox
-              ? 'bg-[#09200d]/90 border-[#52e042]/30 hover:border-[#7cf25c] text-white'
-              : isPs5
-              ? 'bg-[#081a3d]/85 border-white/[0.14] hover:border-[#7cc4ff]/70 text-white'
-              : 'bg-slate-50 hover:bg-slate-100 dark:bg-[#10161e] dark:hover:bg-[#192330] border-slate-200 dark:border-white/[0.1] text-slate-800 dark:text-[#e2eaf4]'
-          }`}
+          className={`sa-ps5-subpanel w-full sm:w-auto inline-flex items-center justify-between gap-2 h-9 px-2.5 sm:px-3 rounded-xl text-[12.5px] font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer min-w-0 active:scale-[0.98] ${controlSurfaceClass(
+            openMenu === 'currency'
+          )}`}
         >
-          <span className="inline-flex items-center gap-1.5 min-w-0">
-            <CurrencyDollar
-              weight="bold"
-              className={`w-4 h-4 shrink-0 ${
+          <span className="inline-flex items-center gap-2 min-w-0">
+            <span
+              dir="ltr"
+              className={`inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded-md font-mono-tabular text-[11px] font-bold shrink-0 ${
                 isXbox
-                  ? 'text-[#6ee755]'
-                  : 'text-[#0284c7] dark:text-[#38bdf8] sa-custom-accent-text'
+                  ? 'bg-[#52e042]/18 text-[#6ee755]'
+                  : isPs5
+                  ? 'bg-[#0070d1]/30 text-[#7cc4ff]'
+                  : 'bg-sky-500/12 text-[#0284c7] dark:text-[#38bdf8] sa-custom-accent-text'
               }`}
-            />
-            <span className="font-mono-tabular md:hidden">
-              {activeMeta.symbol} {selectedCurrency}
+            >
+              {activeMeta.symbol}
             </span>
-            <span className="hidden md:inline font-mono-tabular">
-              {selectedCurrency !== 'USD' && activeRate
-                ? `1 USD = ${formatRatePreview(selectedCurrency)} ${selectedCurrency}`
-                : labels.allCurrenciesLabel}
-            </span>
+            <span className="font-mono-tabular tracking-tight truncate">{selectedCurrency}</span>
+            {selectedCurrency !== 'USD' && activeRate && (
+              <span className="hidden xl:inline font-mono-tabular text-[11px] opacity-65 shrink-0">
+                · 1$={formatRatePreview(selectedCurrency)}
+              </span>
+            )}
           </span>
           <CaretDown
             weight="bold"
-            className={`w-3.5 h-3.5 shrink-0 opacity-75 transition-transform duration-150 ${
-              isOpen ? 'rotate-180' : ''
+            className={`w-3.5 h-3.5 shrink-0 opacity-65 transition-transform duration-150 ${
+              openMenu === 'currency' ? 'rotate-180 opacity-100' : ''
             }`}
           />
         </button>
 
-        {/* Store Region Selector (Mobile inline / Desktop compact) */}
-        <label
-          className={`sa-ps5-select-wrap inline-flex items-center gap-1.5 min-h-[38px] px-2.5 py-1.5 rounded-xl border text-[12px] cursor-pointer shrink-0 ${
-            isXbox
-              ? 'bg-[#09200d]/90 border-[#52e042]/30 text-white'
-              : isPs5
-              ? 'bg-[#081a3d]/85 border-white/[0.14] text-white'
-              : 'bg-slate-50 dark:bg-[#10161e] border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-[#cbd6e4]'
-          }`}
+        {/* Region Dropdown Trigger (Replaces Raw Native Select) */}
+        <button
+          type="button"
+          onClick={() => setOpenMenu((m) => (m === 'region' ? null : 'region'))}
+          aria-expanded={openMenu === 'region'}
+          aria-haspopup="dialog"
+          aria-label={labels.regionLabel}
+          className={`sa-ps5-subpanel w-full sm:w-auto inline-flex items-center justify-between gap-2 h-9 px-2.5 sm:px-3 rounded-xl text-[12.5px] font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer min-w-0 active:scale-[0.98] ${controlSurfaceClass(
+            openMenu === 'region'
+          )}`}
         >
-          <Globe
-            className={`w-3.5 h-3.5 shrink-0 ${
-              isXbox ? 'text-[#6ee755]' : 'text-[#0284c7] dark:text-[#38bdf8] sa-custom-accent-text'
+          <span className="inline-flex items-center gap-2 min-w-0">
+            <Globe
+              weight="duotone"
+              className={`w-4 h-4 shrink-0 ${
+                isXbox
+                  ? 'text-[#6ee755]'
+                  : isPs5
+                  ? 'text-[#7cc4ff]'
+                  : 'text-[#0284c7] dark:text-[#38bdf8] sa-custom-accent-text'
+              }`}
+            />
+            <span className="truncate">
+              <span className="font-mono-tabular">{activeRegion.code}</span>
+              <span className="opacity-50 mx-1">·</span>
+              <span>{activeRegion.label}</span>
+            </span>
+          </span>
+          <CaretDown
+            weight="bold"
+            className={`w-3.5 h-3.5 shrink-0 opacity-65 transition-transform duration-150 ${
+              openMenu === 'region' ? 'rotate-180 opacity-100' : ''
             }`}
           />
-          <span className="sr-only">{labels.regionLabel}</span>
-          <select
-            value={region}
-            onChange={(e) => onSelectRegion(e.target.value as DealsRegionCode)}
-            aria-label={labels.regionLabel}
-            className="bg-transparent font-semibold focus:outline-none cursor-pointer max-w-[115px] sm:max-w-none truncate"
-          >
-            {DEALS_REGION_OPTIONS.map((opt) => (
-              <option
-                key={opt.code}
-                value={opt.code}
-                className="bg-white dark:bg-[#151c25] text-slate-900 dark:text-white"
-              >
-                {opt.code} · {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        </button>
       </div>
 
-      {/* Modern Multi-Currency Selector Popover */}
-      {isOpen && (
+      {/* Multi-Currency Selector Popover */}
+      {openMenu === 'currency' && (
         <div
           role="dialog"
           aria-label={labels.currencyLabel}
-          className={`sa-ps5-panel absolute top-full end-0 mt-2 z-50 w-[min(92vw,390px)] rounded-2xl border shadow-2xl overflow-hidden ${
-            isXbox
-              ? 'bg-[#07180a]/98 border-[#52e042]/35 text-white'
-              : isPs5
-              ? 'bg-[#071636]/98 border-white/[0.16] text-white'
-              : 'bg-white dark:bg-[#151c25] border-slate-200 dark:border-white/[0.12] text-slate-900 dark:text-white'
-          }`}
+          className={`sa-ps5-panel absolute top-full start-0 sm:start-auto sm:end-0 mt-2 z-50 w-full sm:w-[390px] max-w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl overflow-hidden ${popoverSurfaceClass}`}
         >
           {/* Popover Header with Live FX Telemetry */}
-          <div className="px-4 py-3 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between gap-2 bg-slate-50/80 dark:bg-[#10161e]/85">
+          <div className="px-4 py-3 border-b border-slate-200/80 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 dark:bg-[#0f161f]">
             <span className="text-[12.5px] font-bold tracking-tight">
               {labels.currencyLabel}
             </span>
@@ -243,7 +220,7 @@ export function CurrencySwitcher({
           </div>
 
           {/* 2-Column Responsive Grid of All 10 Currencies */}
-          <div className="p-3 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto">
+          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto">
             {DEALS_CURRENCY_OPTIONS.map((opt) => {
               const active = selectedCurrency === opt.code;
               const rateStr = formatRatePreview(opt.code);
@@ -254,9 +231,9 @@ export function CurrencySwitcher({
                   aria-pressed={active}
                   onClick={() => {
                     onSelectCurrency(opt.code);
-                    setIsOpen(false);
+                    setOpenMenu(null);
                   }}
-                  className={`sa-ps5-subpanel flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border text-start transition-all cursor-pointer ${
+                  className={`sa-ps5-subpanel flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border text-start transition-all cursor-pointer active:scale-[0.98] ${
                     active
                       ? isXbox
                         ? 'bg-[#107C10]/30 border-[#6ee755] text-white'
@@ -307,6 +284,56 @@ export function CurrencySwitcher({
                       />
                     )}
                   </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Store Region Selector Popover */}
+      {openMenu === 'region' && (
+        <div
+          role="dialog"
+          aria-label={labels.regionLabel}
+          className={`sa-ps5-panel absolute top-full end-0 mt-2 z-50 w-full sm:w-[270px] max-w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl overflow-hidden ${popoverSurfaceClass}`}
+        >
+          <div className="px-4 py-2.5 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between gap-2 bg-slate-50/80 dark:bg-[#0f161f]">
+            <span className="text-[12.5px] font-bold tracking-tight">{labels.regionLabel}</span>
+            <span className="font-mono-tabular text-[11px] text-slate-500 dark:text-[#8b9bb4]">
+              {activeRegion.code}
+            </span>
+          </div>
+
+          <div className="p-2 space-y-1 max-h-[55vh] overflow-y-auto">
+            {DEALS_REGION_OPTIONS.map((opt) => {
+              const active = region === opt.code;
+              return (
+                <button
+                  key={opt.code}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    onSelectRegion(opt.code);
+                    setOpenMenu(null);
+                  }}
+                  className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-start text-[12.5px] transition-colors cursor-pointer ${
+                    active
+                      ? isXbox
+                        ? 'bg-[#107C10]/30 text-white font-semibold'
+                        : isPs5
+                        ? 'bg-[#0070d1]/35 text-white font-semibold'
+                        : 'bg-sky-500/12 text-[#0284c7] dark:text-[#38bdf8] font-semibold'
+                      : 'text-slate-700 dark:text-[#cbd6e4] hover:bg-slate-100 dark:hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <span className="font-mono-tabular text-[11.5px] font-bold px-1.5 py-0.5 rounded bg-slate-200/75 dark:bg-white/[0.08] shrink-0">
+                      {opt.code}
+                    </span>
+                    <span className="truncate">{opt.label}</span>
+                  </span>
+                  {active && <Check weight="bold" className="w-4 h-4 shrink-0" />}
                 </button>
               );
             })}

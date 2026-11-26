@@ -12,7 +12,8 @@ const {
   classifyCpuFamily,
   classifyMemoryChannels,
 } = require('./hardware/displayLaptopAdapter.cjs');
-const { readManagedLhmSensors } = require('./hardware/lhmLibBridge.cjs');
+const { readManagedLhmSensors, parseLhmBridgeOutput } = require('./hardware/lhmLibBridge.cjs');
+const { createWinTelemetryWorker } = require('./hardware/winTelemetryWorker.cjs');
 
 function runExecFile(cmd, args, timeoutMs = 2500) {
   return new Promise((resolve) => {
@@ -934,12 +935,22 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
   let nvidiaSmiPath = undefined;
   let cachedNvidiaExt = null;
   let lastNvidiaExtAt = 0;
-  const displayLaptopAdapter = createDisplayLaptopAdapter();
+  let cachedNvidiaRes = [];
+  let lastNvidiaPollAt = 0;
+  let nvidiaSlowBackoffUntil = 0;
+  const winWorker = process.platform === 'win32' ? createWinTelemetryWorker() : null;
+  const displayLaptopAdapter = createDisplayLaptopAdapter({
+    execWinPs: winWorker ? (script, timeoutMs) => winWorker.runPsScript(script, timeoutMs) : undefined,
+  });
   let cachedDisplayLaptop = null;
   let lastDisplayLaptopAt = 0;
   let cachedManagedLhm = null;
   let lastManagedLhmAt = 0;
   let managedLhmInFlight = false;
+  let lastWinGpuEngAt = 0;
+  let cachedWinGpuEng = null;
+  let lastWinThermalAt = 0;
+  let cachedWinThermal = null;
 
   let cachedFsSize = null;
   let lastFsFetchAt = 0;
@@ -1008,6 +1019,12 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
   async function queryNvidiaSmi() {
     const bin = await detectNvidiaSmiPath();
     if (!bin) return [];
+    const now = Date.now();
+    // On Optimus laptops in D3cold or sluggish drivers, back off nvidia-smi to avoid waking dGPU every 1.5s
+    if (now < nvidiaSlowBackoffUntil && now - lastNvidiaPollAt < 6000) {
+      return cachedNvidiaRes;
+    }
+    const t0 = Date.now();
     const out = await runExecFile(
       bin,
       [
@@ -1016,7 +1033,17 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
       ],
       1800
     );
-    return parseNvidiaSmiCsv(out);
+    const elapsed = Date.now() - t0;
+    lastNvidiaPollAt = Date.now();
+    if (out === null || elapsed >= 450) {
+      nvidiaSlowBackoffUntil = Date.now() + 30000;
+    }
+    if (out === null) {
+      return cachedNvidiaRes;
+    }
+    const parsed = parseNvidiaSmiCsv(out);
+    cachedNvidiaRes = parsed;
+    return parsed;
   }
 
   async function queryWindowsStaticHardware() {
@@ -1043,11 +1070,13 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
       '@{ mem = $mem; disks = $disks; parts = $parts; dxAdapters = $dxAdapters; hasLhm = ($ns -contains "LibreHardwareMonitor"); hasOhm = ($ns -contains "OpenHardwareMonitor") } | ConvertTo-Json -Depth 4 -Compress',
     ].join(' ');
 
-    const raw = await runExecFile(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
-      7000
-    );
+    const raw =
+      (winWorker ? await winWorker.runPsScript(script, 7000) : null) ||
+      (await runExecFile(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+        7000
+      ));
     if (!raw) return null;
     try {
       return JSON.parse(raw);
@@ -1056,9 +1085,78 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
     }
   }
 
+  async function queryWindowsFsDisks() {
+    if (process.platform !== 'win32' || !winWorker) {
+      return si.fsSize().catch(() => cachedFsSize);
+    }
+    const rawDisks = await winWorker.queryLogicalDisks(4000).catch(() => null);
+    if (!Array.isArray(rawDisks)) {
+      return si.fsSize().catch(() => cachedFsSize);
+    }
+    return rawDisks
+      .map((d) => {
+        const dev = sanitizeLabel(d?.DeviceID);
+        const size = toFiniteNumber(d?.Size);
+        const free = toFiniteNumber(d?.FreeSpace);
+        if (!dev || !size || size <= 0) return null;
+        const used = free !== null ? Math.max(0, size - free) : null;
+        return {
+          fs: dev,
+          mount: dev.endsWith('\\') ? dev : `${dev}\\`,
+          type: sanitizeLabel(d?.FileSystem) || 'NTFS',
+          size,
+          used,
+          available: free,
+          use: used !== null ? Number(((used / size) * 100).toFixed(1)) : null,
+        };
+      })
+      .filter(Boolean);
+  }
+
   async function queryWindowsDynamicPerf(winFeatures) {
     if (process.platform !== 'win32') return null;
-    // Single combined lightweight PowerShell CIM query per poll cycle
+    const now = Date.now();
+    // Sample heavy wildcard GPUEngine & WMI thermal counters at >=2s cadence inside the warm persistent worker
+    const includeGpuEng = !cachedWinGpuEng || now - lastWinGpuEngAt >= 2000;
+    const includeThermal = !cachedWinThermal || now - lastWinThermalAt >= 2000;
+
+    if (winWorker) {
+      const workerData = await winWorker
+        .queryPerfTick({
+          hasLhmWmi: Boolean(winFeatures?.hasLhm),
+          hasOhmWmi: Boolean(winFeatures?.hasOhm),
+          includeGpuEng,
+          includeThermal,
+          timeoutMs: 5500,
+        })
+        .catch(() => null);
+
+      if (workerData) {
+        if (includeGpuEng && workerData.gpuEng !== null && workerData.gpuEng !== undefined) {
+          cachedWinGpuEng = workerData.gpuEng;
+          lastWinGpuEngAt = now;
+        } else if (cachedWinGpuEng) {
+          workerData.gpuEng = cachedWinGpuEng;
+        }
+
+        if (includeThermal) {
+          cachedWinThermal = {
+            thermalAcpi: workerData.thermalAcpi,
+            thermalPerf: workerData.thermalPerf,
+            powerMeters: workerData.powerMeters,
+          };
+          lastWinThermalAt = now;
+        } else if (cachedWinThermal) {
+          workerData.thermalAcpi = cachedWinThermal.thermalAcpi;
+          workerData.thermalPerf = cachedWinThermal.thermalPerf;
+          workerData.powerMeters = cachedWinThermal.powerMeters;
+        }
+
+        return workerData;
+      }
+    }
+
+    // Fallback one-shot query if persistent worker failed temporarily
     const scriptParts = [
       '$ErrorActionPreference = "SilentlyContinue";',
       '$cpuFreq = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name=\'_Total\'" | Select-Object -First 1 ProcessorFrequency;',
@@ -1362,18 +1460,14 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
       } else {
         prevCpuSnapshot = computeCpuLoadFromOsCpus(null).nextSnapshot;
         if (isWindows) {
-          const netRaw = await runExecFile(
-            'powershell.exe',
-            [
-              '-NoProfile',
-              '-NonInteractive',
-              '-ExecutionPolicy',
-              'Bypass',
-              '-Command',
-              '@(Get-NetAdapterStatistics | Select-Object Name,ReceivedBytes,SentBytes) | ConvertTo-Json -Compress',
-            ],
-            3000
-          ).catch(() => null);
+          const netWarmScript = '@(Get-NetAdapterStatistics | Select-Object Name,ReceivedBytes,SentBytes) | ConvertTo-Json -Compress';
+          const netRaw =
+            (winWorker ? await winWorker.runPsScript(netWarmScript, 3000).catch(() => null) : null) ||
+            (await runExecFile(
+              'powershell.exe',
+              ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', netWarmScript],
+              3000
+            ).catch(() => null));
           if (netRaw) {
             try {
               const parsedNet = JSON.parse(netRaw);
@@ -1404,11 +1498,12 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
     }
 
     const adaptiveScale = Math.max(1, intervalMs / 1500);
-    const shouldRefreshFs = !cachedFsSize || now - lastFsFetchAt >= Math.round(3000 * adaptiveScale);
-    const diskLayoutInterval = Math.round((isWindows ? 30000 : 12000) * Math.min(2.5, adaptiveScale));
+    const fsIntervalMs = Math.round((isWindows ? 10000 : 3000) * adaptiveScale);
+    const shouldRefreshFs = !cachedFsSize || now - lastFsFetchAt >= fsIntervalMs;
+    const diskLayoutInterval = Math.round((isWindows ? 90000 : 12000) * Math.min(2.5, adaptiveScale));
     const shouldRefreshDiskLayout = !cachedDiskLayout || now - lastDiskLayoutAt >= diskLayoutInterval;
-    const shouldRefreshNetIfaces =
-      !cachedNetIfaces || now - lastNetIfacesAt >= Math.round(15000 * Math.min(2, adaptiveScale));
+    const netIfaceInterval = Math.round((isWindows ? 30000 : 15000) * Math.min(2, adaptiveScale));
+    const shouldRefreshNetIfaces = !cachedNetIfaces || now - lastNetIfacesAt >= netIfaceInterval;
     const fsStatsIntervalMs = Math.max(1400, intervalMs);
     const shouldRefreshFsStats =
       (isLinux || isDarwin) && (!cachedFsStats || now - lastFsStatsAt >= fsStatsIntervalMs);
@@ -1429,10 +1524,10 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
       winPerfRes,
     ] = await Promise.all([
       isLinux ? resolveLinuxCpuMetrics() : Promise.resolve(null),
-      !isLinux ? si.cpuCurrentSpeed().catch(() => null) : Promise.resolve(null),
+      !isLinux && !isWindows ? si.cpuCurrentSpeed().catch(() => null) : Promise.resolve(null),
       isDarwin ? si.cpuTemperature().catch(() => null) : Promise.resolve(null),
       isWindows ? Promise.resolve(null) : si.mem().catch(() => null),
-      nvidiaSmiPath ? queryNvidiaSmi().catch(() => []) : Promise.resolve([]),
+      nvidiaSmiPath ? queryNvidiaSmi().catch(() => cachedNvidiaRes) : Promise.resolve([]),
       isLinux ? readLinuxDrmGpuDynamicAsync() : Promise.resolve({ AMD: [], Intel: [] }),
       shouldRefreshFsStats ? si.fsStats().catch(() => cachedFsStats) : Promise.resolve(cachedFsStats),
       isLinux ? fsp.readFile('/proc/diskstats', 'utf8').catch(() => null) : Promise.resolve(null),
@@ -1440,7 +1535,11 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
         ? si.networkInterfaces().catch(() => cachedNetIfaces || [])
         : Promise.resolve(cachedNetIfaces || []),
       isDarwin ? si.networkStats('*').catch(() => []) : Promise.resolve([]),
-      shouldRefreshFs ? si.fsSize().catch(() => cachedFsSize) : Promise.resolve(cachedFsSize),
+      shouldRefreshFs
+        ? isWindows
+          ? queryWindowsFsDisks().catch(() => cachedFsSize)
+          : si.fsSize().catch(() => cachedFsSize)
+        : Promise.resolve(cachedFsSize),
       shouldRefreshDiskLayout
         ? si.diskLayout().catch(() => cachedDiskLayout)
         : Promise.resolve(cachedDiskLayout),
@@ -1478,16 +1577,29 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
       lhmLibInfo?.healthy &&
       lhmLibInfo?.dllPath
     ) {
+      // With persistent warm LHM Computer instance, $hw.Update() takes ~15ms instead of opening/closing Ring0 every poll
+      const directLhmIntervalMs = Math.round(intervalMs);
       const shouldPollDirectLhm =
         !cachedManagedLhm ||
-        sampleTimestamp - lastManagedLhmAt >= Math.round(2000 * Math.min(2.5, adaptiveScale));
+        sampleTimestamp - lastManagedLhmAt >= directLhmIntervalMs;
       if (shouldPollDirectLhm && !managedLhmInFlight) {
         managedLhmInFlight = true;
         try {
-          const directRes = await readManagedLhmSensors({
-            dllPath: lhmLibInfo.dllPath,
-            timeoutMs: 5500,
-          }).catch(() => null);
+          let directRes = null;
+          if (winWorker) {
+            const rawWorkerLhm = await winWorker
+              .queryManagedLhm(lhmLibInfo.dllPath, 5500)
+              .catch(() => null);
+            if (rawWorkerLhm) {
+              directRes = parseLhmBridgeOutput(JSON.stringify(rawWorkerLhm));
+            }
+          }
+          if (!directRes || !directRes.ok) {
+            directRes = await readManagedLhmSensors({
+              dllPath: lhmLibInfo.dllPath,
+              timeoutMs: 5500,
+            }).catch(() => null);
+          }
           if (directRes) {
             cachedManagedLhm = directRes;
             lastManagedLhmAt = Date.now();
@@ -2113,15 +2225,16 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
       ? interfaces.reduce((acc, i) => acc + (i.uploadBytesPerSec || 0), 0)
       : null;
 
-    // --- 6. Universal Tech Adapters, Display/Gaming Quality & Laptop Battery/Power (Throttled cache 12s) ---
-    if (!cachedDisplayLaptop || sampleTimestamp - lastDisplayLaptopAt >= 12000) {
+    // --- 6. Universal Tech Adapters, Display/Gaming Quality & Laptop Battery/Power (Throttled cache) ---
+    const displayLaptopTtlMs = isWindows ? 30000 : 12000;
+    if (!cachedDisplayLaptop || sampleTimestamp - lastDisplayLaptopAt >= displayLaptopTtlMs) {
       cachedDisplayLaptop = await displayLaptopAdapter
         .collectDisplayAndLaptopInfo({ gpus })
         .catch(() => cachedDisplayLaptop);
       lastDisplayLaptopAt = sampleTimestamp;
     }
 
-    if (nvidiaSmiPath && (!cachedNvidiaExt || sampleTimestamp - lastNvidiaExtAt >= 30000)) {
+    if (nvidiaSmiPath && (!cachedNvidiaExt || sampleTimestamp - lastNvidiaExtAt >= 300000)) {
       cachedNvidiaExt = await queryNvidiaExtendedInfo(nvidiaSmiPath).catch(() => cachedNvidiaExt);
       lastNvidiaExtAt = sampleTimestamp;
     }
@@ -2298,6 +2411,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
     if (nextIntervalMs !== undefined) {
       intervalMs = clampInterval(nextIntervalMs);
     }
+    if (winWorker) winWorker.reopen();
     sessionToken += 1;
     const myToken = sessionToken;
     isMonitoring = true;
@@ -2335,6 +2449,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
     pausedByHide = false;
     pendingImmediateSample = false;
     clearPollTimer();
+    if (winWorker) winWorker.suspend();
     if (lastSnapshot) {
       lastSnapshot = { ...lastSnapshot, isMonitoring: false, intervalMs };
     }
@@ -2348,6 +2463,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
     pausedByHide = true;
     pendingImmediateSample = false;
     clearPollTimer();
+    if (winWorker) winWorker.suspend();
   }
 
   function resumeFromHidden() {
@@ -2405,6 +2521,7 @@ function createHardwareMonitor({ getMainWindow, onSnapshot, getLhmLibraryInfo } 
 
   function shutdown() {
     stop();
+    if (winWorker) winWorker.destroy();
   }
 
   function registerIpc(ipcMain, isTrustedSender) {

@@ -148,7 +148,50 @@ export function getAppVersionString(): string {
   } catch {
     // ignore undefined define during isolated tests
   }
-  return '1.0.6';
+  return '1.0.12';
+}
+
+const LAST_SEEN_VERSION_KEY = 'secretarea_last_seen_app_version_v1';
+
+export function getLastSeenAppVersion(): string | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem(LAST_SEEN_VERSION_KEY);
+    return raw && raw.trim() ? raw.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setLastSeenAppVersion(version: string): void {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const clean = version.trim();
+    if (!clean) return;
+    localStorage.setItem(LAST_SEEN_VERSION_KEY, clean);
+  } catch {
+    // ignore localStorage failures
+  }
+}
+
+export function compareAppVersions(a: string, b: string): number {
+  const parse = (val: string) =>
+    val
+      .replace(/^v/i, '')
+      .trim()
+      .split('-')[0]
+      .split('.')
+      .map((n) => parseInt(n, 10) || 0);
+  const pa = parse(a);
+  const pb = parse(b);
+  const len = Math.max(pa.length, pb.length, 3);
+  for (let i = 0; i < len; i++) {
+    const va = pa[i] || 0;
+    const vb = pb[i] || 0;
+    if (va > vb) return 1;
+    if (va < vb) return -1;
+  }
+  return 0;
 }
 
 function normalizeLanguage(value: unknown): AppLanguage {

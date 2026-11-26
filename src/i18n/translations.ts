@@ -1210,6 +1210,9 @@ export interface LauncherTranslations {
     newCountLabel: string;
     changedCountLabel: string;
     fixedCountLabel: string;
+    justUpdatedTitle: string;
+    justUpdatedFromPrefix: string;
+    newlyInstalledBadge: string;
   };
   notificationCenter: {
     buttonLabel: string;
@@ -1464,6 +1467,119 @@ export interface LauncherTranslations {
     apiKeysConfiguredBadge: string;
     apiKeysNotSetBadge: string;
     apiKeysSafeStorageNote: string;
+  };
+  settingsHub: {
+    searchPlaceholder: string;
+    searchResultsCount: string;
+    searchEmptyTitle: string;
+    searchEmptyDesc: string;
+    clearSearchBtn: string;
+    catAll: string;
+    catTools: string;
+    catLanguage: string;
+    catStartup: string;
+    catAppearance: string;
+    catAudio: string;
+    catPerformance: string;
+    catStorage: string;
+    catUpdates: string;
+    summaryThemeLabel: string;
+    summaryPerfLabel: string;
+    summaryToolsLabel: string;
+    summarySystemLabel: string;
+    toolsReadySuffix: string;
+    themeStudioTitle: string;
+    themeStudioDesc: string;
+    themeDefaultDark: string;
+    themeCrispLight: string;
+    themePs5: string;
+    themeXbox: string;
+    themeCustom: string;
+    traySmartTip: string;
+    traySmartBtn: string;
+    audioStatusConsoleActive: string;
+    audioStatusStandby: string;
+    audioPreviewBtn: string;
+    volumeMute: string;
+    volumeLow: string;
+    volumeBalanced: string;
+    volumeMax: string;
+    effectiveParamsTitle: string;
+    effectiveHwPoll: string;
+    effectiveUiCoalesce: string;
+    effectiveTorrentPoll: string;
+    effectiveCacheCap: string;
+    diskFreeLabel: string;
+    cacheSectionTitle: string;
+    cacheSectionDesc: string;
+    clearDealsCacheBtn: string;
+    dealsCacheCleared: string;
+    clearImageCacheBtn: string;
+    imageCacheCleared: string;
+    exportSettingsBtn: string;
+    importSettingsBtn: string;
+    importSettingsSuccess: string;
+    importSettingsError: string;
+    hubTitle: string;
+    hubSubtitle: string;
+    hubFilterAll: string;
+    hubFilterHardware: string;
+    hubFilterDownloads: string;
+    hubFilterDeals: string;
+    hubFilterUtilities: string;
+    hubConfigureBtn: string;
+    hubHideConfigBtn: string;
+    hubPurposeLabel: string;
+    hubStatusReady: string;
+    hubStatusAttention: string;
+    hubStatusStandby: string;
+    hubStatusBuiltin: string;
+    hubStatusWebPreview: string;
+    toolQbitName: string;
+    toolQbitPurpose: string;
+    toolPresentMonName: string;
+    toolPresentMonPurpose: string;
+    toolLhmName: string;
+    toolLhmPurpose: string;
+    toolCleanerName: string;
+    toolCleanerPurpose: string;
+    toolDealsApiName: string;
+    toolDealsApiPurpose: string;
+    toolCanRunItName: string;
+    toolCanRunItPurpose: string;
+    toolBenchDbName: string;
+    toolBenchDbPurpose: string;
+    toolHypervisorName: string;
+    toolHypervisorPurpose: string;
+    toolSpinWheelName: string;
+    toolSpinWheelPurpose: string;
+    toolUpdaterName: string;
+    toolUpdaterPurpose: string;
+    specsAutoDetected: string;
+    specsCustomOverride: string;
+    specsBrowserMode: string;
+    specsRescanBtn: string;
+    specsCustomizeBtn: string;
+    specsSaveBtn: string;
+    specsResetAutoBtn: string;
+    specsCpuLabel: string;
+    specsGpuLabel: string;
+    specsVramLabel: string;
+    specsRamLabel: string;
+    specsDiskFreeLabel: string;
+    cleanerQuickScanBtn: string;
+    cleanerQuickCleanBtn: string;
+    cleanerWebNote: string;
+    dbEntriesLabel: string;
+    dbVersionLabel: string;
+    dbCheckUpdateBtn: string;
+    openHardwareMonitorBtn: string;
+    openPcCleanerBtn: string;
+    openBenchmarksBtn: string;
+    openDealsBtn: string;
+    openHypervisorBtn: string;
+    openSpinWheelBtn: string;
+    openUpdaterBtn: string;
   };
 }
 
@@ -2638,11 +2754,14 @@ const EN: LauncherTranslations = {
     newCountLabel: 'New',
     changedCountLabel: 'Changed',
     fixedCountLabel: 'Fixed',
+    justUpdatedTitle: "What's New in This Version",
+    justUpdatedFromPrefix: 'Updated automatically from',
+    newlyInstalledBadge: 'Just Installed',
   },
   notificationCenter: {
     buttonLabel: 'Notifications',
     title: 'Notification Center',
-    subtitle: 'Live catalog updates across important releases and news feeds',
+    subtitle: 'Latest 3 new games & catalog updates',
     syncNowBtn: 'Sync Now',
     syncingBtn: 'Syncing...',
     markAllReadBtn: 'Mark all read',
@@ -2663,7 +2782,7 @@ const EN: LauncherTranslations = {
     openItemHint: 'Open',
     openExtrasHint: 'Open in Extras',
     emptyTitle: 'You are all caught up',
-    emptyDesc: 'No notifications match this filter yet. Click Sync Now to fetch the latest catalog updates.',
+    emptyDesc: 'No recent catalog updates or new games yet.',
     syncedToast: 'Catalog synchronized',
     newUpdatesToastPrefix: 'new catalog updates',
     tabLabels: {
@@ -2910,6 +3029,119 @@ const EN: LauncherTranslations = {
     apiKeysConfiguredBadge: 'Configured',
     apiKeysNotSetBadge: 'Not Configured',
     apiKeysSafeStorageNote: 'Stored strictly in Electron Main Process safeStorage (OS Keychain). Never exposed to renderer JavaScript.',
+  },
+  settingsHub: {
+    searchPlaceholder: 'Search settings, themes, or tools (e.g. qBittorrent, FPS, API, cache)...',
+    searchResultsCount: 'matching sections',
+    searchEmptyTitle: 'No matching settings or tools',
+    searchEmptyDesc: 'Try searching for language, theme, cursor, performance, qBittorrent, PresentMon, cleaner, or API keys.',
+    clearSearchBtn: 'Clear search',
+    catAll: 'All Settings',
+    catTools: 'Tools & Integrations',
+    catLanguage: 'Language & Region',
+    catStartup: 'Startup & System',
+    catAppearance: 'Appearance & Themes',
+    catAudio: 'Audio & Soundscape',
+    catPerformance: 'Performance & Power',
+    catStorage: 'Storage, Cache & Backup',
+    catUpdates: 'Updates & History',
+    summaryThemeLabel: 'Active Theme',
+    summaryPerfLabel: 'Performance Profile',
+    summaryToolsLabel: 'Tools & Engines',
+    summarySystemLabel: 'Hardware & Storage',
+    toolsReadySuffix: 'ready',
+    themeStudioTitle: 'Quick Theme Studio',
+    themeStudioDesc: 'Switch effortlessly between desktop dark/light modes, console atmospheres, or your custom palette.',
+    themeDefaultDark: 'Default Dark',
+    themeCrispLight: 'Crisp Light',
+    themePs5: 'PlayStation 5',
+    themeXbox: 'Xbox Nexus',
+    themeCustom: 'Custom Studio',
+    traySmartTip: 'Tip: You enabled Start with Computer. Switch close behavior to Minimize to System Tray so SecretArea stays ready in the background.',
+    traySmartBtn: 'Use Tray Minimize',
+    audioStatusConsoleActive: 'Console ambient music and UI sound effects are active.',
+    audioStatusStandby: 'UI click sounds are active. Ambient background music automatically activates when PS5 or Xbox theme is selected.',
+    audioPreviewBtn: 'Test Sound',
+    volumeMute: 'Mute',
+    volumeLow: 'Low',
+    volumeBalanced: 'Balanced',
+    volumeMax: 'Max',
+    effectiveParamsTitle: 'Live Effective Parameters',
+    effectiveHwPoll: 'HW Poll',
+    effectiveUiCoalesce: 'UI Sync',
+    effectiveTorrentPoll: 'Torrent Idle',
+    effectiveCacheCap: 'Image Cap',
+    diskFreeLabel: 'Free disk space',
+    cacheSectionTitle: 'Cache, Data & Portable Backup',
+    cacheSectionDesc: 'Clear cached network responses or artwork, or export/import your launcher preferences as a portable JSON file.',
+    clearDealsCacheBtn: 'Clear Deals Cache',
+    dealsCacheCleared: 'Deals & intelligence memory cache cleared.',
+    clearImageCacheBtn: 'Clear Artwork Cache',
+    imageCacheCleared: 'Cached cover artwork cleared.',
+    exportSettingsBtn: 'Export Settings',
+    importSettingsBtn: 'Import Settings',
+    importSettingsSuccess: 'Settings imported and applied.',
+    importSettingsError: 'Invalid settings JSON file.',
+    hubTitle: 'Extra Tools & Integrations Hub',
+    hubSubtitle: 'Every built-in utility, hardware engine, downloader integration, and API provider collected in one place—see what each tool does and configure it directly.',
+    hubFilterAll: 'All Tools',
+    hubFilterHardware: 'Hardware & Diagnostics',
+    hubFilterDownloads: 'Downloads & Network',
+    hubFilterDeals: 'Deals & APIs',
+    hubFilterUtilities: 'Utilities & Guides',
+    hubConfigureBtn: 'Configure Tool',
+    hubHideConfigBtn: 'Hide Configuration',
+    hubPurposeLabel: 'What this tool is for',
+    hubStatusReady: 'Ready',
+    hubStatusAttention: 'Needs Attention',
+    hubStatusStandby: 'Standby',
+    hubStatusBuiltin: 'Built-in Tool',
+    hubStatusWebPreview: 'Desktop App Required',
+    toolQbitName: 'qBittorrent Web UI (API v2 / 5.0+)',
+    toolQbitPurpose: 'Sends magnet and .torrent links directly from SecretArea to your local qBittorrent client, tracking live DL/UL speeds, ETA, and queue controls.',
+    toolPresentMonName: 'Intel PresentMon (FPS & Frame Time)',
+    toolPresentMonPurpose: 'Captures low-overhead DX11/DX12/Vulkan/OpenGL frame times, 1% & 0.1% low FPS, and GPU Busy telemetry during gaming sessions.',
+    toolLhmName: 'LibreHardwareMonitorLib (Sensor Engine)',
+    toolLhmPurpose: 'Open-source MPL-2.0 sensor engine reading real-time CPU/GPU temperatures, clocks, power draw, VRM voltages, NVMe SMART, and fan RPM.',
+    toolCleanerName: 'Safe PC Cleaner & Cache Optimizer',
+    toolCleanerPurpose: 'Safely scans and clears Windows temp folders, app caches, SecretArea cache, thumbnails, and DirectX shader caches to reclaim disk space.',
+    toolDealsApiName: 'Game Deals & Critic API Providers',
+    toolDealsApiPurpose: 'Powers Game Deals, Live Players, and Critic Scores via 6 zero-key public APIs plus optional encrypted keys for Steam Index, Metacritic, and OpenCritic.',
+    toolCanRunItName: 'Can Run It & PC Hardware Profiler',
+    toolCanRunItPurpose: 'Compares every game’s CPU, GPU, VRAM, RAM, and disk requirements against your detected (or customized) PC specifications.',
+    toolBenchDbName: 'Hardware Benchmarks & Spec Database',
+    toolBenchDbPurpose: 'Runs safe CPU/RAM/Storage/Latency micro-benchmarks and maintains the local GPU/CPU/Console reference database (hardware-db.json).',
+    toolHypervisorName: 'Hypervisor & Virtualization Guide',
+    toolHypervisorPurpose: 'Step-by-step BIOS VT-x / AMD-V, Hyper-V, and driver preparation reference for titles requiring virtualization support.',
+    toolSpinWheelName: 'Spin Wheel (What Should I Play?)',
+    toolSpinWheelPurpose: 'Randomized library picker that helps you break decision fatigue and launch straight into a surprise game from your catalog.',
+    toolUpdaterName: 'App Updater, Changelog & Notifications',
+    toolUpdaterPurpose: 'Checks GitHub Releases for new SecretArea versions, opens full release history, and manages catalog update alerts.',
+    specsAutoDetected: 'Auto-Detected (Native)',
+    specsCustomOverride: 'Custom Override',
+    specsBrowserMode: 'Browser Estimated',
+    specsRescanBtn: 'Re-scan Hardware',
+    specsCustomizeBtn: 'Customize Specs',
+    specsSaveBtn: 'Save Specs',
+    specsResetAutoBtn: 'Reset to Auto',
+    specsCpuLabel: 'Processor (CPU)',
+    specsGpuLabel: 'Graphics (GPU)',
+    specsVramLabel: 'VRAM (GB)',
+    specsRamLabel: 'System RAM (GB)',
+    specsDiskFreeLabel: 'Free Space (GB)',
+    cleanerQuickScanBtn: 'Quick Scan Now',
+    cleanerQuickCleanBtn: 'Clean Selected',
+    cleanerWebNote: 'File-system cleanup requires the SecretArea.exe Desktop App.',
+    dbEntriesLabel: 'Database Entries',
+    dbVersionLabel: 'DB Version',
+    dbCheckUpdateBtn: 'Check DB Update',
+    openHardwareMonitorBtn: 'Open Hardware Monitor',
+    openPcCleanerBtn: 'Open Full PC Cleaner',
+    openBenchmarksBtn: 'Open Benchmarks & DB',
+    openDealsBtn: 'Open Game Deals',
+    openHypervisorBtn: 'Open Hypervisor Guide',
+    openSpinWheelBtn: 'Launch Spin Wheel',
+    openUpdaterBtn: 'Check App Updates',
   },
 };
 
@@ -4084,11 +4316,14 @@ const FR: LauncherTranslations = {
     newCountLabel: 'Nouveautés',
     changedCountLabel: 'Modifiés',
     fixedCountLabel: 'Corrigés',
+    justUpdatedTitle: 'Nouveautés de cette version',
+    justUpdatedFromPrefix: 'Mise à jour automatique depuis',
+    newlyInstalledBadge: 'Installée à l’instant',
   },
   notificationCenter: {
     buttonLabel: 'Notifications',
     title: 'Centre de notifications',
-    subtitle: 'Mises à jour du catalogue en direct : sorties majeures et actualités',
+    subtitle: 'Les 3 derniers jeux ajoutés et mises à jour',
     syncNowBtn: 'Synchroniser',
     syncingBtn: 'Sync...',
     markAllReadBtn: 'Tout marquer lu',
@@ -4109,7 +4344,7 @@ const FR: LauncherTranslations = {
     openItemHint: 'Ouvrir',
     openExtrasHint: 'Voir dans Extras',
     emptyTitle: 'Tout est à jour',
-    emptyDesc: 'Aucune notification ne correspond à ce filtre. Cliquez sur Synchroniser pour charger les dernières mises à jour.',
+    emptyDesc: 'Aucune mise à jour ou nouveauté récente pour le moment.',
     syncedToast: 'Catalogue synchronisé',
     newUpdatesToastPrefix: 'nouvelles mises à jour',
     tabLabels: {
@@ -4356,6 +4591,119 @@ const FR: LauncherTranslations = {
     apiKeysConfiguredBadge: 'Configurée',
     apiKeysNotSetBadge: 'Non définie',
     apiKeysSafeStorageNote: 'Chiffré localement via Electron safeStorage.',
+  },
+  settingsHub: {
+    searchPlaceholder: 'Rechercher un paramètre, thème ou outil (ex: qBittorrent, FPS, API, cache)...',
+    searchResultsCount: 'sections correspondantes',
+    searchEmptyTitle: 'Aucun paramètre ou outil trouvé',
+    searchEmptyDesc: 'Essayez de rechercher langue, thème, curseur, performance, qBittorrent, PresentMon, nettoyeur ou API.',
+    clearSearchBtn: 'Effacer la recherche',
+    catAll: 'Tous les paramètres',
+    catTools: 'Outils & Intégrations',
+    catLanguage: 'Langue & Région',
+    catStartup: 'Démarrage & Système',
+    catAppearance: 'Apparence & Thèmes',
+    catAudio: 'Audio & Ambiance',
+    catPerformance: 'Performance & Énergie',
+    catStorage: 'Stockage, Cache & Sauvegarde',
+    catUpdates: 'Mises à jour & Historique',
+    summaryThemeLabel: 'Thème actif',
+    summaryPerfLabel: 'Profil de performance',
+    summaryToolsLabel: 'Outils & Moteurs',
+    summarySystemLabel: 'Matériel & Stockage',
+    toolsReadySuffix: 'prêts',
+    themeStudioTitle: 'Studio de Thèmes Rapide',
+    themeStudioDesc: 'Basculez facilement entre les modes sombre/clair, les ambiances console ou votre palette personnalisée.',
+    themeDefaultDark: 'Sombre par défaut',
+    themeCrispLight: 'Clair lumineux',
+    themePs5: 'PlayStation 5',
+    themeXbox: 'Xbox Nexus',
+    themeCustom: 'Studio perso',
+    traySmartTip: 'Astuce : le démarrage avec l’ordinateur est actif. Passez la fermeture sur « Réduire dans la zone de notification » pour garder SecretArea prêt en arrière-plan.',
+    traySmartBtn: 'Réduire en barre d’état',
+    audioStatusConsoleActive: 'La musique d’ambiance console et les effets sonores UI sont actifs.',
+    audioStatusStandby: 'Les sons de clic sont actifs. La musique d’ambiance démarre automatiquement avec le thème PS5 ou Xbox.',
+    audioPreviewBtn: 'Tester le son',
+    volumeMute: 'Muet',
+    volumeLow: 'Faible',
+    volumeBalanced: 'Équilibré',
+    volumeMax: 'Max',
+    effectiveParamsTitle: 'Paramètres effectifs en direct',
+    effectiveHwPoll: 'Sonde Matériel',
+    effectiveUiCoalesce: 'Sync UI',
+    effectiveTorrentPoll: 'Torrent Veille',
+    effectiveCacheCap: 'Limite Images',
+    diskFreeLabel: 'Espace disque libre',
+    cacheSectionTitle: 'Cache, Données & Sauvegarde Portable',
+    cacheSectionDesc: 'Videz les caches réseau ou images, ou exportez/importez vos préférences SecretArea en JSON.',
+    clearDealsCacheBtn: 'Vider le cache Bons plans',
+    dealsCacheCleared: 'Cache mémoire des bons plans vidé.',
+    clearImageCacheBtn: 'Vider le cache d’images',
+    imageCacheCleared: 'Cache des jaquettes vidé.',
+    exportSettingsBtn: 'Exporter les réglages',
+    importSettingsBtn: 'Importer les réglages',
+    importSettingsSuccess: 'Réglages importés et appliqués.',
+    importSettingsError: 'Fichier JSON de réglages invalide.',
+    hubTitle: 'Centre des Outils & Intégrations',
+    hubSubtitle: 'Tous les utilitaires intégrés, moteurs matériels, outils de téléchargement et API au même endroit : découvrez leur rôle et configurez-les directement.',
+    hubFilterAll: 'Tous les outils',
+    hubFilterHardware: 'Matériel & Diagnostics',
+    hubFilterDownloads: 'Téléchargements & Réseau',
+    hubFilterDeals: 'Bons plans & API',
+    hubFilterUtilities: 'Utilitaires & Guides',
+    hubConfigureBtn: 'Configurer',
+    hubHideConfigBtn: 'Masquer la config',
+    hubPurposeLabel: 'À quoi sert cet outil',
+    hubStatusReady: 'Prêt',
+    hubStatusAttention: 'Action requise',
+    hubStatusStandby: 'En veille',
+    hubStatusBuiltin: 'Outil intégré',
+    hubStatusWebPreview: 'App Bureau requise',
+    toolQbitName: 'qBittorrent Web UI (API v2 / 5.0+)',
+    toolQbitPurpose: 'Envoie les liens magnet et .torrent vers votre client qBittorrent local et suit les vitesses DL/UL, ETA et la file en direct.',
+    toolPresentMonName: 'Intel PresentMon (FPS & Frame Time)',
+    toolPresentMonPurpose: 'Capture les temps d’image DX11/DX12/Vulkan/OpenGL, les FPS 1%/0.1% Low et la charge GPU en jeu.',
+    toolLhmName: 'LibreHardwareMonitorLib (Capteurs)',
+    toolLhmPurpose: 'Moteur open-source MPL-2.0 mesurant températures CPU/GPU, fréquences, puissance, tensions VRM, SMART NVMe et ventilateurs.',
+    toolCleanerName: 'Nettoyeur PC sécurisé & Optimiseur',
+    toolCleanerPurpose: 'Analyse et nettoie en toute sécurité les fichiers temporaires Windows, caches d’applications, cache SecretArea, miniatures et shaders DirectX.',
+    toolDealsApiName: 'Fournisseurs Bons plans & Critiques',
+    toolDealsApiPurpose: 'Alimente Bons plans, Joueurs en direct et Notes via 6 API publiques gratuites plus 3 clés chiffrées optionnelles.',
+    toolCanRunItName: 'Can Run It & Profil Matériel PC',
+    toolCanRunItPurpose: 'Compare les prérequis CPU, GPU, VRAM, RAM et disque de chaque jeu à la configuration détectée ou personnalisée de votre PC.',
+    toolBenchDbName: 'Benchmarks Matériel & Base de Données',
+    toolBenchDbPurpose: 'Exécute des micro-benchmarks CPU/RAM/Stockage/Latence et maintient la base de référence matérielle (hardware-db.json).',
+    toolHypervisorName: 'Guide Hyperviseur & Virtualisation',
+    toolHypervisorPurpose: 'Guide pas à pas pour BIOS VT-x / AMD-V, Hyper-V et pilotes requis par certains titres.',
+    toolSpinWheelName: 'Roue de la Fortune (À quoi jouer ?)',
+    toolSpinWheelPurpose: 'Sélecteur aléatoire dans votre bibliothèque pour lancer immédiatement un jeu surprise.',
+    toolUpdaterName: 'Mises à jour, Historique & Notifications',
+    toolUpdaterPurpose: 'Vérifie les versions GitHub de SecretArea, affiche le journal complet et gère les alertes du catalogue.',
+    specsAutoDetected: 'Détecté auto (Natif)',
+    specsCustomOverride: 'Profil personnalisé',
+    specsBrowserMode: 'Estimé (Navigateur)',
+    specsRescanBtn: 'Réanalyser le PC',
+    specsCustomizeBtn: 'Modifier les specs',
+    specsSaveBtn: 'Enregistrer',
+    specsResetAutoBtn: 'Rétablir auto',
+    specsCpuLabel: 'Processeur (CPU)',
+    specsGpuLabel: 'Carte graphique (GPU)',
+    specsVramLabel: 'VRAM (Go)',
+    specsRamLabel: 'Mémoire RAM (Go)',
+    specsDiskFreeLabel: 'Espace libre (Go)',
+    cleanerQuickScanBtn: 'Analyse rapide',
+    cleanerQuickCleanBtn: 'Nettoyer la sélection',
+    cleanerWebNote: 'Le nettoyage système nécessite l’application de bureau SecretArea.exe.',
+    dbEntriesLabel: 'Entrées en base',
+    dbVersionLabel: 'Version BD',
+    dbCheckUpdateBtn: 'Vérifier MÀJ BD',
+    openHardwareMonitorBtn: 'Ouvrir Moniteur matériel',
+    openPcCleanerBtn: 'Ouvrir Nettoyeur complet',
+    openBenchmarksBtn: 'Ouvrir Benchmarks & BD',
+    openDealsBtn: 'Ouvrir Bons plans',
+    openHypervisorBtn: 'Ouvrir Guide Hyperviseur',
+    openSpinWheelBtn: 'Lancer la Roue',
+    openUpdaterBtn: 'Vérifier les mises à jour',
   },
 };
 
@@ -5530,11 +5878,14 @@ const ES: LauncherTranslations = {
     newCountLabel: 'Nuevas',
     changedCountLabel: 'Cambios',
     fixedCountLabel: 'Correcciones',
+    justUpdatedTitle: 'Novedades de esta versión',
+    justUpdatedFromPrefix: 'Actualizado automáticamente desde',
+    newlyInstalledBadge: 'Recién instalada',
   },
   notificationCenter: {
     buttonLabel: 'Notificaciones',
     title: 'Centro de notificaciones',
-    subtitle: 'Alertas en vivo del catálogo para pestañas clave y noticias',
+    subtitle: 'Últimos 3 juegos nuevos y actualizaciones',
     syncNowBtn: 'Sincronizar',
     syncingBtn: 'Sincronizando...',
     markAllReadBtn: 'Marcar todo leído',
@@ -5555,7 +5906,7 @@ const ES: LauncherTranslations = {
     openItemHint: 'Abrir',
     openExtrasHint: 'Ver en Extras',
     emptyTitle: 'Todo al día',
-    emptyDesc: 'No hay notificaciones en este filtro. Pulsa Sincronizar para revisar las últimas actualizaciones del catálogo.',
+    emptyDesc: 'Aún no hay juegos nuevos ni actualizaciones recientes.',
     syncedToast: 'Catálogo sincronizado',
     newUpdatesToastPrefix: 'novedades del catálogo',
     tabLabels: {
@@ -5802,6 +6153,119 @@ const ES: LauncherTranslations = {
     apiKeysConfiguredBadge: 'Configurada',
     apiKeysNotSetBadge: 'Sin configurar',
     apiKeysSafeStorageNote: 'Guardado de forma cifrada mediante Electron safeStorage.',
+  },
+  settingsHub: {
+    searchPlaceholder: 'Buscar ajustes, temas o herramientas (ej. qBittorrent, FPS, API, caché)...',
+    searchResultsCount: 'secciones encontradas',
+    searchEmptyTitle: 'No se encontraron ajustes ni herramientas',
+    searchEmptyDesc: 'Prueba buscar idioma, tema, cursor, rendimiento, qBittorrent, PresentMon, limpiador o API.',
+    clearSearchBtn: 'Limpiar búsqueda',
+    catAll: 'Todos los ajustes',
+    catTools: 'Herramientas e Integraciones',
+    catLanguage: 'Idioma y Región',
+    catStartup: 'Inicio y Sistema',
+    catAppearance: 'Apariencia y Temas',
+    catAudio: 'Audio y Sonido',
+    catPerformance: 'Rendimiento y Energía',
+    catStorage: 'Almacenamiento, Caché y Respaldo',
+    catUpdates: 'Actualizaciones e Historial',
+    summaryThemeLabel: 'Tema activo',
+    summaryPerfLabel: 'Perfil de rendimiento',
+    summaryToolsLabel: 'Herramientas y Motores',
+    summarySystemLabel: 'Hardware y Disco',
+    toolsReadySuffix: 'listas',
+    themeStudioTitle: 'Estudio Rápido de Temas',
+    themeStudioDesc: 'Cambia al instante entre modo oscuro/claro, temas de consola o tu paleta personalizada.',
+    themeDefaultDark: 'Oscuro base',
+    themeCrispLight: 'Claro nítido',
+    themePs5: 'PlayStation 5',
+    themeXbox: 'Xbox Nexus',
+    themeCustom: 'Estudio propio',
+    traySmartTip: 'Consejo: activaste Iniciar con el equipo. Cambia el cierre a «Minimizar a la bandeja» para mantener SecretArea listo en segundo plano.',
+    traySmartBtn: 'Minimizar en bandeja',
+    audioStatusConsoleActive: 'La música ambiental de consola y los efectos de interfaz están activos.',
+    audioStatusStandby: 'Los sonidos de clic están activos. La música ambiental se activa automáticamente al elegir el tema PS5 o Xbox.',
+    audioPreviewBtn: 'Probar sonido',
+    volumeMute: 'Silencio',
+    volumeLow: 'Bajo',
+    volumeBalanced: 'Equilibrado',
+    volumeMax: 'Máx',
+    effectiveParamsTitle: 'Parámetros efectivos en vivo',
+    effectiveHwPoll: 'Sondeo HW',
+    effectiveUiCoalesce: 'Sync UI',
+    effectiveTorrentPoll: 'Torrent Inactivo',
+    effectiveCacheCap: 'Tope Imágenes',
+    diskFreeLabel: 'Espacio libre en disco',
+    cacheSectionTitle: 'Caché, Datos y Respaldo Portable',
+    cacheSectionDesc: 'Limpia la caché de ofertas o carátulas, o exporta/importa tus ajustes en un archivo JSON.',
+    clearDealsCacheBtn: 'Limpiar caché de Ofertas',
+    dealsCacheCleared: 'Caché en memoria de ofertas limpiada.',
+    clearImageCacheBtn: 'Limpiar caché de imágenes',
+    imageCacheCleared: 'Caché de carátulas eliminada.',
+    exportSettingsBtn: 'Exportar ajustes',
+    importSettingsBtn: 'Importar ajustes',
+    importSettingsSuccess: 'Ajustes importados y aplicados.',
+    importSettingsError: 'Archivo JSON de ajustes no válido.',
+    hubTitle: 'Centro de Herramientas e Integraciones',
+    hubSubtitle: 'Todas las utilidades integradas, motores de hardware, descargas y proveedores API en un solo lugar: conoce para qué sirve cada herramienta y configúrala aquí.',
+    hubFilterAll: 'Todas',
+    hubFilterHardware: 'Hardware y Diagnóstico',
+    hubFilterDownloads: 'Descargas y Red',
+    hubFilterDeals: 'Ofertas y APIs',
+    hubFilterUtilities: 'Utilidades y Guías',
+    hubConfigureBtn: 'Configurar',
+    hubHideConfigBtn: 'Ocultar config',
+    hubPurposeLabel: 'Para qué sirve',
+    hubStatusReady: 'Listo',
+    hubStatusAttention: 'Requiere atención',
+    hubStatusStandby: 'En espera',
+    hubStatusBuiltin: 'Integrada',
+    hubStatusWebPreview: 'Requiere App Escritorio',
+    toolQbitName: 'qBittorrent Web UI (API v2 / 5.0+)',
+    toolQbitPurpose: 'Envía enlaces magnet y .torrent desde SecretArea a tu qBittorrent local y muestra velocidad DL/UL, ETA y controles en vivo.',
+    toolPresentMonName: 'Intel PresentMon (FPS y Frame Time)',
+    toolPresentMonPurpose: 'Captura tiempos de fotograma DX11/DX12/Vulkan/OpenGL, FPS 1%/0.1% Low y carga real de GPU en sesiones de juego.',
+    toolLhmName: 'LibreHardwareMonitorLib (Sensores)',
+    toolLhmPurpose: 'Motor open-source MPL-2.0 que lee temperaturas CPU/GPU, frecuencias, vatios, voltajes VRM, SMART NVMe y ventiladores.',
+    toolCleanerName: 'Limpiador Seguro de PC y Caché',
+    toolCleanerPurpose: 'Analiza y elimina de forma segura archivos temporales de Windows, caché de apps, caché de SecretArea, miniaturas y shaders DirectX.',
+    toolDealsApiName: 'Proveedores de Ofertas y Críticas API',
+    toolDealsApiPurpose: 'Alimenta Ofertas, Jugadores en vivo y Puntuaciones mediante 6 APIs públicas gratuitas más 3 claves cifradas opcionales.',
+    toolCanRunItName: 'Can Run It y Perfil de Hardware',
+    toolCanRunItPurpose: 'Compara los requisitos de CPU, GPU, VRAM, RAM y disco de cada juego frente a las especificaciones de tu PC.',
+    toolBenchDbName: 'Benchmarks y Base de Datos Hardware',
+    toolBenchDbPurpose: 'Ejecuta micro-benchmarks seguros de CPU/RAM/Disco/Latencia y actualiza la base de datos hardware-db.json.',
+    toolHypervisorName: 'Guía de Hypervisor y Virtualización',
+    toolHypervisorPurpose: 'Referencia paso a paso para BIOS VT-x / AMD-V, Hyper-V y controladores para títulos que requieren virtualización.',
+    toolSpinWheelName: 'Ruleta de Juegos (¿Qué juego elijo?)',
+    toolSpinWheelPurpose: 'Selector aleatorio sobre tu catálogo para superar la indecisión y abrir un juego sorpresa al instante.',
+    toolUpdaterName: 'Actualizador, Historial y Alertas',
+    toolUpdaterPurpose: 'Comprueba nuevas versiones de SecretArea en GitHub Releases, consulta el historial de cambios y gestiona notificaciones.',
+    specsAutoDetected: 'Autodetectado (Nativo)',
+    specsCustomOverride: 'Personalizado',
+    specsBrowserMode: 'Estimado (Navegador)',
+    specsRescanBtn: 'Reescanear PC',
+    specsCustomizeBtn: 'Editar specs',
+    specsSaveBtn: 'Guardar specs',
+    specsResetAutoBtn: 'Restaurar auto',
+    specsCpuLabel: 'Procesador (CPU)',
+    specsGpuLabel: 'Gráfica (GPU)',
+    specsVramLabel: 'VRAM (GB)',
+    specsRamLabel: 'Memoria RAM (GB)',
+    specsDiskFreeLabel: 'Espacio libre (GB)',
+    cleanerQuickScanBtn: 'Análisis rápido',
+    cleanerQuickCleanBtn: 'Limpiar selección',
+    cleanerWebNote: 'La limpieza del sistema requiere la aplicación de escritorio SecretArea.exe.',
+    dbEntriesLabel: 'Entradas en BD',
+    dbVersionLabel: 'Versión BD',
+    dbCheckUpdateBtn: 'Buscar MÀJ BD',
+    openHardwareMonitorBtn: 'Abrir Monitor Hardware',
+    openPcCleanerBtn: 'Abrir Limpiador completo',
+    openBenchmarksBtn: 'Abrir Benchmarks y BD',
+    openDealsBtn: 'Abrir Ofertas',
+    openHypervisorBtn: 'Abrir Guía Hypervisor',
+    openSpinWheelBtn: 'Abrir Ruleta',
+    openUpdaterBtn: 'Buscar actualizaciones',
   },
 };
 
@@ -6976,11 +7440,14 @@ const AR: LauncherTranslations = {
     newCountLabel: 'جديد',
     changedCountLabel: 'تحسينات',
     fixedCountLabel: 'إصلاحات',
+    justUpdatedTitle: 'الجديد في هذا الإصدار',
+    justUpdatedFromPrefix: 'تم التحديث تلقائياً من الإصدار',
+    newlyInstalledBadge: 'مثبّت حديثاً',
   },
   notificationCenter: {
     buttonLabel: 'الإشعارات',
     title: 'مركز الإشعارات',
-    subtitle: 'تحديثات الكتالوج المباشرة للتبويبات المهمة وأخبار الألعاب',
+    subtitle: 'آخر 3 تحديثات أو ألعاب مضافة حديثاً',
     syncNowBtn: 'مزامنة الآن',
     syncingBtn: 'جارٍ المزامنة...',
     markAllReadBtn: 'تحديد الكل كمقروء',
@@ -7001,7 +7468,7 @@ const AR: LauncherTranslations = {
     openItemHint: 'فتح',
     openExtrasHint: 'فتح في الإضافات',
     emptyTitle: 'لا توجد إشعارات جديدة',
-    emptyDesc: 'لا توجد إشعارات مطابقة لهذا القسم حالياً. اضغط مزامنة الآن لجلب أحدث تحديثات الكتالوج.',
+    emptyDesc: 'لا توجد تحديثات أو ألعاب مضافة حديثاً حتى الآن.',
     syncedToast: 'تمت مزامنة الكتالوج بنجاح',
     newUpdatesToastPrefix: 'تحديثات جديدة في الكتالوج',
     tabLabels: {
@@ -7248,6 +7715,119 @@ const AR: LauncherTranslations = {
     apiKeysConfiguredBadge: 'مُفعّل',
     apiKeysNotSetBadge: 'غير مُعد',
     apiKeysSafeStorageNote: 'يُحفظ مشفراً بالكامل داخل Electron safeStorage ولا يُكشف لملفات الواجهة.',
+  },
+  settingsHub: {
+    searchPlaceholder: 'ابحث في الإعدادات أو المظاهر أو الأدوات (مثل qBittorrent، FPS، API، الكاش)...',
+    searchResultsCount: 'أقسام مطابقة',
+    searchEmptyTitle: 'لا توجد إعدادات أو أدوات مطابقة',
+    searchEmptyDesc: 'جرّب البحث عن اللغة، المظهر، المؤشر، الأداء، qBittorrent، PresentMon، المنظف، أو مفاتيح API.',
+    clearSearchBtn: 'مسح البحث',
+    catAll: 'كل الإعدادات',
+    catTools: 'الأدوات والتكاملات',
+    catLanguage: 'اللغة والمنطقة',
+    catStartup: 'البدء والنظام',
+    catAppearance: 'المظهر والسمات',
+    catAudio: 'الصوت والمشهد الصوتي',
+    catPerformance: 'الأداء والطاقة',
+    catStorage: 'التخزين والكاش والنسخ',
+    catUpdates: 'التحديثات والسجل',
+    summaryThemeLabel: 'المظهر النشط',
+    summaryPerfLabel: 'وضع الأداء',
+    summaryToolsLabel: 'الأدوات والمحركات',
+    summarySystemLabel: 'العتاد والتخزين',
+    toolsReadySuffix: 'جاهزة',
+    themeStudioTitle: 'استوديو المظهر السريع',
+    themeStudioDesc: 'تنقل بسهولة بين الوضع الداكن والفاتح، أو مظاهر الكونسول، أو مظهرك المخصص.',
+    themeDefaultDark: 'داكن قياسي',
+    themeCrispLight: 'فاتح ساطع',
+    themePs5: 'PlayStation 5',
+    themeXbox: 'Xbox Nexus',
+    themeCustom: 'مظهر مخصص',
+    traySmartTip: 'نصيحة: قمت بتفعيل التشغيل مع الكمبيوتر. يُنصح بتغيير الإغلاق إلى «تصغير إلى شريط النظام» ليبقى SecretArea جاهزاً بالخلفية.',
+    traySmartBtn: 'تفعيل التصغير للنظام',
+    audioStatusConsoleActive: 'الموسيقى المحيطة للكونسول وأصوات الواجهة قيد التشغيل.',
+    audioStatusStandby: 'أصوات النقر مفعّلة. تعمل الموسيقى المحيطة تلقائياً عند اختيار مظهر PS5 أو Xbox.',
+    audioPreviewBtn: 'اختبار الصوت',
+    volumeMute: 'كتم',
+    volumeLow: 'منخفض',
+    volumeBalanced: 'متوازن',
+    volumeMax: 'أقصى',
+    effectiveParamsTitle: 'القيم الفعالة حالياً',
+    effectiveHwPoll: 'فحص العتاد',
+    effectiveUiCoalesce: 'مزامنة الواجهة',
+    effectiveTorrentPoll: 'خمول التورنت',
+    effectiveCacheCap: 'سقف الصور',
+    diskFreeLabel: 'المساحة الحرة المتاحة',
+    cacheSectionTitle: 'الذاكرة المؤقتة والنسخ الاحتياطي',
+    cacheSectionDesc: 'امسح ذاكرة العروض والصور أو قم بتصدير واستيراد إعدادات المشغّل بملف JSON.',
+    clearDealsCacheBtn: 'مسح كاش العروض',
+    dealsCacheCleared: 'تم مسح الذاكرة المؤقتة للعروض والبيانات.',
+    clearImageCacheBtn: 'مسح كاش الأغلفة',
+    imageCacheCleared: 'تم مسح صور الأغلفة المخزنة مؤقتاً.',
+    exportSettingsBtn: 'تصدير الإعدادات',
+    importSettingsBtn: 'استيراد الإعدادات',
+    importSettingsSuccess: 'تم استيراد الإعدادات وتطبيقها بنجاح.',
+    importSettingsError: 'ملف الإعدادات غير صالح.',
+    hubTitle: 'مركز الأدوات الإضافية والتكاملات',
+    hubSubtitle: 'جميع الأدوات المدمجة ومحركات العتاد وبرامج التنزيل ومزودات API في مكان واحد: تعرّف على وظيفة كل أداة واضبط إعداداتها مباشرة.',
+    hubFilterAll: 'كل الأدوات',
+    hubFilterHardware: 'العتاد والتشخيص',
+    hubFilterDownloads: 'التنزيلات والشبكة',
+    hubFilterDeals: 'العروض و API',
+    hubFilterUtilities: 'أدوات وأدلة',
+    hubConfigureBtn: 'إعداد الأداة',
+    hubHideConfigBtn: 'إخفاء الإعدادات',
+    hubPurposeLabel: 'وظيفة الأداة',
+    hubStatusReady: 'جاهزة',
+    hubStatusAttention: 'تحتاج إجراء',
+    hubStatusStandby: 'في الانتظار',
+    hubStatusBuiltin: 'أداة مدمجة',
+    hubStatusWebPreview: 'يتطلب تطبيق سطح المكتب',
+    toolQbitName: 'ربط qBittorrent Web UI (API v2 / 5.0+)',
+    toolQbitPurpose: 'يرسل روابط Magnet وملفات .torrent مباشرة من SecretArea إلى qBittorrent المحلي ويتابع سرعة التحميل والرفع والوقت المتبقي.',
+    toolPresentMonName: 'Intel PresentMon (مراقبة FPS وزمن الإطار)',
+    toolPresentMonPurpose: 'يلتقط زمن الإطار بدقة عالية لألعاب DX11/DX12/Vulkan/OpenGL مع قياس 1% و 0.1% Low FPS وإشغال GPU.',
+    toolLhmName: 'LibreHardwareMonitorLib (محرك الحساسات)',
+    toolLhmPurpose: 'محرك مفتوح المصدر MPL-2.0 لقراءة درجات حرارة المعالج والكرت، الترددات، الطاقة، الفولتية، NVMe SMART وسرعة المراوح.',
+    toolCleanerName: 'منظف الجهاز الآمن والذاكرة المؤقتة',
+    toolCleanerPurpose: 'يفحص وينظف بأمان الملفات المؤقتة للنظام وكاش التطبيقات وكاش SecretArea والصور المصغرة وكاش DirectX Shader.',
+    toolDealsApiName: 'مزودات عروض الألعاب ومفاتيح API',
+    toolDealsApiPurpose: 'يشغّل قسم العروض واللاعبين المباشرين وتقييمات النقاد عبر 6 واجهات مجانية بالإضافة إلى 3 مفاتيح اختيارية مشفرة.',
+    toolCanRunItName: 'فاحص التوافق Can Run It وملف العتاد',
+    toolCanRunItPurpose: 'يقارن متطلبات المعالج وكرت الشاشة والذاكرة والمساحة لكل لعبة مع مواصفات جهازك المكتشفة أو المخصصة.',
+    toolBenchDbName: 'اختبارات الأداء وقاعدة بيانات العتاد',
+    toolBenchDbPurpose: 'يجري اختبارات أداء آمنة للمعالج والذاكرة والتخزين والشبكة مع تحديث قاعدة بيانات الكروت والمعالجات (hardware-db.json).',
+    toolHypervisorName: 'دليل Hypervisor والأنظمة الافتراضية',
+    toolHypervisorPurpose: 'مرجع شامل لتفعيل VT-x / AMD-V من البيوس وإعداد Hyper-V والتعريفات للألعاب التي تتطلب ذلك.',
+    toolSpinWheelName: 'عجلة الاختيار العشوائي (ماذا ألعب؟)',
+    toolSpinWheelPurpose: 'أداة سريعة لاختيار لعبة عشوائية من مكتبتك والبدء باللعب فوراً دون حيرة.',
+    toolUpdaterName: 'مُحدّث التطبيق وسجل الإصدارات والإشعارات',
+    toolUpdaterPurpose: 'يتحقق من إصدارات SecretArea على GitHub ويعرض سجل التغييرات الكامل ومركز إشعارات الكتالوج.',
+    specsAutoDetected: 'كشف تلقائي (أصلي)',
+    specsCustomOverride: 'مواصفات مخصصة',
+    specsBrowserMode: 'تقدير المتصفح',
+    specsRescanBtn: 'إعادة فحص العتاد',
+    specsCustomizeBtn: 'تخصيص المواصفات',
+    specsSaveBtn: 'حفظ المواصفات',
+    specsResetAutoBtn: 'استعادة التلقائي',
+    specsCpuLabel: 'المعالج (CPU)',
+    specsGpuLabel: 'كرت الشاشة (GPU)',
+    specsVramLabel: 'ذاكرة الكرت VRAM (GB)',
+    specsRamLabel: 'الذاكرة العشوائية RAM (GB)',
+    specsDiskFreeLabel: 'المساحة الحرة (GB)',
+    cleanerQuickScanBtn: 'فحص سريع الآن',
+    cleanerQuickCleanBtn: 'تنظيف المحدد',
+    cleanerWebNote: 'تنظيف ملفات النظام يتطلب تشغيل تطبيق سطح المكتب SecretArea.exe.',
+    dbEntriesLabel: 'عناصر القاعدة',
+    dbVersionLabel: 'إصدار القاعدة',
+    dbCheckUpdateBtn: 'تحديث القاعدة',
+    openHardwareMonitorBtn: 'فتح مراقب العتاد',
+    openPcCleanerBtn: 'فتح المنظف الكامل',
+    openBenchmarksBtn: 'فتح الاختبارات والقاعدة',
+    openDealsBtn: 'فتح عروض الألعاب',
+    openHypervisorBtn: 'فتح دليل Hypervisor',
+    openSpinWheelBtn: 'تشغيل عجلة الألعاب',
+    openUpdaterBtn: 'التحقق من التحديثات',
   },
 };
 

@@ -31,6 +31,8 @@ interface UpdateHistoryModalProps {
   language?: AppLanguage;
   currentVersion: string;
   isDevMode?: boolean;
+  isJustUpdated?: boolean;
+  justUpdatedFromVersion?: string | null;
   availableUpdateVersion?: string | null;
   updaterBridge?: SecretAreaUpdaterBridge | null;
   onClose: () => void;
@@ -45,6 +47,8 @@ export function UpdateHistoryModal({
   language = 'en',
   currentVersion,
   isDevMode,
+  isJustUpdated = false,
+  justUpdatedFromVersion = null,
   availableUpdateVersion = null,
   updaterBridge = null,
   onClose,
@@ -188,7 +192,7 @@ export function UpdateHistoryModal({
 
   return (
     <div
-      className="fixed inset-0 z-[98] bg-slate-900/50 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[98] bg-slate-950/65 dark:bg-black/80 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-label={t.title}
@@ -325,6 +329,46 @@ export function UpdateHistoryModal({
             </span>
           ) : null}
         </div>
+
+        {/* Automatic Post-Update Highlight Banner */}
+        {isJustUpdated && (
+          <div
+            className={`px-5 py-3 border-b flex flex-wrap items-center justify-between gap-2.5 shrink-0 ${
+              isXboxTheme
+                ? 'bg-[#107C10]/20 border-[#52e042]/35 text-[#ecfdf0]'
+                : isPs5Theme
+                ? 'bg-[#0070d1]/25 border-[#60b2ff]/35 text-white'
+                : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-900 dark:bg-emerald-500/12 dark:border-emerald-400/25 dark:text-emerald-100'
+            }`}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Sparkle
+                weight="duotone"
+                className={`w-4.5 h-4.5 shrink-0 ${
+                  isXboxTheme
+                    ? 'text-[#6ee755]'
+                    : isPs5Theme
+                    ? 'text-[#7cc4ff]'
+                    : 'text-emerald-600 dark:text-[#34d399]'
+                }`}
+              />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[12.5px] font-bold">{t.justUpdatedTitle}</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-700 dark:bg-[#10b981]/25 dark:text-[#34d399]">
+                    {t.newlyInstalledBadge}
+                  </span>
+                </div>
+                {justUpdatedFromVersion && (
+                  <p className="text-[11px] opacity-85 font-mono-tabular" dir="ltr">
+                    {t.justUpdatedFromPrefix} v{justUpdatedFromVersion.replace(/^v/i, '')} → v
+                    {cleanCurrentVersion}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search & Filters */}
         <div

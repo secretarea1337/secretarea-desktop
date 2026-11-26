@@ -20,6 +20,460 @@ export interface ReleaseChangelogEntry {
 }
 
 const LOCAL_CHANGELOG: Record<string, Record<AppLanguage, ReleaseChangelogEntry>> = {
+  '1.0.12': {
+    en: {
+      version: '1.0.12',
+      releaseTitle: "Automatic Post-Update 'What's New' & Instant 3-Item Notifications",
+      summary:
+        'Automatically opens release notes after installing a new Windows version, limits Notification Center to the 3 newest game additions & updates, and eliminates drawer opening lag.',
+      publishedAt: '2026-11-26T11:00:00Z',
+      items: [
+        {
+          category: 'feature',
+          title: "Automatic New-Version 'What's New' Reveal",
+          description:
+            'Detects when SecretArea Desktop is newly installed or upgraded on Windows and automatically presents the changelog for the newly installed version once.',
+        },
+        {
+          category: 'improvement',
+          title: 'Focused 3-Item Notification Center Feed',
+          description:
+            'Shows strictly the 3 newest live catalog updates or newly added games instead of loading dozens of historical Google Sheet rows.',
+        },
+        {
+          category: 'fix',
+          title: 'Instant Notification Drawer Opening',
+          description:
+            'Removed lazy-chunk fetch blocking, heavy full-screen backdrop blur stalls, and synchronous sync contention on click so Notifications open immediately.',
+        },
+      ],
+    },
+    fr: {
+      version: '1.0.12',
+      releaseTitle: 'Nouveautés automatiques après mise à jour & Notifications instantanées (Top 3)',
+      summary:
+        'Affiche automatiquement les nouveautés dès l’installation d’une nouvelle version Windows, limite les notifications aux 3 derniers ajouts/mises à jour et supprime la latence d’ouverture.',
+      publishedAt: '2026-11-26T11:00:00Z',
+      items: [
+        {
+          category: 'feature',
+          title: 'Ouverture automatique des nouveautés après installation',
+          description:
+            'Détecte automatiquement chaque mise à jour installée sur Windows et présente une fois le journal des changements de la nouvelle version.',
+        },
+        {
+          category: 'improvement',
+          title: 'Centre de notifications limité aux 3 dernières nouveautés',
+          description:
+            'N’affiche que les 3 jeux ajoutés ou mis à jour les plus récents au lieu de tout le tableau Google Sheets.',
+        },
+        {
+          category: 'fix',
+          title: 'Ouverture instantanée du panneau de notifications',
+          description:
+            'Suppression du chargement différé, du flou plein écran coûteux et des blocages au clic pour un affichage immédiat.',
+        },
+      ],
+    },
+    es: {
+      version: '1.0.12',
+      releaseTitle: 'Novedades automáticas al actualizar y Notificaciones instantáneas (Top 3)',
+      summary:
+        'Muestra automáticamente qué cambió al instalar una nueva versión en Windows, limita las notificaciones a los 3 últimos juegos o actualizaciones y elimina el retraso al abrir.',
+      publishedAt: '2026-11-26T11:00:00Z',
+      items: [
+        {
+          category: 'feature',
+          title: 'Resumen automático al instalar nueva versión',
+          description:
+            'Detecta cuando SecretArea Desktop se actualiza en Windows y abre una vez las novedades de la versión recién instalada.',
+        },
+        {
+          category: 'improvement',
+          title: 'Notificaciones enfocadas en los 3 últimos cambios',
+          description:
+            'Muestra únicamente los 3 juegos recién añadidos o actualizados más recientes en lugar de toda la hoja de Google.',
+        },
+        {
+          category: 'fix',
+          title: 'Apertura instantánea del Centro de Notificaciones',
+          description:
+            'Eliminada la carga diferida y el desenfoque pesado al hacer clic para que la ventana aparezca al instante.',
+        },
+      ],
+    },
+    ar: {
+      version: '1.0.12',
+      releaseTitle: 'عرض تلقائي لما هو جديد بعد التحديث وإشعارات فورية (آخر 3 فقط)',
+      summary:
+        'يعرض تلقائياً تفاصيل الإصدار الجديد فور التثبيت على ويندوز، ويقتصر مركز الإشعارات على آخر 3 ألعاب أو تحديثات جديدة فقط مع فتح فوري بدون أي بطء.',
+      publishedAt: '2026-11-26T11:00:00Z',
+      items: [
+        {
+          category: 'feature',
+          title: 'عرض تلقائي لمزايا الإصدار الجديد عند التثبيت',
+          description:
+            'يكتشف تلقائياً ترقية التطبيق على ويندوز ويفتح سجل التغييرات للإصدار المثبت حديثاً مرة واحدة لتعرف ما الجديد فوراً.',
+        },
+        {
+          category: 'improvement',
+          title: 'حصر الإشعارات في آخر 3 تحديثات أو ألعاب مضافة فقط',
+          description:
+            'عرض أحدث 3 إضافات وتحديثات فقط بدلاً من إظهار كامل صفوف جدول Google Sheet.',
+        },
+        {
+          category: 'fix',
+          title: 'إصلاح بطء فتح نافذة الإشعارات عند النقر',
+          description:
+            'إزالة التحميل المتأخر والتمويه الثقيل والمزامنة المتزامنة لحظة النقر لتظهر النافذة فوراً.',
+        },
+      ],
+    },
+  },
+  '1.0.11': {
+    en: {
+      version: '1.0.11',
+      releaseTitle: 'Windows 60 FPS Smoothness & Non-Blocking Telemetry Worker',
+      summary:
+        'Eliminates 1-second UI micro-freezes on Windows desktop by isolating PowerShell hardware/display probes in a persistent worker and optimizing Spin Wheel & Custom Cursor rendering.',
+      publishedAt: '2026-11-26T08:00:00Z',
+      items: [
+        {
+          category: 'fix',
+          title: 'Persistent Windows Telemetry Worker',
+          description:
+            'Moved cold-spawned PowerShell/WMI display & hardware probes to an off-thread persistent worker with fast in-flight caching so Hardware Monitor never stalls the UI.',
+        },
+        {
+          category: 'improvement',
+          title: 'GPU-Composited Spin Wheel & Custom Cursor',
+          description:
+            'Eliminated per-frame React state updates during wheel spins and throttled custom cursor WebAudio chimes for stutter-free 60 FPS desktop interaction.',
+        },
+        {
+          category: 'improvement',
+          title: 'Navbar Compositor Budget Optimization',
+          description:
+            'Replaced expensive rotating box-shadow keyframe repaints with lightweight CSS transforms.',
+        },
+      ],
+    },
+    fr: {
+      version: '1.0.11',
+      releaseTitle: 'Fluidité 60 FPS Windows & Worker Télémétrie sans blocage',
+      summary:
+        'Supprime les micro-gels d’une seconde sur Windows grâce à un worker PowerShell persistant et à l’optimisation 60 FPS de la roue et du curseur personnalisé.',
+      publishedAt: '2026-11-26T08:00:00Z',
+      items: [
+        {
+          category: 'fix',
+          title: 'Worker persistant de télémétrie Windows',
+          description:
+            'Déportation des sondes WMI/PowerShell vers un processus persistant pour éviter tout blocage du Moniteur Matériel.',
+        },
+        {
+          category: 'improvement',
+          title: 'Roue & Curseur fluide à 60 FPS',
+          description:
+            'Suppression des rendus React par image durant la rotation de la roue et régulation audio du curseur.',
+        },
+        {
+          category: 'improvement',
+          title: 'Optimisation du rendu de la barre de navigation',
+          description:
+            'Remplacement des ombres animées coûteuses par des transformations CSS accélérées.',
+        },
+      ],
+    },
+    es: {
+      version: '1.0.11',
+      releaseTitle: 'Fluidez a 60 FPS en Windows y Worker de Telemetría sin bloqueos',
+      summary:
+        'Elimina micro-congelamientos en escritorio Windows aislando consultas PowerShell/WMI en un worker persistente y optimizando la ruleta y el cursor.',
+      publishedAt: '2026-11-26T08:00:00Z',
+      items: [
+        {
+          category: 'fix',
+          title: 'Worker persistente de telemetría en Windows',
+          description:
+            'Consultas de pantalla y hardware ejecutadas en segundo plano sin pausar la interfaz.',
+        },
+        {
+          category: 'improvement',
+          title: 'Ruleta y cursor personalizado a 60 FPS',
+          description:
+            'Renderizado directo sin re-renders por fotograma y control de frecuencia de audio WebAudio.',
+        },
+        {
+          category: 'improvement',
+          title: 'Menor carga gráfica en la barra superior',
+          description:
+            'Animaciones CSS ligeras aceleradas por GPU sin repintado continuo de sombras.',
+        },
+      ],
+    },
+    ar: {
+      version: '1.0.11',
+      releaseTitle: 'سلاسة 60 إطار على ويندوز وعامل قراءة عتاد بدون تجمّد',
+      summary:
+        'معالجة تقطّع الثانية الواحدة في تطبيق ويندوز عبر عزل استعلامات PowerShell في عملية مستمرة وتحسين عجلة الحظ والمؤشر المخصص.',
+      publishedAt: '2026-11-26T08:00:00Z',
+      items: [
+        {
+          category: 'fix',
+          title: 'عملية مستقلة لقراءة العتاد بدون تجميد الواجهة',
+          description:
+            'تشغيل استعلامات WMI و PowerShell في الخلفية عبر عامل مستمر يمنع أي توقف مفاجئ في مراقب العتاد.',
+        },
+        {
+          category: 'improvement',
+          title: 'تحسين عجلة الحظ والمؤشر المخصص إلى 60 إطار',
+          description:
+            'تقليل تحديثات الواجهة أثناء الدوران وتنظيم أصوات المؤشر لتجربة سريعة ومستجيبة.',
+        },
+        {
+          category: 'improvement',
+          title: 'تخفيف حمل الرسوميات في شريط التنقل',
+          description:
+            'استبدال تأثيرات الظلال الثقيلة بتحويلات CSS خفيفة ومسرّعة بالعتاد.',
+        },
+      ],
+    },
+  },
+  '1.0.10': {
+    en: {
+      version: '1.0.10',
+      releaseTitle: 'Modern Launcher Buttons & Responsive Deals Toolbar',
+      summary:
+        'Upgraded button styling across the app, deduplicated currency/filter controls in Game Deals, improved mobile wrapping, and secured desktop API credentials.',
+      publishedAt: '2026-11-26T05:30:00Z',
+      items: [
+        {
+          category: 'improvement',
+          title: 'Modernized UI Buttons & Depth Styling',
+          description:
+            'Refined button surfaces, crisp borders, active state feedback, and icon alignment across Home, Deals, Downloads, and Settings.',
+        },
+        {
+          category: 'fix',
+          title: 'Responsive Game Deals Header & No Duplicate Controls',
+          description:
+            'Removed duplicate currency selectors, made filter/navigation controls wrap cleanly on narrow windows, and hid developer API credential dialogs in public desktop builds.',
+        },
+      ],
+    },
+    fr: {
+      version: '1.0.10',
+      releaseTitle: 'Boutons modernisés & Barre Bons Plans responsive',
+      summary:
+        'Modernisation des boutons dans toute l’interface, suppression des contrôles en double dans Bons Plans et adaptation aux petits écrans.',
+      publishedAt: '2026-11-26T05:30:00Z',
+      items: [
+        {
+          category: 'improvement',
+          title: 'Boutons UI modernes et plus lisibles',
+          description:
+            'Bordures affinées, meilleurs états actifs et alignement homogène dans Accueil, Bons Plans, Téléchargements et Paramètres.',
+        },
+        {
+          category: 'fix',
+          title: 'En-tête Bons Plans responsive sans doublons',
+          description:
+            'Suppression des sélecteurs de devise dupliqués, retour à la ligne fluide sur petit écran et masquage des clés API en version desktop.',
+        },
+      ],
+    },
+    es: {
+      version: '1.0.10',
+      releaseTitle: 'Botones modernos y barra de Ofertas adaptable',
+      summary:
+        'Renueva el estilo de botones en toda la app, elimina controles duplicados en Ofertas de Juegos y mejora el diseño en pantallas pequeñas.',
+      publishedAt: '2026-11-26T05:30:00Z',
+      items: [
+        {
+          category: 'improvement',
+          title: 'Botones UI modernos y mayor claridad visual',
+          description:
+            'Acabados modernos, mejores estados activos y alineación uniforme en Inicio, Ofertas, Descargas y Ajustes.',
+        },
+        {
+          category: 'fix',
+          title: 'Ofertas responsive sin botones duplicados',
+          description:
+            'Eliminado el selector de moneda duplicado, ajuste automático en ventanas estrechas y protección de credenciales API en escritorio.',
+        },
+      ],
+    },
+    ar: {
+      version: '1.0.10',
+      releaseTitle: 'تحديث الأزرار العصرية وتجاوب صفحة العروض',
+      summary:
+        'تحسين تصميم الأزرار في جميع الصفحات، وإزالة الأزرار المكررة في صفحة عروض الألعاب، وجعل الواجهة متجاوبة مع الشاشات الصغيرة.',
+      publishedAt: '2026-11-26T05:30:00Z',
+      items: [
+        {
+          category: 'improvement',
+          title: 'أزرار عصرية بتفاصيل وحواف أوضح',
+          description:
+            'تحسين المظهر والتفاعل وحالات التفعيل للأزرار عبر المتجر والعروض والتنزيلات والإعدادات.',
+        },
+        {
+          category: 'fix',
+          title: 'تجاوب صفحة عروض الألعاب ومنع التكرار',
+          description:
+            'إزالة محول العملات المكرر وضمان التفاف التبويبات على الشاشات الصغيرة وإخفاء مفاتيح API عن الواجهة العامة.',
+        },
+      ],
+    },
+  },
+  '1.0.9': {
+    en: {
+      version: '1.0.9',
+      releaseTitle: 'Settings Dynamic Load Stability & Module Reliability',
+      summary:
+        'Resolved a dynamic module import failure on Settings and tightened component chunk loading.',
+      publishedAt: '2026-11-26T03:00:00Z',
+      items: [
+        {
+          category: 'fix',
+          title: 'Settings Chunk Loading & Lazy Import Reliability',
+          description:
+            'Fixed intermittent dynamic import fetch errors when navigating directly into the Settings view.',
+        },
+      ],
+    },
+    fr: {
+      version: '1.0.9',
+      releaseTitle: 'Stabilité du chargement des Paramètres',
+      summary:
+        'Correction d’une erreur de chargement dynamique lors de l’ouverture de la page Paramètres.',
+      publishedAt: '2026-11-26T03:00:00Z',
+      items: [
+        {
+          category: 'fix',
+          title: 'Chargement fiable du module Paramètres',
+          description:
+            'Correction des erreurs d’importation dynamique à l’ouverture des Paramètres.',
+        },
+      ],
+    },
+    es: {
+      version: '1.0.9',
+      releaseTitle: 'Estabilidad al cargar la vista de Ajustes',
+      summary:
+        'Corregido un fallo al importar dinámicamente el módulo de Ajustes.',
+      publishedAt: '2026-11-26T03:00:00Z',
+      items: [
+        {
+          category: 'fix',
+          title: 'Carga fiable del módulo de Ajustes',
+          description:
+            'Resueltos los errores de carga dinámica al acceder a la sección de Ajustes.',
+        },
+      ],
+    },
+    ar: {
+      version: '1.0.9',
+      releaseTitle: 'استقرار تحميل صفحة الإعدادات',
+      summary:
+        'إصلاح خطأ استيراد الوحدة الديناميكية عند الانتقال إلى صفحة الإعدادات.',
+      publishedAt: '2026-11-26T03:00:00Z',
+      items: [
+        {
+          category: 'fix',
+          title: 'إصلاح تحميل وحدة الإعدادات',
+          description:
+            'معالجة فشل جلب وحدة الإعدادات وضمان فتحها بسلاسة في كل مرة.',
+        },
+      ],
+    },
+  },
+  '1.0.8': {
+    en: {
+      version: '1.0.8',
+      releaseTitle: 'Unified Settings Hub & Extra Tools Center',
+      summary:
+        'Redesigned Settings with a smart section layout and gathered every SecretArea extra tool (qBittorrent Setup, PresentMon Manager, Spin Wheel, Hypervisor Guide, Performance Mode, and Notifications) in one place.',
+      publishedAt: '2026-11-25T18:00:00Z',
+      items: [
+        {
+          category: 'feature',
+          title: 'All Extra Tools Collected Inside Settings',
+          description:
+            'Added a dedicated Tools directory inside Settings describing each tool clearly alongside one-click launch and configuration actions.',
+        },
+        {
+          category: 'improvement',
+          title: 'Smart Settings Layout & Profile Export/Import',
+          description:
+            'Upgraded Appearance, Performance, Audio, System Specs, and Desktop Controls cards with clearer UX and settings backup support.',
+        },
+      ],
+    },
+    fr: {
+      version: '1.0.8',
+      releaseTitle: 'Paramètres repensés & Hub complet des Outils',
+      summary:
+        'Regroupe tous les outils intégrés (qBittorrent, PresentMon, Roue, Guide Hypervisor, Performance et Notifications) dans une interface Paramètres unifiée.',
+      publishedAt: '2026-11-25T18:00:00Z',
+      items: [
+        {
+          category: 'feature',
+          title: 'Tous les outils réunis dans Paramètres',
+          description:
+            'Catalogue clair décrivant chaque outil avec accès direct à sa configuration.',
+        },
+        {
+          category: 'improvement',
+          title: 'Sections Paramètres plus intelligentes',
+          description:
+            'Ergonomie améliorée pour Apparence, Performance, Audio, Spécifications PC et sauvegarde des préférences.',
+        },
+      ],
+    },
+    es: {
+      version: '1.0.8',
+      releaseTitle: 'Ajustes unificados y Centro de Herramientas',
+      summary:
+        'Reúne todas las herramientas adicionales (qBittorrent, PresentMon, Ruleta, Guía Hypervisor, Rendimiento y Notificaciones) en una interfaz clara dentro de Ajustes.',
+      publishedAt: '2026-11-25T18:00:00Z',
+      items: [
+        {
+          category: 'feature',
+          title: 'Todas las herramientas extra en Ajustes',
+          description:
+            'Vista unificada con descripción de cada herramienta y acceso directo a su configuración.',
+        },
+        {
+          category: 'improvement',
+          title: 'Mejora integral de secciones en Ajustes',
+          description:
+            'Controles más claros para Apariencia, Rendimiento, Audio, Hardware e importación de ajustes.',
+        },
+      ],
+    },
+    ar: {
+      version: '1.0.8',
+      releaseTitle: 'مركز الأدوات الموحّد وتطوير شامل لصفحة الإعدادات',
+      summary:
+        'تجميع كافة الأدوات الإضافية (qBittorrent وPresentMon وعجلة الحظ ودليل Hypervisor ومحسن الأداء والإشعارات) داخل صفحة الإعدادات بتصميم ذكي.',
+      publishedAt: '2026-11-25T18:00:00Z',
+      items: [
+        {
+          category: 'feature',
+          title: 'تجميع كل الأدوات الإضافية داخل الإعدادات',
+          description:
+            'بطاقات واضحة تشرح وظيفة كل أداة مع أزرار مباشرة للتشغيل والإعداد.',
+        },
+        {
+          category: 'improvement',
+          title: 'تطوير واجهة وتجربة المستخدم في كافة أقسام الإعدادات',
+          description:
+            'تنظيم أذكى للمظهر والأداء والصوتيات ومواصفات الجهاز وتصدير الإعدادات.',
+        },
+      ],
+    },
+  },
   '1.0.7': {
     en: {
       version: '1.0.7',
@@ -1107,10 +1561,15 @@ export function parseGithubReleaseNotes(
     const cleanText = (bulletMatch ? bulletMatch[1] : line)
       .replace(/\*\*/g, '')
       .replace(/`/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/\s+by\s+@[A-Za-z0-9_-]+\s+in\s+https?:\/\/\S+$/i, '')
+      .replace(/\s+in\s+https?:\/\/\S+$/i, '')
       .trim();
 
     if (!cleanText || cleanText.length < 4) continue;
-    if (/^full changelog:/i.test(cleanText)) continue;
+    if (/^(full changelog:|new contributors|.*made their first contribution)/i.test(cleanText)) {
+      continue;
+    }
 
     const colonIdx = cleanText.indexOf(':');
     const title =
@@ -1244,7 +1703,10 @@ export function buildMergedReleaseHistory({
   for (const rel of remoteReleases) {
     const cleanVer = String(rel.version || '').replace(/^v/i, '').trim();
     if (!cleanVer) continue;
-    const hasGithubNotes = Boolean(rel.notes && rel.notes.trim().length > 0);
+    const rawNotes = typeof rel.notes === 'string' ? rel.notes.trim() : '';
+    const hasGithubNotes = rawNotes.length > 0;
+    const isAutoGeneratedStub =
+      /^##\s*What's Changed/im.test(rawNotes) || /^(\*\*Full Changelog\*\*:)/im.test(rawNotes);
     const localExisting = LOCAL_CHANGELOG[cleanVer]?.[language] || LOCAL_CHANGELOG[cleanVer]?.en;
     const parsed = parseGithubReleaseNotes(
       cleanVer,
@@ -1254,9 +1716,10 @@ export function buildMergedReleaseHistory({
       rel.publishedAt,
       rel.htmlUrl
     );
-    const useLocalLocalizedNotes = !hasGithubNotes && Boolean(localExisting);
+    const useLocalCuratedNotes =
+      Boolean(localExisting) && (!hasGithubNotes || (isAutoGeneratedStub && localExisting!.items.length > 0));
     byVersion.set(cleanVer, {
-      ...(useLocalLocalizedNotes && localExisting ? localExisting : parsed),
+      ...(useLocalCuratedNotes && localExisting ? localExisting : parsed),
       publishedAt: rel.publishedAt || localExisting?.publishedAt || parsed.publishedAt || null,
       htmlUrl: rel.htmlUrl || parsed.htmlUrl || null,
       source: rel.source === 'github' ? 'github' : parsed.source || 'local',
@@ -1326,14 +1789,62 @@ function createGenericVersionEntry(
   publishedAt?: string | null,
   htmlUrl?: string | null
 ): ReleaseChangelogEntry {
-  const base = LOCAL_CHANGELOG['1.0.3'][language] || LOCAL_CHANGELOG['1.0.3'].en;
+  const localized =
+    language === 'fr'
+      ? {
+          summary: `Version SecretArea v${version} installée avec les dernières améliorations et correctifs de stabilité.`,
+          items: [
+            {
+              category: 'improvement' as const,
+              title: `Nouveautés de SecretArea v${version}`,
+              description:
+                'Cette version inclut les dernières optimisations de performance, mises à jour du lanceur et corrections publiées sur GitHub Releases.',
+            },
+          ],
+        }
+      : language === 'es'
+      ? {
+          summary: `SecretArea v${version} instalado con las últimas mejoras y correcciones de estabilidad.`,
+          items: [
+            {
+              category: 'improvement' as const,
+              title: `Cambios de SecretArea v${version}`,
+              description:
+                'Esta compilación incluye las mejoras de rendimiento, actualizaciones del lanzador y correcciones publicadas en GitHub Releases.',
+            },
+          ],
+        }
+      : language === 'ar'
+      ? {
+          summary: `تم تثبيت SecretArea v${version} مع أحدث تحسينات الأداء وإصلاحات الاستقرار.`,
+          items: [
+            {
+              category: 'improvement' as const,
+              title: `تحديثات SecretArea v${version}`,
+              description:
+                'يتضمن هذا الإصدار أحدث تحسينات الأداء وتحديثات المشغّل وإصلاحات الاستقرار المنشورة في GitHub Releases.',
+            },
+          ],
+        }
+      : {
+          summary: `SecretArea v${version} installed with the latest launcher improvements and stability updates.`,
+          items: [
+            {
+              category: 'improvement' as const,
+              title: `SecretArea v${version} Release Updates`,
+              description:
+                'Includes the latest launcher refinements, performance updates, and stability fixes synced from GitHub Releases.',
+            },
+          ],
+        };
+
   return {
     version,
     releaseTitle: releaseName?.trim() || `SecretArea v${version}`,
-    summary: base.summary,
+    summary: localized.summary,
     publishedAt: publishedAt || null,
     htmlUrl: htmlUrl || null,
     source: htmlUrl ? 'github' : 'local',
-    items: base.items,
+    items: localized.items,
   };
 }

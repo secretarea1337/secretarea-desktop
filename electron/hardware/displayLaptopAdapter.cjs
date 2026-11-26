@@ -342,14 +342,15 @@ function estimateDirectXVersionFromGpus(gpus, dxdiagText) {
   return null;
 }
 
-function createDisplayLaptopAdapter() {
+function createDisplayLaptopAdapter({ execWinPs } = {}) {
   let cachedStaticWinInfo = null;
   let lastWinInfoAt = 0;
+  let confirmedNoBattery = false;
 
   async function queryWindowsExtendedSystem() {
     if (process.platform !== 'win32') return null;
     const now = Date.now();
-    if (cachedStaticWinInfo && now - lastWinInfoAt < 15000) {
+    if (cachedStaticWinInfo && now - lastWinInfoAt < 30000) {
       return cachedStaticWinInfo;
     }
 
@@ -370,11 +371,14 @@ function createDisplayLaptopAdapter() {
       '@{ displays = $displays; monIds = $monIds; hdrMon = $hdrMon; bat = $bat; batStatic = $batStatic; batFull = $batFull; hags = $hagsKey.HwSchMode; gameMode = $gmKey.AutoGameModeEnabled; allowGameMode = $gmKey.AllowAutoGameMode; dxVer = $dxVer; powerPlan = $powerPlan; videoCtrls = $videoCtrls } | ConvertTo-Json -Depth 4 -Compress',
     ].join(' ');
 
-    const raw = await runExec(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
-      4000
-    );
+    const raw =
+      typeof execWinPs === 'function'
+        ? await execWinPs(script, 4500)
+        : await runExec(
+            'powershell.exe',
+            ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+            4000
+          );
     if (!raw) return cachedStaticWinInfo;
     try {
       cachedStaticWinInfo = JSON.parse(raw);
@@ -388,9 +392,14 @@ function createDisplayLaptopAdapter() {
   async function collectDisplayAndLaptopInfo({ gpus }) {
     const [siGraphics, siBattery, winExt] = await Promise.all([
       si.graphics().catch(() => null),
-      si.battery().catch(() => null),
+      confirmedNoBattery ? Promise.resolve(null) : si.battery().catch(() => null),
       queryWindowsExtendedSystem().catch(() => null),
     ]);
+    if (siBattery && siBattery.hasBattery === false && !winExt?.bat) {
+      confirmedNoBattery = true;
+    } else if (siBattery?.hasBattery || winExt?.bat) {
+      confirmedNoBattery = false;
+    }
 
     const rawDisplays = Array.isArray(siGraphics?.displays) ? siGraphics.displays : [];
     const winDisplays = Array.isArray(winExt?.displays)

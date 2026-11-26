@@ -262,14 +262,14 @@ export function GameCompareView({
             <table className="w-full text-start border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#10161e]">
-                  <th className="p-3.5 text-start text-[12px] font-bold text-slate-500 dark:text-[#8b9bb4] w-48">
+                  <th className="p-2.5 sm:p-3.5 text-start text-[12px] font-bold text-slate-500 dark:text-[#8b9bb4] w-28 sm:w-44 md:w-48">
                     {labels.compareMetricCol}
                   </th>
                   {selectedItems.map((item) => {
                     const d = dossiers[item.key];
                     const img = d?.headerImage || item.thumbUrl;
                     return (
-                      <th key={item.key} className="p-3.5 text-start min-w-[200px] align-top">
+                      <th key={item.key} className="p-2.5 sm:p-3.5 text-start min-w-[155px] sm:min-w-[200px] align-top">
                         <div className="flex items-start justify-between gap-2">
                           <div className="space-y-2 min-w-0">
                             {img && (
@@ -277,10 +277,10 @@ export function GameCompareView({
                                 src={img}
                                 alt={item.title}
                                 referrerPolicy="no-referrer"
-                                className="w-36 aspect-[16/9] rounded-lg object-cover bg-slate-200 dark:bg-[#0e141b]"
+                                className="w-28 sm:w-36 aspect-[16/9] rounded-lg object-cover bg-slate-200 dark:bg-[#0e141b]"
                               />
                             )}
-                            <div className="font-display text-[13.5px] font-bold text-slate-900 dark:text-white line-clamp-2">
+                            <div className="font-display text-[13px] sm:text-[13.5px] font-bold text-slate-900 dark:text-white line-clamp-2">
                               {d?.title || item.title}
                             </div>
                           </div>
@@ -335,8 +335,6 @@ export function GameCompareView({
                     render: (d: GameIntelligenceDossier) =>
                       d.criticCards.metacriticMetascore.score !== null
                         ? `${d.criticCards.metacriticMetascore.score} / 100`
-                        : d.criticCards.metacriticMetascore.requiresKey
-                        ? 'Key optional'
                         : '—',
                   },
                   {
@@ -344,8 +342,6 @@ export function GameCompareView({
                     render: (d: GameIntelligenceDossier) =>
                       d.criticCards.metacriticUserScore.score !== null
                         ? `${d.criticCards.metacriticUserScore.score} / 10`
-                        : d.criticCards.metacriticUserScore.requiresKey
-                        ? 'Key optional'
                         : '—',
                   },
                   {
@@ -353,8 +349,6 @@ export function GameCompareView({
                     render: (d: GameIntelligenceDossier) =>
                       d.criticCards.openCriticScore.topCriticScore !== null
                         ? `${d.criticCards.openCriticScore.topCriticScore} / 100`
-                        : d.criticCards.openCriticScore.requiresKey
-                        ? 'Key optional'
                         : '—',
                   },
                   {

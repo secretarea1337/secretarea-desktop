@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld('secretAreaDesktop', {
     exitApplication: () => ipcRenderer.invoke('app:exit-completely'),
     completeOnboarding: (payload = true) =>
       ipcRenderer.invoke('settings:complete-onboarding', payload),
+    markVersionSeen: (version) =>
+      ipcRenderer.invoke('settings:mark-version-seen', version),
     setPerformanceSettings: (payload) =>
       ipcRenderer.invoke('settings:set-performance', payload),
     getPerformanceMetrics: () =>
