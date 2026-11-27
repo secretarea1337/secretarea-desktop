@@ -62,7 +62,7 @@ test('GitHub Actions workflow builds Windows & Linux in parallel and publishes a
   );
   assert.equal((yml.match(/softprops\/action-gh-release@v2/g) || []).length, 1);
 
-  // Required release assets verified before publishing
+  // Required release assets & permanent download aliases verified before publishing
   for (const expectedAsset of [
     'SecretArea.exe',
     'SecretArea.exe.blockmap',
@@ -70,6 +70,8 @@ test('GitHub Actions workflow builds Windows & Linux in parallel and publishes a
     'linux-x86_64.AppImage',
     'linux-amd64.deb',
     'latest-linux.yml',
+    'artifacts/aliases/SecretArea-linux-x86_64.AppImage',
+    'artifacts/aliases/SecretArea-linux-amd64.deb',
   ]) {
     assert.equal(yml.includes(expectedAsset), true, `Workflow must handle ${expectedAsset}`);
   }
