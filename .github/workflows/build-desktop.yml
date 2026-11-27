@@ -472,20 +472,27 @@ jobs:
           name: SecretArea-${{ needs.check-version.outputs.tag }}-Linux
           path: artifacts/linux
 
-      - name: Validate all platform release files before publishing
+      - name: Validate all platform release files and stage stable download aliases
         shell: bash
         env:
           EXPECTED_VERSION: ${{ needs.check-version.outputs.version }}
         run: |
           set -euo pipefail
 
+          VERSIONED_WIN_EXE="artifacts/windows/SecretArea.exe"
+          VERSIONED_WIN_BLOCKMAP="artifacts/windows/SecretArea.exe.blockmap"
+          WIN_LATEST_YML="artifacts/windows/latest.yml"
+          VERSIONED_APPIMAGE="artifacts/linux/SecretArea-${EXPECTED_VERSION}-linux-x86_64.AppImage"
+          VERSIONED_DEB="artifacts/linux/SecretArea-${EXPECTED_VERSION}-linux-amd64.deb"
+          LINUX_LATEST_YML="artifacts/linux/latest-linux.yml"
+
           REQUIRED=(
-            "artifacts/windows/SecretArea.exe"
-            "artifacts/windows/SecretArea.exe.blockmap"
-            "artifacts/windows/latest.yml"
-            "artifacts/linux/SecretArea-${EXPECTED_VERSION}-linux-x86_64.AppImage"
-            "artifacts/linux/SecretArea-${EXPECTED_VERSION}-linux-amd64.deb"
-            "artifacts/linux/latest-linux.yml"
+            "$VERSIONED_WIN_EXE"
+            "$VERSIONED_WIN_BLOCKMAP"
+            "$WIN_LATEST_YML"
+            "$VERSIONED_APPIMAGE"
+            "$VERSIONED_DEB"
+            "$LINUX_LATEST_YML"
           )
 
           for file in "${REQUIRED[@]}"; do
@@ -493,17 +500,109 @@ jobs:
               echo "Missing or empty staged release asset: $file" >&2
               exit 1
             fi
-
             ls -lh "$file"
           done
 
-      - name: Publish Windows & Linux Assets to GitHub Release
+          # Verify updater metadata integrity wasn't altered
+          EXPECTED_VERSION="$EXPECTED_VERSION" node << 'EOF'
+          const fs = require('fs');
+          const ver = process.env.EXPECTED_VERSION;
+          const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const winYml = fs.readFileSync('artifacts/windows/latest.yml', 'utf8');
+          const linuxYml = fs.readFileSync('artifacts/linux/latest-linux.yml', 'utf8');
+          const verLine = new RegExp(`^version:\\s*['"]?${escapeRegExp(ver)}['"]?\\s*$`, 'm');
+
+          if (!verLine.test(winYml) || !winYml.includes('SecretArea.exe')) {
+            throw new Error('artifacts/windows/latest.yml failed version/SecretArea.exe check.');
+          }
+          if (
+            !verLine.test(linuxYml) ||
+            !linuxYml.includes(`SecretArea-${ver}-linux-x86_64.AppImage`) ||
+            !linuxYml.includes(`SecretArea-${ver}-linux-amd64.deb`)
+          ) {
+            throw new Error('artifacts/linux/latest-linux.yml failed version/artifact reference check.');
+          }
+          EOF
+
+          # Always start with a clean alias directory so older release files can never leak in
+          rm -rf artifacts/aliases
+          mkdir -p artifacts/aliases
+
+          ALIAS_APPIMAGE="artifacts/aliases/SecretArea-linux-x86_64.AppImage"
+          ALIAS_DEB="artifacts/aliases/SecretArea-linux-amd64.deb"
+
+          cp -f "$VERSIONED_APPIMAGE" "$ALIAS_APPIMAGE"
+          cp -f "$VERSIONED_DEB" "$ALIAS_DEB"
+          chmod +x "$ALIAS_APPIMAGE"
+
+          # Verify exact byte-for-byte parity between versioned binaries and stable aliases
+          verify_alias() {
+            local src="$1"
+            local dst="$2"
+            if [ ! -s "$dst" ]; then
+              echo "Missing or empty stable alias: $dst" >&2
+              exit 1
+            fi
+            local src_size dst_size src_sha dst_sha
+            src_size=$(wc -c < "$src")
+            dst_size=$(wc -c < "$dst")
+            src_sha=$(sha256sum "$src" | awk '{print $1}')
+            dst_sha=$(sha256sum "$dst" | awk '{print $1}')
+            if [ "$src_size" != "$dst_size" ] || [ "$src_sha" != "$dst_sha" ]; then
+              echo "Checksum or size mismatch for alias $dst ($src_sha vs $dst_sha)" >&2
+              exit 1
+            fi
+            echo "Verified stable alias: $dst (${dst_size} bytes, sha256=${dst_sha})"
+          }
+
+          verify_alias "$VERSIONED_APPIMAGE" "$ALIAS_APPIMAGE"
+          verify_alias "$VERSIONED_DEB" "$ALIAS_DEB"
+
+      - name: Determine release draft mode before asset upload
+        id: release_state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.check-version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          node << 'EOF'
+          const fs = require('fs');
+          const repo = process.env.REPOSITORY;
+          const tag = process.env.RELEASE_TAG;
+          const token = process.env.GH_TOKEN;
+
+          (async () => {
+            const res = await fetch(
+              `https://api.github.com/repos/${repo}/releases/tags/${encodeURIComponent(tag)}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  Accept: 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                },
+              }
+            );
+            // For brand-new releases (404), create as draft first so all assets + aliases attach before going latest
+            const useDraft = res.status === 404 ? 'true' : 'false';
+            console.log(`Release ${tag} lookup status=${res.status}; use_draft=${useDraft}`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `use_draft=${useDraft}\n`);
+          })().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          EOF
+
+      - name: Upload Windows & Linux Assets + Stable Download Aliases to GitHub Release
+        id: gh_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.check-version.outputs.tag }}
           name: SecretArea Desktop ${{ needs.check-version.outputs.tag }}
+          draft: ${{ steps.release_state.outputs.use_draft == 'true' }}
           generate_release_notes: true
-          make_latest: true
+          overwrite_files: true
           fail_on_unmatched_files: true
           files: |
             artifacts/windows/SecretArea.exe
@@ -512,3 +611,112 @@ jobs:
             artifacts/linux/SecretArea-${{ needs.check-version.outputs.version }}-linux-x86_64.AppImage
             artifacts/linux/SecretArea-${{ needs.check-version.outputs.version }}-linux-amd64.deb
             artifacts/linux/latest-linux.yml
+            artifacts/aliases/SecretArea-linux-x86_64.AppImage
+            artifacts/aliases/SecretArea-linux-amd64.deb
+
+      - name: Verify all uploaded assets & publish release as latest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.check-version.outputs.tag }}
+          RELEASE_ID: ${{ steps.gh_release.outputs.id }}
+          EXPECTED_VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          node << 'EOF'
+          const repo = process.env.REPOSITORY;
+          const tag = process.env.RELEASE_TAG;
+          const releaseId = (process.env.RELEASE_ID || '').trim();
+          const version = process.env.EXPECTED_VERSION;
+          const token = process.env.GH_TOKEN;
+
+          const headers = {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          };
+
+          (async () => {
+            let rel = null;
+            if (releaseId) {
+              const directRes = await fetch(
+                `https://api.github.com/repos/${repo}/releases/${encodeURIComponent(releaseId)}`,
+                { headers }
+              );
+              if (directRes.ok) {
+                rel = await directRes.json();
+              }
+            }
+            if (!rel) {
+              const listRes = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=25`, {
+                headers,
+              });
+              if (!listRes.ok) {
+                throw new Error(`Failed to list releases (HTTP ${listRes.status})`);
+              }
+              const releases = await listRes.json();
+              rel = releases.find((r) => r && r.tag_name === tag) || null;
+            }
+            if (!rel) {
+              throw new Error(`Release ${tag} was not found after asset upload.`);
+            }
+
+            const expectedAssets = [
+              'SecretArea.exe',
+              'SecretArea.exe.blockmap',
+              'latest.yml',
+              `SecretArea-${version}-linux-x86_64.AppImage`,
+              `SecretArea-${version}-linux-amd64.deb`,
+              'latest-linux.yml',
+              'SecretArea-linux-x86_64.AppImage',
+              'SecretArea-linux-amd64.deb',
+            ];
+
+            const assets = Array.isArray(rel.assets) ? rel.assets : [];
+            const byName = new Map(assets.map((a) => [a.name, a]));
+
+            for (const name of expectedAssets) {
+              const asset = byName.get(name);
+              if (!asset || !asset.size || asset.size <= 0) {
+                throw new Error(`Uploaded release ${tag} is missing or has empty asset: ${name}`);
+              }
+              console.log(`Confirmed uploaded asset: ${name} (${asset.size} bytes)`);
+            }
+
+            const vAppImage = byName.get(`SecretArea-${version}-linux-x86_64.AppImage`);
+            const aAppImage = byName.get('SecretArea-linux-x86_64.AppImage');
+            const vDeb = byName.get(`SecretArea-${version}-linux-amd64.deb`);
+            const aDeb = byName.get('SecretArea-linux-amd64.deb');
+
+            if (vAppImage.size !== aAppImage.size) {
+              throw new Error(`AppImage alias size mismatch: ${aAppImage.size} !== ${vAppImage.size}`);
+            }
+            if (vDeb.size !== aDeb.size) {
+              throw new Error(`DEB alias size mismatch: ${aDeb.size} !== ${vDeb.size}`);
+            }
+
+            // Now that every original asset, update metadata file, and stable alias is attached, mark release published & latest
+            const publishRes = await fetch(`https://api.github.com/repos/${repo}/releases/${rel.id}`, {
+              method: 'PATCH',
+              headers: {
+                ...headers,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                draft: false,
+                make_latest: 'true',
+              }),
+            });
+            if (!publishRes.ok) {
+              const body = await publishRes.text().catch(() => '');
+              throw new Error(`Failed to finalize release ${tag} (HTTP ${publishRes.status}): ${body}`);
+            }
+
+            const updated = await publishRes.json();
+            console.log(`Release ${updated.tag_name} finalized cleanly (draft=${updated.draft}).`);
+          })().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          EOF
